@@ -13,6 +13,7 @@ Group=webitel
 
 # Configuration file path
 # Environment=CONFIG_FILE=
+Environment=SERVICE_ID=webitel-im-providers-1
 Environment=SERVICE_SECRET=
 Environment=SERVICE_ADDR=127.0.0.1:10056
 
