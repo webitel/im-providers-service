@@ -14,6 +14,13 @@ type Handler struct {
 	logger    *slog.Logger
 	providers map[string]provider.Provider
 }
+	
+	
+
+
+
+
+
 
 // NewHandler initializes the handler with a registry of providers.
 // [CONSTRUCTOR] Used by fx.Module.

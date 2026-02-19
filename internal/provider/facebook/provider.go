@@ -38,7 +38,6 @@ func (p *facebookProvider) HandleWebhook(ctx context.Context, payload []byte) er
 }
 
 // --- [SENDER_IMPLEMENTATION] ---
-
 func (p *facebookProvider) SendText(ctx context.Context, req *dto.SendTextRequest) (*dto.SendTextResponse, error) {
 	return p.client.SendTextMessage(ctx, req)
 }

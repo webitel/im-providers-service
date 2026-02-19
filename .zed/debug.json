@@ -1,0 +1,33 @@
+[
+  {
+    "label": "Debug Server",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "exec",
+    "program": "${ZED_WORKTREE_ROOT}/__debug_server",
+    "args": ["server"],
+    "env": {
+      "GOLANG_PROTOBUF_REGISTRATION_CONFLICT": "ignore",
+      "SERVICE_ID": "vhunkalo-im-providers-service",
+      "SERVICE_ADDR": "10.10.10.5:21508",
+      "SERVICE_SECRET": "your-very-secure-secret-key",
+      "PUBSUB_BROKER_URL": "amqp://webitel:webitel@172.22.22.22:5672",
+      "PUBSUB_BROKER_DRIVER": "amqp",
+      "CONSUL_ADDR": "172.22.22.22:8500",
+      "POSTGRES_DSN": "postgres://opensips:webitel@172.22.22.2:5432/webitel_dev?sslmode=disable",
+      "LOG_LEVEL": "info",
+      "LOG_JSON": "true",
+      "SERVICE_CONN_VERIFY_CERTS": "true",
+      "SERVICE_CONN_CA": "/Users/volodiahunkalo/Downloads/development/certs/ca.pem",
+      "SERVICE_CONN_CERT": "/Users/volodiahunkalo/Downloads/development/certs/im-gateway-server.pem",
+      "SERVICE_CONN_KEY": "/Users/volodiahunkalo/Downloads/development/certs/im-gateway-server-key.pem",
+      "SERVICE_CONN_CLIENT_CA": "/Users/volodiahunkalo/Downloads/development/certs/ca.pem",
+      "SERVICE_CONN_CLIENT_CERT": "/Users/volodiahunkalo/Downloads/development/certs/im-gateway-client.pem",
+      "SERVICE_CONN_CLIENT_KEY": "/Users/volodiahunkalo/Downloads/development/certs/im-gateway-client-key.pem",
+    },
+    "build": {
+      "command": "go",
+      "args": ["build", "-gcflags", "all=-N -l", "-o", "__debug_server", "main.go"],
+    },
+  },
+]

@@ -3,19 +3,18 @@
   "go.lintFlags": [
     "--path-mode=abs"
   ],
-  "go.formatTool": "custom",
-  "go.alternateTools": {
-    "customFormatter": "golangci-lint"
-  },
-  "go.formatFlags": [
-    "fmt",
-    "--stdin"
-  ],
+  // [FIX] Use gofumpt for strict formatting or gofmt for standard
+  "go.formatTool": "gofumpt", 
+  
   "editor.formatOnSave": true,
   "[go]": {
+    "editor.defaultFormatter": "golang.go",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-      "source.organizeImports": "always"
+      // [FIX] Standard Go tool for organizing imports
+      "source.organizeImports": "explicit" 
     }
-  }
+  },
+  // Ensure the extension handles the formatting
+  "go.useLanguageServer": true
 }
