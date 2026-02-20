@@ -10,7 +10,12 @@ import (
 var Module = fx.Provide(
 	fx.Annotate(
 		New,
-		fx.As(new(provider.Provider)),
+		// [STRATEGY] Provide as ALL relevant interfaces
+		fx.As(new(provider.Sender)),   // For AMQP outbound
+		fx.As(new(provider.Receiver)), // For HTTP webhooks
+		fx.As(new(provider.Provider)), // For general use
+
+		// Add to the common group for automatic discovery
 		fx.ResultTags(`group:"providers"`),
 	),
 )

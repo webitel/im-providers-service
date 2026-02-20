@@ -6,30 +6,31 @@ import (
 )
 
 type Document struct {
-	ID       int64
-	Name     string
-	MimeType string
-	Size     int64
-	URL      string
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	MimeType string `json:"mime_type"`
+	Size     int64  `json:"size"`
+	URL      string `json:"url"`
 }
 
 type DocumentRequest struct {
-	Body      string
-	Documents []*Document
+	Body      string      `json:"body"`
+	Documents []*Document `json:"documents"`
 }
 
 type SendDocumentRequest struct {
-	From     model.Peer
-	To       model.Peer
-	Document DocumentRequest
-	DomainID int64 `json:"domain_id"`
+	From     model.Peer      `json:"from"`
+	To       model.Peer      `json:"to"`
+	Document DocumentRequest `json:"document"`
+	DomainID int64           `json:"domain_id"`
 }
 
 type SendDocumentResponse struct {
-	ID uuid.UUID
-	To model.Peer
+	ID uuid.UUID  `json:"id"`
+	To model.Peer `json:"to"`
 }
 
+// Getters and Setters for Document
 func (d *Document) GetID() int64        { return d.ID }
 func (d *Document) GetURL() string      { return d.URL }
 func (d *Document) GetMimeType() string { return d.MimeType }

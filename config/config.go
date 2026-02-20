@@ -20,10 +20,22 @@ type Config struct {
 }
 
 type ServiceConfig struct {
-	ID        string `mapstructure:"id"`
-	Address   string `mapstructure:"addr"`
-	HTTPAddr  string `mapstructure:"http_addr"`
-	SecretKey string `mapstructure:"secret"`
+	ID         string           `mapstructure:"id"`
+	Address    string           `mapstructure:"addr"`
+	HTTPAddr   string           `mapstructure:"http_addr"`
+	Connection ConnectionConfig `mapstructure:"conn"`
+}
+
+type ConnectionConfig struct {
+	TLS         TLSConfig `mapstructure:",squash"`
+	VerifyCerts bool      `mapstructure:"verify_certs"`
+	Client      TLSConfig `mapstructure:"client"`
+}
+
+type TLSConfig struct {
+	CA   string `mapstructure:"ca"`
+	Cert string `mapstructure:"cert"`
+	Key  string `mapstructure:"key"`
 }
 
 type LogConfig struct {
@@ -45,14 +57,12 @@ type RedisConfig struct {
 }
 
 type ConsulConfig struct {
-	Address       string `mapstructure:"addr"`
-	PublicAddress string `mapstructure:"grpc_addr"`
+	Address string `mapstructure:"addr"`
 }
 
 type PubsubConfig struct {
-	BrokerURL string `mapstructure:"broker_url"`
-	Exchange  string `mapstructure:"exchange"`
-	Queue     string `mapstructure:"queue"`
+	URL    string `mapstructure:"broker_url"`
+	Driver string `mapstructure:"broker_driver"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -113,28 +123,45 @@ func defineFlags() {
 
 	pflag.String("service.id", "", "Service ID")
 	pflag.String("service.addr", "localhost:8080", "Service address")
+	pflag.Bool("service.conn.verify_certs", false, "Determine whether to verify certificates")
+	pflag.String("service.conn.ca", "", "Server CA certificate path")
+	pflag.String("service.conn.key", "", "Server certificate key path")
+	pflag.String("service.conn.cert", "", "Server certificate path")
+	pflag.String("service.conn.client.ca", "", "Client CA certificate path")
+	pflag.String("service.conn.client.key", "", "Client certificate key path")
+	pflag.String("service.conn.client.cert", "", "Client certificate path")
 	pflag.String("service.http_addr", ":8081", "HTTP/WS service address")
-	pflag.String("service.secret", "", "Service secret key")
 
 	pflag.String("log.level", "info", "Log level")
 	pflag.Bool("log.json", false, "Log in JSON format")
 	pflag.String("log.file", "", "Log file path")
+	pflag.Bool("log.console", true, "Enable console logging")
+	pflag.Bool("log.otel", false, "Enable OTEL logging")
 
 	pflag.String("postgres.dsn", "", "Postgres DSN")
+
 	pflag.String("redis.addr", "localhost:6379", "Redis address")
+	pflag.String("redis.password", "", "Redis password")
+	pflag.Int("redis.db", 0, "Redis database number")
+
 	pflag.String("consul.addr", "localhost:8500", "Consul address")
+
 	pflag.String("pubsub.broker_url", "", "PubSub broker URL")
+	pflag.String("pubsub.broker_driver", "", "PubSub broker driver")
 }
 
 func (c *Config) validate() error {
 	if c.Service.ID == "" {
-		return fmt.Errorf("config: service.id is required (use --service.id or ID env)")
+		return fmt.Errorf("config: service.id is required (use --service.id or SERVICE_ID env)")
 	}
-	if c.Service.SecretKey == "" {
-		return fmt.Errorf("config: service.secret is required (use --service.secret or SERVICE_SECRET env)")
-	}
+
 	if c.Service.Address == "" {
 		return fmt.Errorf("config: service.addr is required")
+	}
+
+	err := validateConnectionConfig(c.Service.Connection)
+	if err != nil {
+		return err
 	}
 
 	if c.Log.Level == "" {
@@ -153,13 +180,28 @@ func (c *Config) validate() error {
 		return fmt.Errorf("config: consul.addr is required")
 	}
 
-	if c.Pubsub.BrokerURL == "" {
+	if c.Pubsub.URL == "" {
 		return fmt.Errorf("config: pubsub.broker_url is required (use --pubsub.broker_url or PUBSUB env)")
 	}
 
-	if !strings.HasPrefix(c.Pubsub.BrokerURL, "amqp://") && !strings.HasPrefix(c.Pubsub.BrokerURL, "amqps://") {
+	if !strings.HasPrefix(c.Pubsub.URL, "amqp://") && !strings.HasPrefix(c.Pubsub.URL, "amqps://") {
 		return fmt.Errorf("config: pubsub.broker_url must start with amqp:// or amqps://")
 	}
 
+	return nil
+}
+
+func validateConnectionConfig(conn ConnectionConfig) error {
+	if conn.VerifyCerts {
+		if conn.TLS.CA == "" {
+			return fmt.Errorf("config: service.conn.ca is required when verify_certs is true")
+		}
+		if conn.TLS.Cert == "" {
+			return fmt.Errorf("config: service.conn.cert is required when verify_certs is true")
+		}
+		if conn.TLS.Key == "" {
+			return fmt.Errorf("config: service.conn.key is required when verify_certs is true")
+		}
+	}
 	return nil
 }

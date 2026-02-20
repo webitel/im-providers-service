@@ -3,8 +3,8 @@ package whatsapp
 import (
 	"context"
 
+	"github.com/webitel/im-providers-service/internal/domain/model"
 	"github.com/webitel/im-providers-service/internal/service"
-	"github.com/webitel/im-providers-service/internal/service/dto"
 )
 
 // Client encapsulates low-level communication with WhatsApp Business API.
@@ -23,17 +23,17 @@ func NewClient(messenger service.Messenger) *Client {
 // --- [API_OUTBOUND_METHODS] ---
 
 // SendTextMessage triggers the WhatsApp Cloud API to deliver text.
-func (c *Client) SendTextMessage(ctx context.Context, req *dto.SendTextRequest) (*dto.SendTextResponse, error) {
+func (c *Client) SendTextMessage(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
 	panic("unimplemented: [WHATSAPP_API] POST /messages (text)")
 }
 
 // SendImageMessage triggers the WhatsApp Cloud API to deliver image media.
-func (c *Client) SendImageMessage(ctx context.Context, req *dto.SendImageRequest) (*dto.SendImageResponse, error) {
+func (c *Client) SendImageMessage(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
 	panic("unimplemented: [WHATSAPP_API] POST /messages (image)")
 }
 
 // SendDocumentMessage triggers the WhatsApp Cloud API to deliver files/documents.
-func (c *Client) SendDocumentMessage(ctx context.Context, req *dto.SendDocumentRequest) (*dto.SendDocumentResponse, error) {
+func (c *Client) SendDocumentMessage(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
 	panic("unimplemented: [WHATSAPP_API] POST /messages (document)")
 }
 

@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	"github.com/webitel/im-providers-service/internal/service/dto"
+	"github.com/webitel/im-providers-service/internal/domain/model"
 )
 
 // Sender defines the contract for outgoing communication.
@@ -11,9 +11,9 @@ import (
 type Sender interface {
 	// Type returns the provider identifier (e.g., "facebook").
 	Type() string
-	SendText(ctx context.Context, req *dto.SendTextRequest) (*dto.SendTextResponse, error)
-	SendImage(ctx context.Context, req *dto.SendImageRequest) (*dto.SendImageResponse, error)
-	SendDocument(ctx context.Context, req *dto.SendDocumentRequest) (*dto.SendDocumentResponse, error)
+	SendText(ctx context.Context, req *model.Message) (*model.MessageResponse, error)
+	SendImage(ctx context.Context, req *model.Message) (*model.MessageResponse, error)
+	SendDocument(ctx context.Context, req *model.Message) (*model.MessageResponse, error)
 }
 
 // Receiver defines the contract for incoming communication (Webhooks).

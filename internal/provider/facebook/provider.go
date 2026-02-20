@@ -3,9 +3,9 @@ package facebook
 import (
 	"context"
 
+	"github.com/webitel/im-providers-service/internal/domain/model"
 	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/service"
-	"github.com/webitel/im-providers-service/internal/service/dto"
 )
 
 // [INTERFACE_GUARDS] Ensure the adapter satisfies all required domain contracts.
@@ -38,14 +38,14 @@ func (p *facebookProvider) HandleWebhook(ctx context.Context, payload []byte) er
 }
 
 // --- [SENDER_IMPLEMENTATION] ---
-func (p *facebookProvider) SendText(ctx context.Context, req *dto.SendTextRequest) (*dto.SendTextResponse, error) {
+func (p *facebookProvider) SendText(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
 	return p.client.SendTextMessage(ctx, req)
 }
 
-func (p *facebookProvider) SendImage(ctx context.Context, req *dto.SendImageRequest) (*dto.SendImageResponse, error) {
+func (p *facebookProvider) SendImage(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
 	return p.client.SendImageMessage(ctx, req)
 }
 
-func (p *facebookProvider) SendDocument(ctx context.Context, req *dto.SendDocumentRequest) (*dto.SendDocumentResponse, error) {
+func (p *facebookProvider) SendDocument(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
 	return p.client.SendDocumentMessage(ctx, req)
 }
