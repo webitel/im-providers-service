@@ -85,7 +85,7 @@ func (h *MessageHandler) RegisterHandlers(router *message.Router, subProvider *p
 		}
 
 		// Connect to the router with default middlewares
-		router.AddNoPublisherHandler(
+		router.AddConsumerHandler(
 			c.name,
 			c.topic,
 			sub,
