@@ -6,6 +6,7 @@ import (
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	grpcsrv "github.com/webitel/im-providers-service/infra/srv/grpc"
 	httpsrv "github.com/webitel/im-providers-service/infra/srv/http"
+	"github.com/webitel/im-providers-service/internal/handler/amqp"
 	"github.com/webitel/im-providers-service/internal/handler/http/webhook"
 	"github.com/webitel/im-providers-service/internal/provider/facebook"
 	"github.com/webitel/im-providers-service/internal/provider/whatsapp"
@@ -21,6 +22,7 @@ func NewApp(cfg *config.Config) *fx.App {
 		fx.Provide(
 			func() *config.Config { return cfg },
 			ProvideLogger,
+			ProvideWatermillLogger,
 			ProvideSD,
 			ProvidePubSub,
 		),
@@ -47,6 +49,9 @@ func NewApp(cfg *config.Config) *fx.App {
 		// [SERVERS] Network listeners (gRPC for internal API, HTTP for webhooks).
 		grpcsrv.Module,
 		httpsrv.Module,
+
+		// Messaging handlers and background workers
+		amqp.Module,
 
 		// [BOOTSTRAP] Orchestrate HTTP routing and application entry points.
 		fx.Invoke(func(wh *webhook.Handler) {

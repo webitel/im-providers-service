@@ -3,9 +3,9 @@ package whatsapp
 import (
 	"context"
 
+	"github.com/webitel/im-providers-service/internal/domain/model"
 	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/service"
-	"github.com/webitel/im-providers-service/internal/service/dto"
 )
 
 // [INTERFACE_GUARDS] Ensure the adapter strictly adheres to all provider contracts.
@@ -38,18 +38,17 @@ func (p *whatsAppProvider) HandleWebhook(ctx context.Context, payload []byte) er
 }
 
 // --- [SENDER_IMPLEMENTATION] ---
-
-func (p *whatsAppProvider) SendText(ctx context.Context, req *dto.SendTextRequest) (*dto.SendTextResponse, error) {
+func (p *whatsAppProvider) SendText(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
 	// [MAPPING] Map domain DTO to WhatsApp Business API text message.
 	return p.client.SendTextMessage(ctx, req)
 }
 
-func (p *whatsAppProvider) SendImage(ctx context.Context, req *dto.SendImageRequest) (*dto.SendImageResponse, error) {
+func (p *whatsAppProvider) SendImage(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
 	// [MAPPING] Handle media-based messages for WhatsApp.
 	return p.client.SendImageMessage(ctx, req)
 }
 
-func (p *whatsAppProvider) SendDocument(ctx context.Context, req *dto.SendDocumentRequest) (*dto.SendDocumentResponse, error) {
+func (p *whatsAppProvider) SendDocument(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
 	// [MAPPING] Deliver PDF/Documents via WhatsApp Cloud API.
 	return p.client.SendDocumentMessage(ctx, req)
 }

@@ -8,14 +8,14 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[PeerContact-1]
+	_ = x[PeerUser-1]
 	_ = x[PeerGroup-2]
 	_ = x[PeerChannel-3]
 }
 
-const _PeerType_name = "PeerContactPeerGroupPeerChannel"
+const _PeerType_name = "PeerUserPeerGroupPeerChannel"
 
-var _PeerType_index = [...]uint8{0, 11, 20, 31}
+var _PeerType_index = [...]uint8{0, 8, 17, 28}
 
 func (i PeerType) String() string {
 	i -= 1

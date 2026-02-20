@@ -38,7 +38,7 @@ func (m *MessageService) SendText(ctx context.Context, in *dto.SendTextRequest) 
 		To: &gatewayv1.Peer{
 			Kind: &gatewayv1.Peer_Contact{
 				Contact: &gatewayv1.PeerIdentity{
-					Sub: in.From.ID,
+					Sub: in.From.ID.String(),
 					Iss: in.From.Issuer,
 				},
 			},
@@ -54,12 +54,11 @@ func (m *MessageService) SendText(ctx context.Context, in *dto.SendTextRequest) 
 
 // SendImage handles image gallery delivery
 func (m *MessageService) SendImage(ctx context.Context, in *dto.SendImageRequest) (*dto.SendImageResponse, error) {
-
 	resp, err := m.gatewayer.SendImage(ctx, &gatewayv1.SendImageRequest{
 		To: &gatewayv1.Peer{
 			Kind: &gatewayv1.Peer_Contact{
 				Contact: &gatewayv1.PeerIdentity{
-					Sub: in.From.ID,
+					Sub: in.From.ID.String(),
 					Iss: in.From.Issuer,
 				},
 			},
@@ -78,12 +77,11 @@ func (m *MessageService) SendImage(ctx context.Context, in *dto.SendImageRequest
 
 // SendDocument handles file/attachment delivery
 func (m *MessageService) SendDocument(ctx context.Context, in *dto.SendDocumentRequest) (*dto.SendDocumentResponse, error) {
-
 	resp, err := m.gatewayer.SendFile(ctx, &gatewayv1.SendDocumentRequest{
 		To: &gatewayv1.Peer{
 			Kind: &gatewayv1.Peer_Contact{
 				Contact: &gatewayv1.PeerIdentity{
-					Sub: in.From.ID,
+					Sub: in.From.ID.String(),
 					Iss: in.From.Issuer,
 				},
 			},

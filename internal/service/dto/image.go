@@ -31,6 +31,7 @@ type (
 	}
 )
 
+// Getters and Setters for Image
 func (i *Image) GetID() int64        { return i.ID }
 func (i *Image) GetURL() string      { return i.URL }
 func (i *Image) GetMimeType() string { return i.MimeType }

@@ -2,18 +2,38 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/url"
 	"os"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/webitel/im-providers-service/config"
+	"github.com/webitel/im-providers-service/infra/pubsub"
+	"github.com/webitel/im-providers-service/infra/pubsub/factory"
+	"github.com/webitel/im-providers-service/infra/pubsub/factory/amqp"
 	"github.com/webitel/im-providers-service/internal/domain/model"
-	"github.com/webitel/im-providers-service/internal/pubsub"
 	"github.com/webitel/webitel-go-kit/infra/discovery"
 	_ "github.com/webitel/webitel-go-kit/infra/discovery/consul"
+	otelsdk "github.com/webitel/webitel-go-kit/infra/otel/sdk"
+	"go.opentelemetry.io/contrib/bridges/otelslog"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
 	"go.uber.org/fx"
+
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/log/otlp"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/log/stdout"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/otlp"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/stdout"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/trace/otlp"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/trace/stdout"
 )
+
+func ProvideWatermillLogger(l *slog.Logger) watermill.LoggerAdapter {
+	return watermill.NewSlogLogger(l)
+}
 
 func ProvideLogger(cfg *config.Config, lc fx.Lifecycle) (*slog.Logger, error) {
 	logSettings := cfg.Log
@@ -59,6 +79,33 @@ func ProvideLogger(cfg *config.Config, lc fx.Lifecycle) (*slog.Logger, error) {
 			h = slog.NewTextHandler(f, opts)
 		}
 		handlers = append(handlers, h)
+	}
+
+	if logSettings.Otel {
+		service := resource.NewSchemaless(
+			semconv.ServiceName(model.ServiceName),
+			semconv.ServiceVersion(model.Version),
+			semconv.ServiceInstanceID(cfg.Service.ID),
+			semconv.ServiceNamespace(model.ServiceNamespace),
+		)
+		otelHandler := otelslog.NewHandler("slog")
+
+		shutdown, err := otelsdk.Configure(context.Background(), otelsdk.WithResource(service),
+			otelsdk.WithLogBridge(
+				func() {
+					handlers = append(handlers, otelHandler)
+				},
+			),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		lc.Append(fx.Hook{
+			OnStop: func(ctx context.Context) error {
+				return shutdown(ctx)
+			},
+		})
 	}
 
 	var finalHandler slog.Handler
@@ -132,6 +179,7 @@ func (h *multiHandler) WithGroup(name string) slog.Handler {
 	}
 	return &multiHandler{handlers: newHandlers}
 }
+
 func ProvideSD(cfg *config.Config, log *slog.Logger, lc fx.Lifecycle) (discovery.DiscoveryProvider, error) {
 	provider, err := discovery.DefaultFactory.CreateProvider(
 		discovery.ProviderConsul,
@@ -176,21 +224,41 @@ func ProvideSD(cfg *config.Config, log *slog.Logger, lc fx.Lifecycle) (discovery
 	return provider, nil
 }
 
-func ProvidePubSub(cfg *config.Config, l *slog.Logger, lc fx.Lifecycle) (*pubsub.Manager, error) {
+func ProvidePubSub(cfg *config.Config, l *slog.Logger, lc fx.Lifecycle) (pubsub.Provider, error) {
+	var (
+		pubsubConfig  = cfg.Pubsub
+		loggerAdapter = watermill.NewSlogLogger(l)
+		pubsubFactory factory.Factory
+		err           error
+	)
 
-	ps, err := pubsub.New(l, cfg.Pubsub.BrokerURL)
+	switch pubsubConfig.Driver {
+	case "amqp":
+		pubsubFactory, err = amqp.NewFactory(pubsubConfig.URL, loggerAdapter)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, errors.New("pubsub driver not supported")
+	}
+
+	router, err := message.NewRouter(message.RouterConfig{}, loggerAdapter)
 	if err != nil {
 		return nil, err
 	}
-
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			return ps.Start()
+			go func() {
+				if err := router.Run(context.Background()); err != nil {
+					l.Error("watermill router failed", slog.Any("error", err))
+				}
+			}()
+			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			return ps.Shutdown()
+			return router.Close()
 		},
 	})
 
-	return ps, nil
+	return pubsub.NewDefaultProvider(router, pubsubFactory)
 }
