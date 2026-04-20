@@ -23,7 +23,7 @@ func (c *Client) SendText(
 }
 
 // SendFile delivers documents or files to the core gateway.
-func (c *Client) SendFile(
+func (c *Client) SendDocument(
 	ctx context.Context,
 	in *gatewayv1.SendDocumentRequest,
 	opts ...grpc.CallOption,
@@ -31,7 +31,7 @@ func (c *Client) SendFile(
 	var resp *gatewayv1.SendDocumentResponse
 	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
 		var err error
-		resp, err = api.SendFile(ctx, in, opts...)
+		resp, err = api.SendDocument(ctx, in, opts...)
 		return err
 	})
 	return resp, err
@@ -50,4 +50,9 @@ func (c *Client) SendImage(
 		return err
 	})
 	return resp, err
+}
+
+// Read implements [gateway.MessageClient].
+func (c *Client) Read(ctx context.Context, in *gatewayv1.ReadMessageRequest, opts ...grpc.CallOption) (*gatewayv1.ReadMessageResponse, error) {
+	panic("unimplemented")
 }

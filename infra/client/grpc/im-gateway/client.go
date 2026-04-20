@@ -5,7 +5,8 @@ import (
 	"log/slog"
 
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
-	webitel "github.com/webitel/im-providers-service/infra/client/grpc"
+	webitel "github.com/webitel/im-providers-service/infra/client/grpc" // Import TLS config
+	infratls "github.com/webitel/im-providers-service/infra/tls"
 	"github.com/webitel/webitel-go-kit/infra/discovery"
 	rpc "github.com/webitel/webitel-go-kit/infra/transport/gRPC"
 	"google.golang.org/grpc"
@@ -31,15 +32,18 @@ type Client struct {
 func New(
 	logger *slog.Logger,
 	discovery discovery.DiscoveryProvider,
+	tls *infratls.Config,
 ) (*Client, error) {
 	// Initialize Message Client
 	msg, err := webitel.New(
 		logger,
 		discovery,
 		ServiceName,
-		func(conn *grpc.ClientConn) gatewayv1.MessageClient {
+		tls, // Argument 4: TLS Config
+		func(conn *grpc.ClientConn) gatewayv1.MessageClient { // Argument 5: Factory
 			return gatewayv1.NewMessageClient(conn)
-		})
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("[im-gateway-client] messages init failed: %w", err)
 	}
@@ -49,9 +53,11 @@ func New(
 		logger,
 		discovery,
 		ServiceName,
+		tls,
 		func(conn *grpc.ClientConn) gatewayv1.AccountClient {
 			return gatewayv1.NewAccountClient(conn)
-		})
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("[im-gateway-client] account init failed: %w", err)
 	}
@@ -61,9 +67,11 @@ func New(
 		logger,
 		discovery,
 		ServiceName,
+		tls,
 		func(conn *grpc.ClientConn) gatewayv1.ContactsClient {
 			return gatewayv1.NewContactsClient(conn)
-		})
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("[im-gateway-client] contacts init failed: %w", err)
 	}
@@ -74,4 +82,28 @@ func New(
 		accountRPC: acc,
 		contactRPC: cnt,
 	}, nil
+}
+
+// Close gracefully shuts down all underlying gRPC connections.
+func (c *Client) Close() error {
+	// [CLEANUP] Iterate through all internal rpc client wrappers
+	if c.msgRPC != nil {
+		if err := c.msgRPC.Close(); err != nil {
+			return err
+		}
+	}
+
+	if c.accountRPC != nil {
+		if err := c.accountRPC.Close(); err != nil {
+			return err
+		}
+	}
+
+	if c.contactRPC != nil {
+		if err := c.contactRPC.Close(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

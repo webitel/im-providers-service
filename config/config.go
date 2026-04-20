@@ -16,14 +16,16 @@ type Config struct {
 	Postgres PostgresConfig `mapstructure:"postgres"`
 	Redis    RedisConfig    `mapstructure:"redis"`
 	Consul   ConsulConfig   `mapstructure:"consul"`
-	Pubsub   PubsubConfig   `mapstructure:"pubsub"`
 }
 
 type ServiceConfig struct {
-	ID         string           `mapstructure:"id"`
-	Address    string           `mapstructure:"addr"`
-	HTTPAddr   string           `mapstructure:"http_addr"`
-	Connection ConnectionConfig `mapstructure:"conn"`
+	ID          string           `mapstructure:"id"`
+	GRPCAddr    string           `mapstructure:"addr"`         // gRPC server address
+	HTTPAddr    string           `mapstructure:"http_addr"`    // HTTP server address
+	PublicURL   string           `mapstructure:"public_url"`   // Public URL of the service for callbacks
+	WebhookPath string           `mapstructure:"webhook_path"` // Base path for webhooks (e.g., /wh)
+	Connection  ConnectionConfig `mapstructure:"conn"`
+	SecretKey   string           `mapstructure:"secret_key"`
 }
 
 type ConnectionConfig struct {
@@ -60,17 +62,12 @@ type ConsulConfig struct {
 	Address string `mapstructure:"addr"`
 }
 
-type PubsubConfig struct {
-	URL    string `mapstructure:"broker_url"`
-	Driver string `mapstructure:"broker_driver"`
-}
-
+// LoadConfig initializes configuration from flags, environment variables, and files.
 func LoadConfig() (*Config, error) {
 	defineFlags()
 	pflag.Parse()
 
 	viper.AutomaticEnv()
-
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 
 	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
@@ -122,7 +119,11 @@ func defineFlags() {
 	pflag.String("config_file", "", "Configuration file (YAML, JSON, etc.)")
 
 	pflag.String("service.id", "", "Service ID")
-	pflag.String("service.addr", "localhost:8080", "Service address")
+	pflag.String("service.addr", "localhost:8080", "gRPC service address")
+	pflag.String("service.http_addr", ":8081", "HTTP service address")
+	pflag.String("service.public_url", "http://localhost:8081", "Public URL of the service for callbacks")
+	pflag.String("service.webhook_path", "/wh", "Base path for incoming webhooks")
+
 	pflag.Bool("service.conn.verify_certs", false, "Determine whether to verify certificates")
 	pflag.String("service.conn.ca", "", "Server CA certificate path")
 	pflag.String("service.conn.key", "", "Server certificate key path")
@@ -130,7 +131,6 @@ func defineFlags() {
 	pflag.String("service.conn.client.ca", "", "Client CA certificate path")
 	pflag.String("service.conn.client.key", "", "Client certificate key path")
 	pflag.String("service.conn.client.cert", "", "Client certificate path")
-	pflag.String("service.http_addr", ":8081", "HTTP/WS service address")
 
 	pflag.String("log.level", "info", "Log level")
 	pflag.Bool("log.json", false, "Log in JSON format")
@@ -139,24 +139,28 @@ func defineFlags() {
 	pflag.Bool("log.otel", false, "Enable OTEL logging")
 
 	pflag.String("postgres.dsn", "", "Postgres DSN")
-
 	pflag.String("redis.addr", "localhost:6379", "Redis address")
 	pflag.String("redis.password", "", "Redis password")
 	pflag.Int("redis.db", 0, "Redis database number")
-
 	pflag.String("consul.addr", "localhost:8500", "Consul address")
-
-	pflag.String("pubsub.broker_url", "", "PubSub broker URL")
-	pflag.String("pubsub.broker_driver", "", "PubSub broker driver")
+	pflag.String("service.secret_key", "", "32-byte secret key for sensitive data encryption")
 }
 
 func (c *Config) validate() error {
 	if c.Service.ID == "" {
-		return fmt.Errorf("config: service.id is required (use --service.id or SERVICE_ID env)")
+		return fmt.Errorf("config: service.id is required")
 	}
 
-	if c.Service.Address == "" {
+	if c.Service.GRPCAddr == "" {
 		return fmt.Errorf("config: service.addr is required")
+	}
+
+	// Sanitize WebhookPath
+	if c.Service.WebhookPath == "" {
+		c.Service.WebhookPath = "/wh"
+	}
+	if !strings.HasPrefix(c.Service.WebhookPath, "/") {
+		c.Service.WebhookPath = "/" + c.Service.WebhookPath
 	}
 
 	err := validateConnectionConfig(c.Service.Connection)
@@ -164,28 +168,12 @@ func (c *Config) validate() error {
 		return err
 	}
 
-	if c.Log.Level == "" {
-		c.Log.Level = "info"
-	}
-
 	if c.Postgres.DSN == "" {
-		return fmt.Errorf("config: postgres.dsn is required (use --postgres.dsn or DATA_SOURCE env)")
+		return fmt.Errorf("config: postgres.dsn is required")
 	}
 
-	if c.Redis.Addr == "" {
-		return fmt.Errorf("config: redis.addr is required")
-	}
-
-	if c.Consul.Address == "" {
-		return fmt.Errorf("config: consul.addr is required")
-	}
-
-	if c.Pubsub.URL == "" {
-		return fmt.Errorf("config: pubsub.broker_url is required (use --pubsub.broker_url or PUBSUB env)")
-	}
-
-	if !strings.HasPrefix(c.Pubsub.URL, "amqp://") && !strings.HasPrefix(c.Pubsub.URL, "amqps://") {
-		return fmt.Errorf("config: pubsub.broker_url must start with amqp:// or amqps://")
+	if len(c.Service.SecretKey) != 32 {
+		return fmt.Errorf("config: service.secret_key must be exactly 32 bytes, got %d", len(c.Service.SecretKey))
 	}
 
 	return nil
@@ -193,14 +181,8 @@ func (c *Config) validate() error {
 
 func validateConnectionConfig(conn ConnectionConfig) error {
 	if conn.VerifyCerts {
-		if conn.TLS.CA == "" {
-			return fmt.Errorf("config: service.conn.ca is required when verify_certs is true")
-		}
-		if conn.TLS.Cert == "" {
-			return fmt.Errorf("config: service.conn.cert is required when verify_certs is true")
-		}
-		if conn.TLS.Key == "" {
-			return fmt.Errorf("config: service.conn.key is required when verify_certs is true")
+		if conn.TLS.CA == "" || conn.TLS.Cert == "" || conn.TLS.Key == "" {
+			return fmt.Errorf("config: service.conn TLS certificates are required when verify_certs is true")
 		}
 	}
 	return nil

@@ -9,21 +9,21 @@ import (
 	"go.uber.org/fx"
 )
 
+// Module registers the HTTP server lifecycle.
 var Module = fx.Module("http-server",
-	fx.Provide(http.NewServeMux), // [ROUTER] Provides central *http.ServeMux
-	fx.Invoke(Start),             // [LIFECYCLE] Starts the listener
+	fx.Invoke(Start), // [LIFECYCLE] Starts the listener using the provided handler
 )
 
-func Start(lc fx.Lifecycle, mux *http.ServeMux, log *slog.Logger, cfg *config.Config) {
+// Start initializes the http.Server with a handler provided by the dependency graph.
+func Start(lc fx.Lifecycle, handler http.Handler, log *slog.Logger, cfg *config.Config) {
 	srv := &http.Server{
 		Addr:    cfg.Service.HTTPAddr,
-		Handler: mux,
+		Handler: handler,
 	}
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			log.Info("HTTP_SERVER_STARTED", slog.String("addr", srv.Addr))
-			// [IO] Run in background to not block app startup
 			go func() {
 				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					log.Error("HTTP_SERVER_CRASHED", slog.Any("err", err))

@@ -19,15 +19,24 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ThreadManagement_Search_FullMethodName = "/webitel.im.api.gateway.v1.ThreadManagement/Search"
+	ThreadManagement_Search_FullMethodName       = "/webitel.im.api.gateway.v1.ThreadManagement/Search"
+	ThreadManagement_AddMember_FullMethodName    = "/webitel.im.api.gateway.v1.ThreadManagement/AddMember"
+	ThreadManagement_RemoveMember_FullMethodName = "/webitel.im.api.gateway.v1.ThreadManagement/RemoveMember"
 )
 
 // ThreadManagementClient is the client API for ThreadManagement service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// ThreadManagement service provides access to group threads manipulating
+// and read-only access for direct threads.
 type ThreadManagementClient interface {
 	// Search threads with filters
 	Search(ctx context.Context, in *ThreadSearchRequest, opts ...grpc.CallOption) (*SearchThreadResponse, error)
+	// Add member to the thread.
+	AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*AddMemberResponse, error)
+	// Remove member from the thread.
+	RemoveMember(ctx context.Context, in *RemoveMemberRequest, opts ...grpc.CallOption) (*RemoveMemberResponse, error)
 }
 
 type threadManagementClient struct {
@@ -48,12 +57,39 @@ func (c *threadManagementClient) Search(ctx context.Context, in *ThreadSearchReq
 	return out, nil
 }
 
+func (c *threadManagementClient) AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*AddMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddMemberResponse)
+	err := c.cc.Invoke(ctx, ThreadManagement_AddMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *threadManagementClient) RemoveMember(ctx context.Context, in *RemoveMemberRequest, opts ...grpc.CallOption) (*RemoveMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveMemberResponse)
+	err := c.cc.Invoke(ctx, ThreadManagement_RemoveMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ThreadManagementServer is the server API for ThreadManagement service.
 // All implementations must embed UnimplementedThreadManagementServer
 // for forward compatibility.
+//
+// ThreadManagement service provides access to group threads manipulating
+// and read-only access for direct threads.
 type ThreadManagementServer interface {
 	// Search threads with filters
 	Search(context.Context, *ThreadSearchRequest) (*SearchThreadResponse, error)
+	// Add member to the thread.
+	AddMember(context.Context, *AddMemberRequest) (*AddMemberResponse, error)
+	// Remove member from the thread.
+	RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error)
 	mustEmbedUnimplementedThreadManagementServer()
 }
 
@@ -66,6 +102,12 @@ type UnimplementedThreadManagementServer struct{}
 
 func (UnimplementedThreadManagementServer) Search(context.Context, *ThreadSearchRequest) (*SearchThreadResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Search not implemented")
+}
+func (UnimplementedThreadManagementServer) AddMember(context.Context, *AddMemberRequest) (*AddMemberResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddMember not implemented")
+}
+func (UnimplementedThreadManagementServer) RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveMember not implemented")
 }
 func (UnimplementedThreadManagementServer) mustEmbedUnimplementedThreadManagementServer() {}
 func (UnimplementedThreadManagementServer) testEmbeddedByValue()                          {}
@@ -106,6 +148,42 @@ func _ThreadManagement_Search_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ThreadManagement_AddMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ThreadManagementServer).AddMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ThreadManagement_AddMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ThreadManagementServer).AddMember(ctx, req.(*AddMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ThreadManagement_RemoveMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ThreadManagementServer).RemoveMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ThreadManagement_RemoveMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ThreadManagementServer).RemoveMember(ctx, req.(*RemoveMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ThreadManagement_ServiceDesc is the grpc.ServiceDesc for ThreadManagement service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -116,6 +194,14 @@ var ThreadManagement_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Search",
 			Handler:    _ThreadManagement_Search_Handler,
+		},
+		{
+			MethodName: "AddMember",
+			Handler:    _ThreadManagement_AddMember_Handler,
+		},
+		{
+			MethodName: "RemoveMember",
+			Handler:    _ThreadManagement_RemoveMember_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

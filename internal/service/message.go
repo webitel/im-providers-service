@@ -8,15 +8,15 @@ import (
 	"github.com/google/uuid"
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
-	"github.com/webitel/im-providers-service/internal/service/dto"
+	"github.com/webitel/im-providers-service/internal/domain/model"
 )
 
 var _ Messenger = (*MessageService)(nil)
 
 type Messenger interface {
-	SendText(ctx context.Context, in *dto.SendTextRequest) (*dto.SendTextResponse, error)
-	SendImage(ctx context.Context, in *dto.SendImageRequest) (*dto.SendImageResponse, error)
-	SendDocument(ctx context.Context, in *dto.SendDocumentRequest) (*dto.SendDocumentResponse, error)
+	SendText(ctx context.Context, in *model.SendTextRequest) (*model.SendTextResponse, error)
+	SendImage(ctx context.Context, in *model.SendImageRequest) (*model.SendImageResponse, error)
+	SendDocument(ctx context.Context, in *model.SendDocumentRequest) (*model.SendDocumentResponse, error)
 }
 
 type MessageService struct {
@@ -32,7 +32,7 @@ func NewMessageService(logger *slog.Logger, threadClient *imgateway.Client) *Mes
 }
 
 // SendText handles plain text message delivery
-func (m *MessageService) SendText(ctx context.Context, in *dto.SendTextRequest) (*dto.SendTextResponse, error) {
+func (m *MessageService) SendText(ctx context.Context, in *model.SendTextRequest) (*model.SendTextResponse, error) {
 	// [TRANSPORT_LOGIC] Handling outgoing message delivery via Gateway
 	resp, err := m.gatewayer.SendText(ctx, &gatewayv1.SendTextRequest{
 		To: &gatewayv1.Peer{
@@ -49,11 +49,11 @@ func (m *MessageService) SendText(ctx context.Context, in *dto.SendTextRequest) 
 		return nil, err
 	}
 
-	return &dto.SendTextResponse{To: in.To, ID: m.parseUUID(resp.GetId())}, nil
+	return &model.SendTextResponse{To: in.To, ID: m.parseUUID(resp.GetId())}, nil
 }
 
 // SendImage handles image gallery delivery
-func (m *MessageService) SendImage(ctx context.Context, in *dto.SendImageRequest) (*dto.SendImageResponse, error) {
+func (m *MessageService) SendImage(ctx context.Context, in *model.SendImageRequest) (*model.SendImageResponse, error) {
 	resp, err := m.gatewayer.SendImage(ctx, &gatewayv1.SendImageRequest{
 		To: &gatewayv1.Peer{
 			Kind: &gatewayv1.Peer_Contact{
@@ -72,12 +72,12 @@ func (m *MessageService) SendImage(ctx context.Context, in *dto.SendImageRequest
 		return nil, err
 	}
 
-	return &dto.SendImageResponse{To: in.To, ID: m.parseUUID(resp.GetId())}, nil
+	return &model.SendImageResponse{To: in.To, ID: m.parseUUID(resp.GetId())}, nil
 }
 
 // SendDocument handles file/attachment delivery
-func (m *MessageService) SendDocument(ctx context.Context, in *dto.SendDocumentRequest) (*dto.SendDocumentResponse, error) {
-	resp, err := m.gatewayer.SendFile(ctx, &gatewayv1.SendDocumentRequest{
+func (m *MessageService) SendDocument(ctx context.Context, in *model.SendDocumentRequest) (*model.SendDocumentResponse, error) {
+	resp, err := m.gatewayer.SendDocument(ctx, &gatewayv1.SendDocumentRequest{
 		To: &gatewayv1.Peer{
 			Kind: &gatewayv1.Peer_Contact{
 				Contact: &gatewayv1.PeerIdentity{
@@ -95,7 +95,7 @@ func (m *MessageService) SendDocument(ctx context.Context, in *dto.SendDocumentR
 		return nil, err
 	}
 
-	return &dto.SendDocumentResponse{To: in.To, ID: m.parseUUID(resp.GetId())}, nil
+	return &model.SendDocumentResponse{To: in.To, ID: m.parseUUID(resp.GetId())}, nil
 }
 
 // --- Internal Helpers & Mappers ---
@@ -109,7 +109,7 @@ func coalesceString(args ...string) string {
 	return ""
 }
 
-func (m *MessageService) mapImages(src []*dto.Image) []*gatewayv1.ImageInput {
+func (m *MessageService) mapImages(src []*model.Image) []*gatewayv1.ImageInput {
 	res := make([]*gatewayv1.ImageInput, 0, len(src))
 	for _, img := range src {
 		if img == nil {
@@ -117,7 +117,7 @@ func (m *MessageService) mapImages(src []*dto.Image) []*gatewayv1.ImageInput {
 		}
 		res = append(res, &gatewayv1.ImageInput{
 			Id:       fmt.Sprintf("%d", img.ID),
-			Name:     img.Name,
+			Name:     img.FileName,
 			Link:     img.URL,
 			MimeType: img.MimeType,
 		})
@@ -125,7 +125,7 @@ func (m *MessageService) mapImages(src []*dto.Image) []*gatewayv1.ImageInput {
 	return res
 }
 
-func (m *MessageService) mapDocuments(src []*dto.Document) []*gatewayv1.DocumentInput {
+func (m *MessageService) mapDocuments(src []*model.Document) []*gatewayv1.DocumentInput {
 	res := make([]*gatewayv1.DocumentInput, 0, len(src))
 	for _, doc := range src {
 		if doc == nil {
@@ -135,7 +135,7 @@ func (m *MessageService) mapDocuments(src []*dto.Document) []*gatewayv1.Document
 		res = append(res, &gatewayv1.DocumentInput{
 			Id:        fmt.Sprintf("%d", doc.ID),
 			Url:       doc.URL,
-			FileName:  doc.Name,
+			FileName:  doc.FileName,
 			MimeType:  doc.MimeType,
 			SizeBytes: &size,
 		})

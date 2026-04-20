@@ -2,18 +2,13 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"net/url"
 	"os"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/webitel/im-providers-service/config"
-	"github.com/webitel/im-providers-service/infra/pubsub"
-	"github.com/webitel/im-providers-service/infra/pubsub/factory"
-	"github.com/webitel/im-providers-service/infra/pubsub/factory/amqp"
 	"github.com/webitel/im-providers-service/internal/domain/model"
 	"github.com/webitel/webitel-go-kit/infra/discovery"
 	_ "github.com/webitel/webitel-go-kit/infra/discovery/consul"
@@ -203,7 +198,7 @@ func ProvideSD(cfg *config.Config, log *slog.Logger, lc fx.Lifecycle) (discovery
 			"branch":         model.Branch,
 			"buildTimestamp": model.BuildTimestamp,
 		}
-		si.Endpoints = []string{(&url.URL{Scheme: "grpc", Host: cfg.Service.Address}).String()}
+		si.Endpoints = []string{(&url.URL{Scheme: "grpc", Host: cfg.Service.GRPCAddr}).String()}
 	}
 
 	lc.Append(fx.Hook{
@@ -222,43 +217,4 @@ func ProvideSD(cfg *config.Config, log *slog.Logger, lc fx.Lifecycle) (discovery
 	})
 
 	return provider, nil
-}
-
-func ProvidePubSub(cfg *config.Config, l *slog.Logger, lc fx.Lifecycle) (pubsub.Provider, error) {
-	var (
-		pubsubConfig  = cfg.Pubsub
-		loggerAdapter = watermill.NewSlogLogger(l)
-		pubsubFactory factory.Factory
-		err           error
-	)
-
-	switch pubsubConfig.Driver {
-	case "amqp":
-		pubsubFactory, err = amqp.NewFactory(pubsubConfig.URL, loggerAdapter)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, errors.New("pubsub driver not supported")
-	}
-
-	router, err := message.NewRouter(message.RouterConfig{}, loggerAdapter)
-	if err != nil {
-		return nil, err
-	}
-	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			go func() {
-				if err := router.Run(context.Background()); err != nil {
-					l.Error("watermill router failed", slog.Any("error", err))
-				}
-			}()
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			return router.Close()
-		},
-	})
-
-	return pubsub.NewDefaultProvider(router, pubsubFactory)
 }
