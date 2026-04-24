@@ -5,9 +5,11 @@ create table if not exists "im_provider"."gate_waba"(
   "phone_number" text not null check (trim("phone_number") <> ''),
   "phone_number_id" text not null check (trim("phone_number_id") <> ''),
   "access_token" bytea not null,
-  "access_token_expires_at" timestamp with time zone not null,
+  "access_token_expires_at" timestamp with time zone,
   "business_id" text not null check (trim("business_id") <> ''),
+  "contact_id" uuid not null
 );
+
 
 -- +goose Down
 drop table if exists "im_provider"."gate_waba";
