@@ -1,7 +1,7 @@
 -- +goose Up
 create table if not exists "im_provider"."gate_waba"(
   "id" uuid primary key references "im_provider"."gates" on delete cascade,
-  "meta_app_id" uuid not null references "im_provider"."meta_apps" on delete cascade, --can we use WABA with different meta app?
+  "meta_app_id" uuid not null references "im_provider"."meta_apps" on delete restrict,
   "phone_number" text not null check (trim("phone_number") <> ''),
   "phone_number_id" text not null check (trim("phone_number_id") <> ''),
   "access_token" bytea not null,
