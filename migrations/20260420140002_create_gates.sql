@@ -2,6 +2,7 @@
 -- Create base table for all communication gateways (channels)
 CREATE TABLE IF NOT EXISTS im_provider.gates (
     id          UUID DEFAULT uuidv7() PRIMARY KEY,
+    dc          BIGINT NOT NULL, -- domain identifier
     name        TEXT NOT NULL,
     type        TEXT NOT NULL, -- e.g., 'facebook', 'whatsapp', 'telegram'
     enabled     BOOLEAN NOT NULL DEFAULT TRUE,
