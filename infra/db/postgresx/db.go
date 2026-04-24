@@ -120,3 +120,9 @@ var (
 )
 
 type NamedArgs = pgx.NamedArgs
+
+const (
+	CodeUniqueViolation     string = "23505"
+	CodeForeignKeyViolation string = "23503"
+	CodeCheckViolation      string = "23514"
+)
