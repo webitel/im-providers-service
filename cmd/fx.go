@@ -17,9 +17,10 @@ import (
 	"github.com/webitel/im-providers-service/internal/handler/grpc"
 	"github.com/webitel/im-providers-service/internal/handler/http/webhook"
 	"github.com/webitel/im-providers-service/internal/provider/facebook"
-	"github.com/webitel/im-providers-service/internal/provider/whatsapp"
 	"github.com/webitel/im-providers-service/internal/service"
 	storedi "github.com/webitel/im-providers-service/internal/store/di"
+	"github.com/webitel/im-providers-service/internal/store/postgres"
+	"github.com/webitel/im-providers-service/internal/whatsapp"
 	"github.com/webitel/im-providers-service/pkg/crypto"
 	"go.uber.org/fx"
 )

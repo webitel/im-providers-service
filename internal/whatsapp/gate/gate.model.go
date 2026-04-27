@@ -2,9 +2,12 @@ package gate
 
 import (
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/webitel/im-providers-service/internal/whatsapp/client"
+	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
 
@@ -21,26 +24,22 @@ type Peer interface {
 	GetIss() string
 }
 
-type InternalContact struct {
-	ID  uuid.UUID `json:"id" db:"id"`
-	Sub string    `json:"sub" db:"sub"`
-	Iss string    `json:"iss" db:"iss"`
-}
-
-func (internalContact *InternalContact) GetID() uuid.UUID { return internalContact.ID }
-func (internalContact *InternalContact) GetSub() string   { return internalContact.Sub }
-func (internalContact *InternalContact) GetIss() string   { return internalContact.Iss }
-
 type Gate struct {
-	ID        uuid.UUID `json:"id" db:"id"`
-	Name      string    `json:"name" db:"name"`
-	Type      string    `json:"type" db:"type"`
-	Enabled   bool      `json:"enabled" db:"enabled"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID        uuid.UUID       `json:"id" db:"id"`
+	Name      string          `json:"name" db:"name"`
+	Type      string          `json:"type" db:"type"`
+	Enabled   bool            `json:"enabled" db:"enabled"`
+	CreatedAt time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at" db:"updated_at"`
+	CreatedBy int64           `json:"created_by" db:"created_by"`
+	UpdatedBy int64           `json:"updated_by" db:"updated_by"`
+	Contact   *common.Contact `json:"contact" db:"contact"`
 
 	WhatsAppBusinessAccountGate WhatsAppBusinessAccountGate `json:"whats_app_business_account_gate" db:"whats_app_business_account_gate"`
 }
+
+func (gate *Gate) CreatedAtUnixUTCMilli() int64 { return gate.CreatedAt.UTC().UnixMilli() }
+func (gate *Gate) UpdatedAtUnixUTCMilli() int64 { return gate.UpdatedAt.UTC().UnixMilli() }
 
 func (gate *Gate) Validate() error {
 	if gate == nil {
@@ -63,16 +62,42 @@ func (gate *Gate) Validate() error {
 }
 
 type WhatsAppBusinessAccountGate struct {
-	ID                   uuid.UUID        `json:"id" db:"id"`
-	MetaAppID            uuid.UUID        `json:"meta_app_id" db:"meta_app_id"`
-	PhoneNumber          string           `json:"phone_number" db:"phone_number"`
-	PhoneNumberID        string           `json:"phone_number_id" db:"phone_number_id"`
-	AccessToken          string           `json:"-" db:"-"`
-	AccessTokenEncrypted []byte           `json:"access_token" db:"access_token"`
-	AccessTokenExpiresAt *time.Time       `json:"access_token_expires_at" db:"access_token_expires_at"`
-	BusinessID           string           `json:"business_id" db:"business_id"`
-	ContactID            uuid.UUID        `json:"-" db:"contact_id"`
-	Contact              *InternalContact `json:"contact" db:"contact"`
+	ID                   uuid.UUID  `json:"id" db:"id"`
+	MetaAppID            uuid.UUID  `json:"meta_app_id" db:"meta_app_id"`
+	PhoneNumber          string     `json:"phone_number" db:"phone_number"`
+	PhoneNumberID        string     `json:"phone_number_id" db:"phone_number_id"`
+	AccessToken          string     `json:"-" db:"-"`
+	AccessTokenEncrypted []byte     `json:"access_token" db:"access_token"`
+	AccessTokenExpiresAt *time.Time `json:"access_token_expires_at" db:"access_token_expires_at"`
+	BusinessID           string     `json:"business_id" db:"business_id"`
+	ContactID            uuid.UUID  `json:"-" db:"contact_id"`
+
+	ClientMu *sync.RWMutex
+	Client   *client.RequestClient `json:"-" db:"-"`
+}
+
+func (whatsAppBusinessGate *WhatsAppBusinessAccountGate) SetUpClient() error {
+	whatsAppBusinessGate.ClientMu.Lock()
+	defer whatsAppBusinessGate.ClientMu.Unlock()
+
+	requestClient, err := client.NewRequesClient(
+		client.WithAccessTokenConfig(whatsAppBusinessGate.AccessToken),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	whatsAppBusinessGate.Client = requestClient
+
+	return nil
+}
+
+func (whatsAppBusinessAccountGate *WhatsAppBusinessAccountGate) GetClient() client.RequestClient {
+	whatsAppBusinessAccountGate.ClientMu.RLock()
+	defer whatsAppBusinessAccountGate.ClientMu.RUnlock()
+
+	return *whatsAppBusinessAccountGate.Client
 }
 
 func (gate *WhatsAppBusinessAccountGate) Validate() error {

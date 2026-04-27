@@ -5,6 +5,7 @@ import (
 
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	grpcsrv "github.com/webitel/im-providers-service/infra/srv/grpc"
+	"github.com/webitel/im-providers-service/internal/whatsapp"
 )
 
 // Module registers all gRPC handlers and their registration logic.
@@ -26,7 +27,7 @@ func RegisterProviderServices(
 	facebook *FacebookHandler,
 	metaApp *MetaAppHandler,
 	metaOAuth *MetaOauthHandler,
-	whatsapp *WhatsappHandler,
+	whatsapp whatsapp.WhatsAppGateServer,
 ) {
 	// Register each service defined in your proto files
 	impb.RegisterGateServiceServer(server.Server, gate)

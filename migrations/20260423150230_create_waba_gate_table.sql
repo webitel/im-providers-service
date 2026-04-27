@@ -7,7 +7,9 @@ create table if not exists "im_provider"."gate_waba"(
   "access_token" bytea not null,
   "access_token_expires_at" timestamp with time zone,
   "business_id" text not null check (trim("business_id") <> ''),
-  "contact_id" uuid not null
+  "contact_id" uuid not null,
+
+  unique("phone_number_id")
 );
 
 

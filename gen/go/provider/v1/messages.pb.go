@@ -836,6 +836,424 @@ func (x *ProviderMetaLinkedPage) GetPlatform() string {
 	return ""
 }
 
+type CreateGateRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name    string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Enabled bool   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Bot     *Peer  `protobuf:"bytes,3,opt,name=bot,proto3" json:"bot,omitempty"`
+	// Types that are assignable to Gate:
+	//
+	//	*CreateGateRequest_Waba
+	//	*CreateGateRequest_Fb
+	Gate isCreateGateRequest_Gate `protobuf_oneof:"gate"`
+}
+
+func (x *CreateGateRequest) Reset() {
+	*x = CreateGateRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_service_provider_v1_messages_proto_msgTypes[14]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateGateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateGateRequest) ProtoMessage() {}
+
+func (x *CreateGateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_service_provider_v1_messages_proto_msgTypes[14]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateGateRequest.ProtoReflect.Descriptor instead.
+func (*CreateGateRequest) Descriptor() ([]byte, []int) {
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CreateGateRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateGateRequest) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *CreateGateRequest) GetBot() *Peer {
+	if x != nil {
+		return x.Bot
+	}
+	return nil
+}
+
+func (m *CreateGateRequest) GetGate() isCreateGateRequest_Gate {
+	if m != nil {
+		return m.Gate
+	}
+	return nil
+}
+
+func (x *CreateGateRequest) GetWaba() *CreateWABAGateRequest {
+	if x, ok := x.GetGate().(*CreateGateRequest_Waba); ok {
+		return x.Waba
+	}
+	return nil
+}
+
+func (x *CreateGateRequest) GetFb() *ProviderCreateFacebookGateRequest {
+	if x, ok := x.GetGate().(*CreateGateRequest_Fb); ok {
+		return x.Fb
+	}
+	return nil
+}
+
+type isCreateGateRequest_Gate interface {
+	isCreateGateRequest_Gate()
+}
+
+type CreateGateRequest_Waba struct {
+	Waba *CreateWABAGateRequest `protobuf:"bytes,4,opt,name=waba,proto3,oneof"`
+}
+
+type CreateGateRequest_Fb struct {
+	Fb *ProviderCreateFacebookGateRequest `protobuf:"bytes,5,opt,name=fb,proto3,oneof"`
+}
+
+func (*CreateGateRequest_Waba) isCreateGateRequest_Gate() {}
+
+func (*CreateGateRequest_Fb) isCreateGateRequest_Gate() {}
+
+type CreateWABAGateRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	MetaAppId     string `protobuf:"bytes,1,opt,name=meta_app_id,json=metaAppId,proto3" json:"meta_app_id,omitempty"`
+	PhoneNumber   string `protobuf:"bytes,2,opt,name=phone_number,json=phoneNumber,proto3" json:"phone_number,omitempty"`
+	PhoneNumberId string `protobuf:"bytes,3,opt,name=phone_number_id,json=phoneNumberId,proto3" json:"phone_number_id,omitempty"`
+	AccessToken   string `protobuf:"bytes,4,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	BusinessId    string `protobuf:"bytes,5,opt,name=business_id,json=businessId,proto3" json:"business_id,omitempty"`
+}
+
+func (x *CreateWABAGateRequest) Reset() {
+	*x = CreateWABAGateRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_service_provider_v1_messages_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateWABAGateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateWABAGateRequest) ProtoMessage() {}
+
+func (x *CreateWABAGateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_service_provider_v1_messages_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateWABAGateRequest.ProtoReflect.Descriptor instead.
+func (*CreateWABAGateRequest) Descriptor() ([]byte, []int) {
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CreateWABAGateRequest) GetMetaAppId() string {
+	if x != nil {
+		return x.MetaAppId
+	}
+	return ""
+}
+
+func (x *CreateWABAGateRequest) GetPhoneNumber() string {
+	if x != nil {
+		return x.PhoneNumber
+	}
+	return ""
+}
+
+func (x *CreateWABAGateRequest) GetPhoneNumberId() string {
+	if x != nil {
+		return x.PhoneNumberId
+	}
+	return ""
+}
+
+func (x *CreateWABAGateRequest) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *CreateWABAGateRequest) GetBusinessId() string {
+	if x != nil {
+		return x.BusinessId
+	}
+	return ""
+}
+
+type GateResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id        string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name      string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Type      string `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	Enabled   bool   `protobuf:"varint,4,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	CreatedAt int64  `protobuf:"varint,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedBy int64  `protobuf:"varint,6,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	UpdatedAt int64  `protobuf:"varint,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedBy int64  `protobuf:"varint,8,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
+	Bot       *Peer  `protobuf:"bytes,9,opt,name=bot,proto3" json:"bot,omitempty"`
+	// Types that are assignable to Gate:
+	//
+	//	*GateResponse_Waba
+	Gate isGateResponse_Gate `protobuf_oneof:"gate"`
+}
+
+func (x *GateResponse) Reset() {
+	*x = GateResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_service_provider_v1_messages_proto_msgTypes[16]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GateResponse) ProtoMessage() {}
+
+func (x *GateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_service_provider_v1_messages_proto_msgTypes[16]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GateResponse.ProtoReflect.Descriptor instead.
+func (*GateResponse) Descriptor() ([]byte, []int) {
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GateResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *GateResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GateResponse) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *GateResponse) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *GateResponse) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *GateResponse) GetCreatedBy() int64 {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return 0
+}
+
+func (x *GateResponse) GetUpdatedAt() int64 {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return 0
+}
+
+func (x *GateResponse) GetUpdatedBy() int64 {
+	if x != nil {
+		return x.UpdatedBy
+	}
+	return 0
+}
+
+func (x *GateResponse) GetBot() *Peer {
+	if x != nil {
+		return x.Bot
+	}
+	return nil
+}
+
+func (m *GateResponse) GetGate() isGateResponse_Gate {
+	if m != nil {
+		return m.Gate
+	}
+	return nil
+}
+
+func (x *GateResponse) GetWaba() *WhatsAppBusinessAccount {
+	if x, ok := x.GetGate().(*GateResponse_Waba); ok {
+		return x.Waba
+	}
+	return nil
+}
+
+type isGateResponse_Gate interface {
+	isGateResponse_Gate()
+}
+
+type GateResponse_Waba struct {
+	Waba *WhatsAppBusinessAccount `protobuf:"bytes,10,opt,name=waba,proto3,oneof"`
+}
+
+func (*GateResponse_Waba) isGateResponse_Gate() {}
+
+type WhatsAppBusinessAccount struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id                   string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	MetaAppId            string `protobuf:"bytes,2,opt,name=meta_app_id,json=metaAppId,proto3" json:"meta_app_id,omitempty"`
+	PhoneNumber          string `protobuf:"bytes,3,opt,name=phone_number,json=phoneNumber,proto3" json:"phone_number,omitempty"`
+	PhoneNumberId        string `protobuf:"bytes,4,opt,name=phone_number_id,json=phoneNumberId,proto3" json:"phone_number_id,omitempty"`
+	AccessToken          string `protobuf:"bytes,5,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	AccessTokenExpiresAt *int64 `protobuf:"varint,6,opt,name=access_token_expires_at,json=accessTokenExpiresAt,proto3,oneof" json:"access_token_expires_at,omitempty"`
+	BusinessId           string `protobuf:"bytes,7,opt,name=business_id,json=businessId,proto3" json:"business_id,omitempty"`
+}
+
+func (x *WhatsAppBusinessAccount) Reset() {
+	*x = WhatsAppBusinessAccount{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_service_provider_v1_messages_proto_msgTypes[17]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WhatsAppBusinessAccount) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WhatsAppBusinessAccount) ProtoMessage() {}
+
+func (x *WhatsAppBusinessAccount) ProtoReflect() protoreflect.Message {
+	mi := &file_service_provider_v1_messages_proto_msgTypes[17]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WhatsAppBusinessAccount.ProtoReflect.Descriptor instead.
+func (*WhatsAppBusinessAccount) Descriptor() ([]byte, []int) {
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *WhatsAppBusinessAccount) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *WhatsAppBusinessAccount) GetMetaAppId() string {
+	if x != nil {
+		return x.MetaAppId
+	}
+	return ""
+}
+
+func (x *WhatsAppBusinessAccount) GetPhoneNumber() string {
+	if x != nil {
+		return x.PhoneNumber
+	}
+	return ""
+}
+
+func (x *WhatsAppBusinessAccount) GetPhoneNumberId() string {
+	if x != nil {
+		return x.PhoneNumberId
+	}
+	return ""
+}
+
+func (x *WhatsAppBusinessAccount) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *WhatsAppBusinessAccount) GetAccessTokenExpiresAt() int64 {
+	if x != nil && x.AccessTokenExpiresAt != nil {
+		return *x.AccessTokenExpiresAt
+	}
+	return 0
+}
+
+func (x *WhatsAppBusinessAccount) GetBusinessId() string {
+	if x != nil {
+		return x.BusinessId
+	}
+	return ""
+}
+
 // / ProviderCreateFacebookGateRequest links a specific Facebook Page as a messaging gateway.
 type ProviderCreateFacebookGateRequest struct {
 	state         protoimpl.MessageState
@@ -853,7 +1271,11 @@ type ProviderCreateFacebookGateRequest struct {
 func (x *ProviderCreateFacebookGateRequest) Reset() {
 	*x = ProviderCreateFacebookGateRequest{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[14]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[18]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -866,7 +1288,11 @@ func (x *ProviderCreateFacebookGateRequest) String() string {
 func (*ProviderCreateFacebookGateRequest) ProtoMessage() {}
 
 func (x *ProviderCreateFacebookGateRequest) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[14]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[18]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -879,7 +1305,11 @@ func (x *ProviderCreateFacebookGateRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ProviderCreateFacebookGateRequest.ProtoReflect.Descriptor instead.
 func (*ProviderCreateFacebookGateRequest) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{14}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{18}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderCreateFacebookGateRequest) GetName() string {
@@ -936,7 +1366,11 @@ type ProviderCreateFacebookGateResponse struct {
 func (x *ProviderCreateFacebookGateResponse) Reset() {
 	*x = ProviderCreateFacebookGateResponse{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[15]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[19]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -949,7 +1383,11 @@ func (x *ProviderCreateFacebookGateResponse) String() string {
 func (*ProviderCreateFacebookGateResponse) ProtoMessage() {}
 
 func (x *ProviderCreateFacebookGateResponse) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[15]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[19]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -962,7 +1400,11 @@ func (x *ProviderCreateFacebookGateResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ProviderCreateFacebookGateResponse.ProtoReflect.Descriptor instead.
 func (*ProviderCreateFacebookGateResponse) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{15}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{19}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderCreateFacebookGateResponse) GetItem() *ProviderFacebookGate {
@@ -984,7 +1426,11 @@ type ProviderGetFacebookGateRequest struct {
 func (x *ProviderGetFacebookGateRequest) Reset() {
 	*x = ProviderGetFacebookGateRequest{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[16]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[20]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -997,7 +1443,11 @@ func (x *ProviderGetFacebookGateRequest) String() string {
 func (*ProviderGetFacebookGateRequest) ProtoMessage() {}
 
 func (x *ProviderGetFacebookGateRequest) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[16]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[20]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1010,7 +1460,11 @@ func (x *ProviderGetFacebookGateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderGetFacebookGateRequest.ProtoReflect.Descriptor instead.
 func (*ProviderGetFacebookGateRequest) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{16}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{20}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderGetFacebookGateRequest) GetId() string {
@@ -1031,7 +1485,11 @@ type ProviderGetFacebookGateResponse struct {
 func (x *ProviderGetFacebookGateResponse) Reset() {
 	*x = ProviderGetFacebookGateResponse{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[17]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[21]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1044,7 +1502,11 @@ func (x *ProviderGetFacebookGateResponse) String() string {
 func (*ProviderGetFacebookGateResponse) ProtoMessage() {}
 
 func (x *ProviderGetFacebookGateResponse) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[17]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[21]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1057,7 +1519,11 @@ func (x *ProviderGetFacebookGateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderGetFacebookGateResponse.ProtoReflect.Descriptor instead.
 func (*ProviderGetFacebookGateResponse) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{17}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{21}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderGetFacebookGateResponse) GetItem() *ProviderFacebookGate {
@@ -1083,7 +1549,11 @@ type ProviderUpdateFacebookGateRequest struct {
 func (x *ProviderUpdateFacebookGateRequest) Reset() {
 	*x = ProviderUpdateFacebookGateRequest{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[18]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[22]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1096,7 +1566,11 @@ func (x *ProviderUpdateFacebookGateRequest) String() string {
 func (*ProviderUpdateFacebookGateRequest) ProtoMessage() {}
 
 func (x *ProviderUpdateFacebookGateRequest) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[18]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[22]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1109,7 +1583,11 @@ func (x *ProviderUpdateFacebookGateRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ProviderUpdateFacebookGateRequest.ProtoReflect.Descriptor instead.
 func (*ProviderUpdateFacebookGateRequest) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{18}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{22}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderUpdateFacebookGateRequest) GetId() string {
@@ -1159,7 +1637,11 @@ type ProviderUpdateFacebookGateResponse struct {
 func (x *ProviderUpdateFacebookGateResponse) Reset() {
 	*x = ProviderUpdateFacebookGateResponse{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[19]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[23]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1172,7 +1654,11 @@ func (x *ProviderUpdateFacebookGateResponse) String() string {
 func (*ProviderUpdateFacebookGateResponse) ProtoMessage() {}
 
 func (x *ProviderUpdateFacebookGateResponse) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[19]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[23]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1185,7 +1671,11 @@ func (x *ProviderUpdateFacebookGateResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ProviderUpdateFacebookGateResponse.ProtoReflect.Descriptor instead.
 func (*ProviderUpdateFacebookGateResponse) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{19}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{23}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderUpdateFacebookGateResponse) GetItem() *ProviderFacebookGate {
@@ -1207,7 +1697,11 @@ type ProviderDeleteFacebookGateRequest struct {
 func (x *ProviderDeleteFacebookGateRequest) Reset() {
 	*x = ProviderDeleteFacebookGateRequest{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[20]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[24]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1220,7 +1714,11 @@ func (x *ProviderDeleteFacebookGateRequest) String() string {
 func (*ProviderDeleteFacebookGateRequest) ProtoMessage() {}
 
 func (x *ProviderDeleteFacebookGateRequest) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[20]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[24]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1233,7 +1731,11 @@ func (x *ProviderDeleteFacebookGateRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ProviderDeleteFacebookGateRequest.ProtoReflect.Descriptor instead.
 func (*ProviderDeleteFacebookGateRequest) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{20}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{24}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderDeleteFacebookGateRequest) GetId() string {
@@ -1254,7 +1756,11 @@ type ProviderDeleteFacebookGateResponse struct {
 func (x *ProviderDeleteFacebookGateResponse) Reset() {
 	*x = ProviderDeleteFacebookGateResponse{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[21]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[25]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1267,7 +1773,11 @@ func (x *ProviderDeleteFacebookGateResponse) String() string {
 func (*ProviderDeleteFacebookGateResponse) ProtoMessage() {}
 
 func (x *ProviderDeleteFacebookGateResponse) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[21]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[25]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1280,7 +1790,11 @@ func (x *ProviderDeleteFacebookGateResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ProviderDeleteFacebookGateResponse.ProtoReflect.Descriptor instead.
 func (*ProviderDeleteFacebookGateResponse) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{21}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{25}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderDeleteFacebookGateResponse) GetItem() *ProviderFacebookGate {
@@ -1306,7 +1820,11 @@ type ProviderCreateWhatsAppGateRequest struct {
 func (x *ProviderCreateWhatsAppGateRequest) Reset() {
 	*x = ProviderCreateWhatsAppGateRequest{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[22]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[26]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1319,7 +1837,11 @@ func (x *ProviderCreateWhatsAppGateRequest) String() string {
 func (*ProviderCreateWhatsAppGateRequest) ProtoMessage() {}
 
 func (x *ProviderCreateWhatsAppGateRequest) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[22]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[26]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1332,7 +1854,11 @@ func (x *ProviderCreateWhatsAppGateRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ProviderCreateWhatsAppGateRequest.ProtoReflect.Descriptor instead.
 func (*ProviderCreateWhatsAppGateRequest) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{22}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{26}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderCreateWhatsAppGateRequest) GetName() string {
@@ -1382,7 +1908,11 @@ type ProviderCreateWhatsAppGateResponse struct {
 func (x *ProviderCreateWhatsAppGateResponse) Reset() {
 	*x = ProviderCreateWhatsAppGateResponse{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[23]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[27]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1395,7 +1925,11 @@ func (x *ProviderCreateWhatsAppGateResponse) String() string {
 func (*ProviderCreateWhatsAppGateResponse) ProtoMessage() {}
 
 func (x *ProviderCreateWhatsAppGateResponse) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[23]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[27]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1408,7 +1942,11 @@ func (x *ProviderCreateWhatsAppGateResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ProviderCreateWhatsAppGateResponse.ProtoReflect.Descriptor instead.
 func (*ProviderCreateWhatsAppGateResponse) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{23}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{27}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderCreateWhatsAppGateResponse) GetItem() *ProviderWhatsAppGate {
@@ -1430,7 +1968,11 @@ type ProviderGetWhatsAppGateRequest struct {
 func (x *ProviderGetWhatsAppGateRequest) Reset() {
 	*x = ProviderGetWhatsAppGateRequest{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[24]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[28]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1443,7 +1985,11 @@ func (x *ProviderGetWhatsAppGateRequest) String() string {
 func (*ProviderGetWhatsAppGateRequest) ProtoMessage() {}
 
 func (x *ProviderGetWhatsAppGateRequest) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[24]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[28]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1456,7 +2002,11 @@ func (x *ProviderGetWhatsAppGateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderGetWhatsAppGateRequest.ProtoReflect.Descriptor instead.
 func (*ProviderGetWhatsAppGateRequest) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{24}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{28}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderGetWhatsAppGateRequest) GetId() string {
@@ -1477,7 +2027,11 @@ type ProviderGetWhatsAppGateResponse struct {
 func (x *ProviderGetWhatsAppGateResponse) Reset() {
 	*x = ProviderGetWhatsAppGateResponse{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[25]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[29]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1490,7 +2044,11 @@ func (x *ProviderGetWhatsAppGateResponse) String() string {
 func (*ProviderGetWhatsAppGateResponse) ProtoMessage() {}
 
 func (x *ProviderGetWhatsAppGateResponse) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[25]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[29]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1503,7 +2061,11 @@ func (x *ProviderGetWhatsAppGateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderGetWhatsAppGateResponse.ProtoReflect.Descriptor instead.
 func (*ProviderGetWhatsAppGateResponse) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{25}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{29}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderGetWhatsAppGateResponse) GetItem() *ProviderWhatsAppGate {
@@ -1527,7 +2089,11 @@ type ProviderUpdateWhatsAppGateRequest struct {
 func (x *ProviderUpdateWhatsAppGateRequest) Reset() {
 	*x = ProviderUpdateWhatsAppGateRequest{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[26]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[30]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1540,7 +2106,11 @@ func (x *ProviderUpdateWhatsAppGateRequest) String() string {
 func (*ProviderUpdateWhatsAppGateRequest) ProtoMessage() {}
 
 func (x *ProviderUpdateWhatsAppGateRequest) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[26]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[30]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1553,7 +2123,11 @@ func (x *ProviderUpdateWhatsAppGateRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ProviderUpdateWhatsAppGateRequest.ProtoReflect.Descriptor instead.
 func (*ProviderUpdateWhatsAppGateRequest) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{26}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{30}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderUpdateWhatsAppGateRequest) GetId() string {
@@ -1589,7 +2163,11 @@ type ProviderUpdateWhatsAppGateResponse struct {
 func (x *ProviderUpdateWhatsAppGateResponse) Reset() {
 	*x = ProviderUpdateWhatsAppGateResponse{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[27]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[31]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1602,7 +2180,11 @@ func (x *ProviderUpdateWhatsAppGateResponse) String() string {
 func (*ProviderUpdateWhatsAppGateResponse) ProtoMessage() {}
 
 func (x *ProviderUpdateWhatsAppGateResponse) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[27]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[31]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1615,7 +2197,11 @@ func (x *ProviderUpdateWhatsAppGateResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ProviderUpdateWhatsAppGateResponse.ProtoReflect.Descriptor instead.
 func (*ProviderUpdateWhatsAppGateResponse) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{27}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{31}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderUpdateWhatsAppGateResponse) GetItem() *ProviderWhatsAppGate {
@@ -1637,7 +2223,11 @@ type ProviderDeleteWhatsAppGateRequest struct {
 func (x *ProviderDeleteWhatsAppGateRequest) Reset() {
 	*x = ProviderDeleteWhatsAppGateRequest{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[28]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[32]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1650,7 +2240,11 @@ func (x *ProviderDeleteWhatsAppGateRequest) String() string {
 func (*ProviderDeleteWhatsAppGateRequest) ProtoMessage() {}
 
 func (x *ProviderDeleteWhatsAppGateRequest) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[28]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[32]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1663,7 +2257,11 @@ func (x *ProviderDeleteWhatsAppGateRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ProviderDeleteWhatsAppGateRequest.ProtoReflect.Descriptor instead.
 func (*ProviderDeleteWhatsAppGateRequest) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{28}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{32}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderDeleteWhatsAppGateRequest) GetId() string {
@@ -1684,7 +2282,11 @@ type ProviderDeleteWhatsAppGateResponse struct {
 func (x *ProviderDeleteWhatsAppGateResponse) Reset() {
 	*x = ProviderDeleteWhatsAppGateResponse{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[29]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[33]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1697,7 +2299,11 @@ func (x *ProviderDeleteWhatsAppGateResponse) String() string {
 func (*ProviderDeleteWhatsAppGateResponse) ProtoMessage() {}
 
 func (x *ProviderDeleteWhatsAppGateResponse) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[29]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[33]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1710,7 +2316,11 @@ func (x *ProviderDeleteWhatsAppGateResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ProviderDeleteWhatsAppGateResponse.ProtoReflect.Descriptor instead.
 func (*ProviderDeleteWhatsAppGateResponse) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{29}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{33}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderDeleteWhatsAppGateResponse) GetItem() *ProviderWhatsAppGate {
@@ -1736,7 +2346,11 @@ type ProviderListGatesRequest struct {
 func (x *ProviderListGatesRequest) Reset() {
 	*x = ProviderListGatesRequest{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[30]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[34]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1749,7 +2363,11 @@ func (x *ProviderListGatesRequest) String() string {
 func (*ProviderListGatesRequest) ProtoMessage() {}
 
 func (x *ProviderListGatesRequest) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[30]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[34]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1762,7 +2380,11 @@ func (x *ProviderListGatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderListGatesRequest.ProtoReflect.Descriptor instead.
 func (*ProviderListGatesRequest) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{30}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{34}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderListGatesRequest) GetPage() int32 {
@@ -1818,7 +2440,11 @@ type ProviderListGatesResponse struct {
 func (x *ProviderListGatesResponse) Reset() {
 	*x = ProviderListGatesResponse{}
 	if protoimpl.UnsafeEnabled {
+<<<<<<< HEAD
 		mi := &file_service_provider_v1_messages_proto_msgTypes[31]
+=======
+		mi := &file_service_provider_v1_messages_proto_msgTypes[35]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1831,7 +2457,11 @@ func (x *ProviderListGatesResponse) String() string {
 func (*ProviderListGatesResponse) ProtoMessage() {}
 
 func (x *ProviderListGatesResponse) ProtoReflect() protoreflect.Message {
+<<<<<<< HEAD
 	mi := &file_service_provider_v1_messages_proto_msgTypes[31]
+=======
+	mi := &file_service_provider_v1_messages_proto_msgTypes[35]
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1844,7 +2474,11 @@ func (x *ProviderListGatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderListGatesResponse.ProtoReflect.Descriptor instead.
 func (*ProviderListGatesResponse) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{31}
+=======
+	return file_service_provider_v1_messages_proto_rawDescGZIP(), []int{35}
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func (x *ProviderListGatesResponse) GetItems() []*ProviderSummary {
@@ -1938,6 +2572,7 @@ var file_service_provider_v1_messages_proto_rawDesc = []byte{
 	0x0a, 0x1d, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65,
 	0x4d, 0x65, 0x74, 0x61, 0x41, 0x70, 0x70, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
 	0x3b, 0x0a, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x27, 0x2e,
+<<<<<<< HEAD
 	0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69,
 	0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x4d,
 	0x65, 0x74, 0x61, 0x41, 0x70, 0x70, 0x52, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x22, 0x62, 0x0a, 0x1d,
@@ -2124,6 +2759,264 @@ var file_service_provider_v1_messages_proto_rawDesc = []byte{
 	0x57, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x3a, 0x3a, 0x49, 0x6d, 0x3a, 0x3a, 0x50, 0x72, 0x6f,
 	0x76, 0x69, 0x64, 0x65, 0x72, 0x3a, 0x3a, 0x56, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
 	0x33,
+=======
+	0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69,
+	0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x4d,
+	0x65, 0x74, 0x61, 0x41, 0x70, 0x70, 0x52, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x22, 0x62, 0x0a, 0x1d,
+	0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x4d, 0x65, 0x74, 0x61, 0x4f, 0x41, 0x75, 0x74,
+	0x68, 0x53, 0x74, 0x61, 0x72, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1e, 0x0a,
+	0x0b, 0x6d, 0x65, 0x74, 0x61, 0x5f, 0x61, 0x70, 0x70, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x09, 0x6d, 0x65, 0x74, 0x61, 0x41, 0x70, 0x70, 0x49, 0x64, 0x12, 0x21, 0x0a,
+	0x0c, 0x65, 0x78, 0x74, 0x72, 0x61, 0x5f, 0x73, 0x63, 0x6f, 0x70, 0x65, 0x73, 0x18, 0x02, 0x20,
+	0x03, 0x28, 0x09, 0x52, 0x0b, 0x65, 0x78, 0x74, 0x72, 0x61, 0x53, 0x63, 0x6f, 0x70, 0x65, 0x73,
+	0x22, 0x51, 0x0a, 0x1e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x4d, 0x65, 0x74, 0x61,
+	0x4f, 0x41, 0x75, 0x74, 0x68, 0x53, 0x74, 0x61, 0x72, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x19, 0x0a, 0x08, 0x61, 0x75, 0x74, 0x68, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x61, 0x75, 0x74, 0x68, 0x55, 0x72, 0x6c, 0x12, 0x14, 0x0a,
+	0x05, 0x73, 0x74, 0x61, 0x74, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x73, 0x74,
+	0x61, 0x74, 0x65, 0x22, 0x6c, 0x0a, 0x20, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x4d,
+	0x65, 0x74, 0x61, 0x4f, 0x41, 0x75, 0x74, 0x68, 0x43, 0x61, 0x6c, 0x6c, 0x62, 0x61, 0x63, 0x6b,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1e, 0x0a, 0x0b, 0x6d, 0x65, 0x74, 0x61, 0x5f,
+	0x61, 0x70, 0x70, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6d, 0x65,
+	0x74, 0x61, 0x41, 0x70, 0x70, 0x49, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x73,
+	0x74, 0x61, 0x74, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x73, 0x74, 0x61, 0x74,
+	0x65, 0x22, 0x95, 0x01, 0x0a, 0x21, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x4d, 0x65,
+	0x74, 0x61, 0x4f, 0x41, 0x75, 0x74, 0x68, 0x43, 0x61, 0x6c, 0x6c, 0x62, 0x61, 0x63, 0x6b, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2a, 0x0a, 0x11, 0x75, 0x73, 0x65, 0x72, 0x5f,
+	0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x0f, 0x75, 0x73, 0x65, 0x72, 0x41, 0x63, 0x63, 0x65, 0x73, 0x73, 0x54, 0x6f,
+	0x6b, 0x65, 0x6e, 0x12, 0x44, 0x0a, 0x05, 0x70, 0x61, 0x67, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03,
+	0x28, 0x0b, 0x32, 0x2e, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e,
+	0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76,
+	0x69, 0x64, 0x65, 0x72, 0x4d, 0x65, 0x74, 0x61, 0x4c, 0x69, 0x6e, 0x6b, 0x65, 0x64, 0x50, 0x61,
+	0x67, 0x65, 0x52, 0x05, 0x70, 0x61, 0x67, 0x65, 0x73, 0x22, 0x8d, 0x01, 0x0a, 0x16, 0x50, 0x72,
+	0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x4d, 0x65, 0x74, 0x61, 0x4c, 0x69, 0x6e, 0x6b, 0x65, 0x64,
+	0x50, 0x61, 0x67, 0x65, 0x12, 0x17, 0x0a, 0x07, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x69, 0x64, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x70, 0x61, 0x67, 0x65, 0x49, 0x64, 0x12, 0x1b, 0x0a,
+	0x09, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x08, 0x70, 0x61, 0x67, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x21, 0x0a, 0x0c, 0x61, 0x63,
+	0x63, 0x65, 0x73, 0x73, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x0b, 0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x1a, 0x0a,
+	0x08, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x08, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x22, 0x8b, 0x02, 0x0a, 0x11, 0x43, 0x72,
+	0x65, 0x61, 0x74, 0x65, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e,
+	0x61, 0x6d, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x12, 0x2e, 0x0a,
+	0x03, 0x62, 0x6f, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x77, 0x65, 0x62,
+	0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72,
+	0x2e, 0x76, 0x31, 0x2e, 0x50, 0x65, 0x65, 0x72, 0x52, 0x03, 0x62, 0x6f, 0x74, 0x12, 0x43, 0x0a,
+	0x04, 0x77, 0x61, 0x62, 0x61, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2d, 0x2e, 0x77, 0x65,
+	0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65,
+	0x72, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x41, 0x42, 0x41, 0x47,
+	0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x04, 0x77, 0x61,
+	0x62, 0x61, 0x12, 0x4b, 0x0a, 0x02, 0x66, 0x62, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x39,
+	0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76,
+	0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72,
+	0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61,
+	0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x02, 0x66, 0x62, 0x42,
+	0x06, 0x0a, 0x04, 0x67, 0x61, 0x74, 0x65, 0x22, 0xc6, 0x01, 0x0a, 0x15, 0x43, 0x72, 0x65, 0x61,
+	0x74, 0x65, 0x57, 0x41, 0x42, 0x41, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x1e, 0x0a, 0x0b, 0x6d, 0x65, 0x74, 0x61, 0x5f, 0x61, 0x70, 0x70, 0x5f, 0x69, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6d, 0x65, 0x74, 0x61, 0x41, 0x70, 0x70, 0x49,
+	0x64, 0x12, 0x21, 0x0a, 0x0c, 0x70, 0x68, 0x6f, 0x6e, 0x65, 0x5f, 0x6e, 0x75, 0x6d, 0x62, 0x65,
+	0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x70, 0x68, 0x6f, 0x6e, 0x65, 0x4e, 0x75,
+	0x6d, 0x62, 0x65, 0x72, 0x12, 0x26, 0x0a, 0x0f, 0x70, 0x68, 0x6f, 0x6e, 0x65, 0x5f, 0x6e, 0x75,
+	0x6d, 0x62, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x70,
+	0x68, 0x6f, 0x6e, 0x65, 0x4e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x49, 0x64, 0x12, 0x21, 0x0a, 0x0c,
+	0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x0b, 0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12,
+	0x1f, 0x0a, 0x0b, 0x62, 0x75, 0x73, 0x69, 0x6e, 0x65, 0x73, 0x73, 0x5f, 0x69, 0x64, 0x18, 0x05,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x62, 0x75, 0x73, 0x69, 0x6e, 0x65, 0x73, 0x73, 0x49, 0x64,
+	0x22, 0xdb, 0x02, 0x0a, 0x0c, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69,
+	0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x65, 0x6e, 0x61,
+	0x62, 0x6c, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x65, 0x6e, 0x61, 0x62,
+	0x6c, 0x65, 0x64, 0x12, 0x1d, 0x0a, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61,
+	0x74, 0x18, 0x05, 0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64,
+	0x41, 0x74, 0x12, 0x1d, 0x0a, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x62, 0x79,
+	0x18, 0x06, 0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x42,
+	0x79, 0x12, 0x1d, 0x0a, 0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18,
+	0x07, 0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74,
+	0x12, 0x1d, 0x0a, 0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x62, 0x79, 0x18, 0x08,
+	0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x42, 0x79, 0x12,
+	0x2e, 0x0a, 0x03, 0x62, 0x6f, 0x74, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x77,
+	0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64,
+	0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x65, 0x65, 0x72, 0x52, 0x03, 0x62, 0x6f, 0x74, 0x12,
+	0x45, 0x0a, 0x04, 0x77, 0x61, 0x62, 0x61, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2f, 0x2e,
+	0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69,
+	0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x57, 0x68, 0x61, 0x74, 0x73, 0x41, 0x70, 0x70, 0x42,
+	0x75, 0x73, 0x69, 0x6e, 0x65, 0x73, 0x73, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x48, 0x00,
+	0x52, 0x04, 0x77, 0x61, 0x62, 0x61, 0x42, 0x06, 0x0a, 0x04, 0x67, 0x61, 0x74, 0x65, 0x22, 0xb0,
+	0x02, 0x0a, 0x17, 0x57, 0x68, 0x61, 0x74, 0x73, 0x41, 0x70, 0x70, 0x42, 0x75, 0x73, 0x69, 0x6e,
+	0x65, 0x73, 0x73, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x1e, 0x0a, 0x0b, 0x6d, 0x65,
+	0x74, 0x61, 0x5f, 0x61, 0x70, 0x70, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x09, 0x6d, 0x65, 0x74, 0x61, 0x41, 0x70, 0x70, 0x49, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x70, 0x68,
+	0x6f, 0x6e, 0x65, 0x5f, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x0b, 0x70, 0x68, 0x6f, 0x6e, 0x65, 0x4e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x12, 0x26, 0x0a,
+	0x0f, 0x70, 0x68, 0x6f, 0x6e, 0x65, 0x5f, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x5f, 0x69, 0x64,
+	0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x70, 0x68, 0x6f, 0x6e, 0x65, 0x4e, 0x75, 0x6d,
+	0x62, 0x65, 0x72, 0x49, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x5f,
+	0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x61, 0x63, 0x63,
+	0x65, 0x73, 0x73, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x3a, 0x0a, 0x17, 0x61, 0x63, 0x63, 0x65,
+	0x73, 0x73, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x5f, 0x65, 0x78, 0x70, 0x69, 0x72, 0x65, 0x73,
+	0x5f, 0x61, 0x74, 0x18, 0x06, 0x20, 0x01, 0x28, 0x03, 0x48, 0x00, 0x52, 0x14, 0x61, 0x63, 0x63,
+	0x65, 0x73, 0x73, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x45, 0x78, 0x70, 0x69, 0x72, 0x65, 0x73, 0x41,
+	0x74, 0x88, 0x01, 0x01, 0x12, 0x1f, 0x0a, 0x0b, 0x62, 0x75, 0x73, 0x69, 0x6e, 0x65, 0x73, 0x73,
+	0x5f, 0x69, 0x64, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x62, 0x75, 0x73, 0x69, 0x6e,
+	0x65, 0x73, 0x73, 0x49, 0x64, 0x42, 0x1a, 0x0a, 0x18, 0x5f, 0x61, 0x63, 0x63, 0x65, 0x73, 0x73,
+	0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x5f, 0x65, 0x78, 0x70, 0x69, 0x72, 0x65, 0x73, 0x5f, 0x61,
+	0x74, 0x22, 0xdb, 0x01, 0x0a, 0x21, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x43, 0x72,
+	0x65, 0x61, 0x74, 0x65, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61, 0x74, 0x65,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1e, 0x0a, 0x0b, 0x6d,
+	0x65, 0x74, 0x61, 0x5f, 0x61, 0x70, 0x70, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x09, 0x6d, 0x65, 0x74, 0x61, 0x41, 0x70, 0x70, 0x49, 0x64, 0x12, 0x30, 0x0a, 0x04, 0x70,
+	0x65, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x77, 0x65, 0x62, 0x69,
+	0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e,
+	0x76, 0x31, 0x2e, 0x50, 0x65, 0x65, 0x72, 0x52, 0x04, 0x70, 0x65, 0x65, 0x72, 0x12, 0x17, 0x0a,
+	0x07, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x69, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06,
+	0x70, 0x61, 0x67, 0x65, 0x49, 0x64, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x74,
+	0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x61, 0x67, 0x65,
+	0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x64,
+	0x18, 0x06, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x22,
+	0x66, 0x0a, 0x22, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x43, 0x72, 0x65, 0x61, 0x74,
+	0x65, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x40, 0x0a, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d,
+	0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f,
+	0x76, 0x69, 0x64, 0x65, 0x72, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61, 0x74,
+	0x65, 0x52, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x22, 0x30, 0x0a, 0x1e, 0x50, 0x72, 0x6f, 0x76, 0x69,
+	0x64, 0x65, 0x72, 0x47, 0x65, 0x74, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61,
+	0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x22, 0x63, 0x0a, 0x1f, 0x50, 0x72, 0x6f,
+	0x76, 0x69, 0x64, 0x65, 0x72, 0x47, 0x65, 0x74, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b,
+	0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x40, 0x0a, 0x04,
+	0x69, 0x74, 0x65, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x77, 0x65, 0x62,
+	0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72,
+	0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x46, 0x61, 0x63, 0x65,
+	0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61, 0x74, 0x65, 0x52, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x22, 0xb2,
+	0x01, 0x0a, 0x21, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x55, 0x70, 0x64, 0x61, 0x74,
+	0x65, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x30, 0x0a, 0x04, 0x70, 0x65, 0x65, 0x72,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c,
+	0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e,
+	0x50, 0x65, 0x65, 0x72, 0x52, 0x04, 0x70, 0x65, 0x65, 0x72, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x61,
+	0x67, 0x65, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09,
+	0x70, 0x61, 0x67, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x65, 0x6e, 0x61,
+	0x62, 0x6c, 0x65, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x65, 0x6e, 0x61, 0x62,
+	0x6c, 0x65, 0x64, 0x22, 0x66, 0x0a, 0x22, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x55,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61, 0x74,
+	0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x40, 0x0a, 0x04, 0x69, 0x74, 0x65,
+	0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65,
+	0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31,
+	0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f,
+	0x6b, 0x47, 0x61, 0x74, 0x65, 0x52, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x22, 0x33, 0x0a, 0x21, 0x50,
+	0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x46, 0x61, 0x63,
+	0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64,
+	0x22, 0x66, 0x0a, 0x22, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x65,
+	0x74, 0x65, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x40, 0x0a, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69,
+	0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72,
+	0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x46, 0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x47, 0x61,
+	0x74, 0x65, 0x52, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x22, 0xbb, 0x01, 0x0a, 0x21, 0x50, 0x72, 0x6f,
+	0x76, 0x69, 0x64, 0x65, 0x72, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x68, 0x61, 0x74, 0x73,
+	0x41, 0x70, 0x70, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12,
+	0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61,
+	0x6d, 0x65, 0x12, 0x1e, 0x0a, 0x0b, 0x6d, 0x65, 0x74, 0x61, 0x5f, 0x61, 0x70, 0x70, 0x5f, 0x69,
+	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6d, 0x65, 0x74, 0x61, 0x41, 0x70, 0x70,
+	0x49, 0x64, 0x12, 0x17, 0x0a, 0x07, 0x77, 0x61, 0x62, 0x61, 0x5f, 0x69, 0x64, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x77, 0x61, 0x62, 0x61, 0x49, 0x64, 0x12, 0x26, 0x0a, 0x0f, 0x70,
+	0x68, 0x6f, 0x6e, 0x65, 0x5f, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x18, 0x04,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x70, 0x68, 0x6f, 0x6e, 0x65, 0x4e, 0x75, 0x6d, 0x62, 0x65,
+	0x72, 0x49, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x5f, 0x74, 0x6f,
+	0x6b, 0x65, 0x6e, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x61, 0x63, 0x63, 0x65, 0x73,
+	0x73, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x22, 0x66, 0x0a, 0x22, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64,
+	0x65, 0x72, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x68, 0x61, 0x74, 0x73, 0x41, 0x70, 0x70,
+	0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x40, 0x0a, 0x04,
+	0x69, 0x74, 0x65, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x77, 0x65, 0x62,
+	0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72,
+	0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x57, 0x68, 0x61, 0x74,
+	0x73, 0x41, 0x70, 0x70, 0x47, 0x61, 0x74, 0x65, 0x52, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x22, 0x30,
+	0x0a, 0x1e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x47, 0x65, 0x74, 0x57, 0x68, 0x61,
+	0x74, 0x73, 0x41, 0x70, 0x70, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64,
+	0x22, 0x63, 0x0a, 0x1f, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x47, 0x65, 0x74, 0x57,
+	0x68, 0x61, 0x74, 0x73, 0x41, 0x70, 0x70, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x40, 0x0a, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x2c, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70,
+	0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69,
+	0x64, 0x65, 0x72, 0x57, 0x68, 0x61, 0x74, 0x73, 0x41, 0x70, 0x70, 0x47, 0x61, 0x74, 0x65, 0x52,
+	0x04, 0x69, 0x74, 0x65, 0x6d, 0x22, 0x6a, 0x0a, 0x21, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65,
+	0x72, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x57, 0x68, 0x61, 0x74, 0x73, 0x41, 0x70, 0x70, 0x47,
+	0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61,
+	0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x21,
+	0x0a, 0x0c, 0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x54, 0x6f, 0x6b, 0x65,
+	0x6e, 0x22, 0x66, 0x0a, 0x22, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x55, 0x70, 0x64,
+	0x61, 0x74, 0x65, 0x57, 0x68, 0x61, 0x74, 0x73, 0x41, 0x70, 0x70, 0x47, 0x61, 0x74, 0x65, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x40, 0x0a, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e,
+	0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50,
+	0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x57, 0x68, 0x61, 0x74, 0x73, 0x41, 0x70, 0x70, 0x47,
+	0x61, 0x74, 0x65, 0x52, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x22, 0x33, 0x0a, 0x21, 0x50, 0x72, 0x6f,
+	0x76, 0x69, 0x64, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x57, 0x68, 0x61, 0x74, 0x73,
+	0x41, 0x70, 0x70, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e,
+	0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x22, 0x66,
+	0x0a, 0x22, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65,
+	0x57, 0x68, 0x61, 0x74, 0x73, 0x41, 0x70, 0x70, 0x47, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x40, 0x0a, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e,
+	0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76,
+	0x69, 0x64, 0x65, 0x72, 0x57, 0x68, 0x61, 0x74, 0x73, 0x41, 0x70, 0x70, 0x47, 0x61, 0x74, 0x65,
+	0x52, 0x04, 0x69, 0x74, 0x65, 0x6d, 0x22, 0xcc, 0x01, 0x0a, 0x18, 0x50, 0x72, 0x6f, 0x76, 0x69,
+	0x64, 0x65, 0x72, 0x4c, 0x69, 0x73, 0x74, 0x47, 0x61, 0x74, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x05, 0x52, 0x04, 0x70, 0x61, 0x67, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x12, 0x3a, 0x0a, 0x05, 0x74,
+	0x79, 0x70, 0x65, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0e, 0x32, 0x24, 0x2e, 0x77, 0x65, 0x62,
+	0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72,
+	0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x54, 0x79, 0x70, 0x65,
+	0x52, 0x05, 0x74, 0x79, 0x70, 0x65, 0x73, 0x12, 0x3e, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75,
+	0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x26, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65,
+	0x6c, 0x2e, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31,
+	0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52,
+	0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x0c, 0x0a, 0x01, 0x71, 0x18, 0x05, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x01, 0x71, 0x22, 0x96, 0x01, 0x0a, 0x19, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64,
+	0x65, 0x72, 0x4c, 0x69, 0x73, 0x74, 0x47, 0x61, 0x74, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x3d, 0x0a, 0x05, 0x69, 0x74, 0x65, 0x6d, 0x73, 0x18, 0x01, 0x20, 0x03,
+	0x28, 0x0b, 0x32, 0x27, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69, 0x6d, 0x2e,
+	0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76,
+	0x69, 0x64, 0x65, 0x72, 0x53, 0x75, 0x6d, 0x6d, 0x61, 0x72, 0x79, 0x52, 0x05, 0x69, 0x74, 0x65,
+	0x6d, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05,
+	0x52, 0x04, 0x70, 0x61, 0x67, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x65,
+	0x78, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x04, 0x6e, 0x65, 0x78, 0x74, 0x42, 0xe0,
+	0x01, 0x0a, 0x1a, 0x63, 0x6f, 0x6d, 0x2e, 0x77, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x69,
+	0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x42, 0x0d, 0x4d,
+	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x38,
+	0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x77, 0x65, 0x62, 0x69, 0x74,
+	0x65, 0x6c, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x2f, 0x67, 0x65, 0x6e, 0x2f, 0x67, 0x6f,
+	0x2f, 0x69, 0x6d, 0x2f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x2f, 0x76, 0x31, 0x3b,
+	0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0xa2, 0x02, 0x03, 0x57, 0x49, 0x50, 0xaa, 0x02,
+	0x16, 0x57, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x2e, 0x49, 0x6d, 0x2e, 0x50, 0x72, 0x6f, 0x76,
+	0x69, 0x64, 0x65, 0x72, 0x2e, 0x56, 0x31, 0xca, 0x02, 0x16, 0x57, 0x65, 0x62, 0x69, 0x74, 0x65,
+	0x6c, 0x5c, 0x49, 0x6d, 0x5c, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x5c, 0x56, 0x31,
+	0xe2, 0x02, 0x22, 0x57, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x5c, 0x49, 0x6d, 0x5c, 0x50, 0x72,
+	0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x5c, 0x56, 0x31, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74,
+	0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x19, 0x57, 0x65, 0x62, 0x69, 0x74, 0x65, 0x6c, 0x3a,
+	0x3a, 0x49, 0x6d, 0x3a, 0x3a, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x3a, 0x3a, 0x56,
+	0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 var (
@@ -2138,7 +3031,11 @@ func file_service_provider_v1_messages_proto_rawDescGZIP() []byte {
 	return file_service_provider_v1_messages_proto_rawDescData
 }
 
+<<<<<<< HEAD
 var file_service_provider_v1_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+=======
+var file_service_provider_v1_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 var file_service_provider_v1_messages_proto_goTypes = []interface{}{
 	(*Peer)(nil),                               // 0: webitel.im.provider.v1.Peer
 	(*ProviderCreateMetaAppRequest)(nil),       // 1: webitel.im.provider.v1.ProviderCreateMetaAppRequest
@@ -2154,6 +3051,7 @@ var file_service_provider_v1_messages_proto_goTypes = []interface{}{
 	(*ProviderMetaOAuthCallbackRequest)(nil),   // 11: webitel.im.provider.v1.ProviderMetaOAuthCallbackRequest
 	(*ProviderMetaOAuthCallbackResponse)(nil),  // 12: webitel.im.provider.v1.ProviderMetaOAuthCallbackResponse
 	(*ProviderMetaLinkedPage)(nil),             // 13: webitel.im.provider.v1.ProviderMetaLinkedPage
+<<<<<<< HEAD
 	(*ProviderCreateFacebookGateRequest)(nil),  // 14: webitel.im.provider.v1.ProviderCreateFacebookGateRequest
 	(*ProviderCreateFacebookGateResponse)(nil), // 15: webitel.im.provider.v1.ProviderCreateFacebookGateResponse
 	(*ProviderGetFacebookGateRequest)(nil),     // 16: webitel.im.provider.v1.ProviderGetFacebookGateRequest
@@ -2203,6 +3101,66 @@ var file_service_provider_v1_messages_proto_depIdxs = []int32{
 	18, // [18:18] is the sub-list for extension type_name
 	18, // [18:18] is the sub-list for extension extendee
 	0,  // [0:18] is the sub-list for field type_name
+=======
+	(*CreateGateRequest)(nil),                  // 14: webitel.im.provider.v1.CreateGateRequest
+	(*CreateWABAGateRequest)(nil),              // 15: webitel.im.provider.v1.CreateWABAGateRequest
+	(*GateResponse)(nil),                       // 16: webitel.im.provider.v1.GateResponse
+	(*WhatsAppBusinessAccount)(nil),            // 17: webitel.im.provider.v1.WhatsAppBusinessAccount
+	(*ProviderCreateFacebookGateRequest)(nil),  // 18: webitel.im.provider.v1.ProviderCreateFacebookGateRequest
+	(*ProviderCreateFacebookGateResponse)(nil), // 19: webitel.im.provider.v1.ProviderCreateFacebookGateResponse
+	(*ProviderGetFacebookGateRequest)(nil),     // 20: webitel.im.provider.v1.ProviderGetFacebookGateRequest
+	(*ProviderGetFacebookGateResponse)(nil),    // 21: webitel.im.provider.v1.ProviderGetFacebookGateResponse
+	(*ProviderUpdateFacebookGateRequest)(nil),  // 22: webitel.im.provider.v1.ProviderUpdateFacebookGateRequest
+	(*ProviderUpdateFacebookGateResponse)(nil), // 23: webitel.im.provider.v1.ProviderUpdateFacebookGateResponse
+	(*ProviderDeleteFacebookGateRequest)(nil),  // 24: webitel.im.provider.v1.ProviderDeleteFacebookGateRequest
+	(*ProviderDeleteFacebookGateResponse)(nil), // 25: webitel.im.provider.v1.ProviderDeleteFacebookGateResponse
+	(*ProviderCreateWhatsAppGateRequest)(nil),  // 26: webitel.im.provider.v1.ProviderCreateWhatsAppGateRequest
+	(*ProviderCreateWhatsAppGateResponse)(nil), // 27: webitel.im.provider.v1.ProviderCreateWhatsAppGateResponse
+	(*ProviderGetWhatsAppGateRequest)(nil),     // 28: webitel.im.provider.v1.ProviderGetWhatsAppGateRequest
+	(*ProviderGetWhatsAppGateResponse)(nil),    // 29: webitel.im.provider.v1.ProviderGetWhatsAppGateResponse
+	(*ProviderUpdateWhatsAppGateRequest)(nil),  // 30: webitel.im.provider.v1.ProviderUpdateWhatsAppGateRequest
+	(*ProviderUpdateWhatsAppGateResponse)(nil), // 31: webitel.im.provider.v1.ProviderUpdateWhatsAppGateResponse
+	(*ProviderDeleteWhatsAppGateRequest)(nil),  // 32: webitel.im.provider.v1.ProviderDeleteWhatsAppGateRequest
+	(*ProviderDeleteWhatsAppGateResponse)(nil), // 33: webitel.im.provider.v1.ProviderDeleteWhatsAppGateResponse
+	(*ProviderListGatesRequest)(nil),           // 34: webitel.im.provider.v1.ProviderListGatesRequest
+	(*ProviderListGatesResponse)(nil),          // 35: webitel.im.provider.v1.ProviderListGatesResponse
+	(*ProviderMetaApp)(nil),                    // 36: webitel.im.provider.v1.ProviderMetaApp
+	(*ProviderFacebookGate)(nil),               // 37: webitel.im.provider.v1.ProviderFacebookGate
+	(*ProviderWhatsAppGate)(nil),               // 38: webitel.im.provider.v1.ProviderWhatsAppGate
+	(ProviderType)(0),                          // 39: webitel.im.provider.v1.ProviderType
+	(ProviderStatus)(0),                        // 40: webitel.im.provider.v1.ProviderStatus
+	(*ProviderSummary)(nil),                    // 41: webitel.im.provider.v1.ProviderSummary
+}
+var file_service_provider_v1_messages_proto_depIdxs = []int32{
+	36, // 0: webitel.im.provider.v1.ProviderCreateMetaAppResponse.item:type_name -> webitel.im.provider.v1.ProviderMetaApp
+	36, // 1: webitel.im.provider.v1.ProviderGetMetaAppResponse.item:type_name -> webitel.im.provider.v1.ProviderMetaApp
+	36, // 2: webitel.im.provider.v1.ProviderUpdateMetaAppResponse.item:type_name -> webitel.im.provider.v1.ProviderMetaApp
+	36, // 3: webitel.im.provider.v1.ProviderDeleteMetaAppResponse.item:type_name -> webitel.im.provider.v1.ProviderMetaApp
+	13, // 4: webitel.im.provider.v1.ProviderMetaOAuthCallbackResponse.pages:type_name -> webitel.im.provider.v1.ProviderMetaLinkedPage
+	0,  // 5: webitel.im.provider.v1.CreateGateRequest.bot:type_name -> webitel.im.provider.v1.Peer
+	15, // 6: webitel.im.provider.v1.CreateGateRequest.waba:type_name -> webitel.im.provider.v1.CreateWABAGateRequest
+	18, // 7: webitel.im.provider.v1.CreateGateRequest.fb:type_name -> webitel.im.provider.v1.ProviderCreateFacebookGateRequest
+	0,  // 8: webitel.im.provider.v1.GateResponse.bot:type_name -> webitel.im.provider.v1.Peer
+	17, // 9: webitel.im.provider.v1.GateResponse.waba:type_name -> webitel.im.provider.v1.WhatsAppBusinessAccount
+	0,  // 10: webitel.im.provider.v1.ProviderCreateFacebookGateRequest.peer:type_name -> webitel.im.provider.v1.Peer
+	37, // 11: webitel.im.provider.v1.ProviderCreateFacebookGateResponse.item:type_name -> webitel.im.provider.v1.ProviderFacebookGate
+	37, // 12: webitel.im.provider.v1.ProviderGetFacebookGateResponse.item:type_name -> webitel.im.provider.v1.ProviderFacebookGate
+	0,  // 13: webitel.im.provider.v1.ProviderUpdateFacebookGateRequest.peer:type_name -> webitel.im.provider.v1.Peer
+	37, // 14: webitel.im.provider.v1.ProviderUpdateFacebookGateResponse.item:type_name -> webitel.im.provider.v1.ProviderFacebookGate
+	37, // 15: webitel.im.provider.v1.ProviderDeleteFacebookGateResponse.item:type_name -> webitel.im.provider.v1.ProviderFacebookGate
+	38, // 16: webitel.im.provider.v1.ProviderCreateWhatsAppGateResponse.item:type_name -> webitel.im.provider.v1.ProviderWhatsAppGate
+	38, // 17: webitel.im.provider.v1.ProviderGetWhatsAppGateResponse.item:type_name -> webitel.im.provider.v1.ProviderWhatsAppGate
+	38, // 18: webitel.im.provider.v1.ProviderUpdateWhatsAppGateResponse.item:type_name -> webitel.im.provider.v1.ProviderWhatsAppGate
+	38, // 19: webitel.im.provider.v1.ProviderDeleteWhatsAppGateResponse.item:type_name -> webitel.im.provider.v1.ProviderWhatsAppGate
+	39, // 20: webitel.im.provider.v1.ProviderListGatesRequest.types:type_name -> webitel.im.provider.v1.ProviderType
+	40, // 21: webitel.im.provider.v1.ProviderListGatesRequest.status:type_name -> webitel.im.provider.v1.ProviderStatus
+	41, // 22: webitel.im.provider.v1.ProviderListGatesResponse.items:type_name -> webitel.im.provider.v1.ProviderSummary
+	23, // [23:23] is the sub-list for method output_type
+	23, // [23:23] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 }
 
 func init() { file_service_provider_v1_messages_proto_init() }
@@ -2382,7 +3340,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderCreateFacebookGateRequest); i {
+=======
+			switch v := v.(*CreateGateRequest); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2394,7 +3356,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderCreateFacebookGateResponse); i {
+=======
+			switch v := v.(*CreateWABAGateRequest); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2406,7 +3372,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderGetFacebookGateRequest); i {
+=======
+			switch v := v.(*GateResponse); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2418,7 +3388,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderGetFacebookGateResponse); i {
+=======
+			switch v := v.(*WhatsAppBusinessAccount); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2430,7 +3404,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderUpdateFacebookGateRequest); i {
+=======
+			switch v := v.(*ProviderCreateFacebookGateRequest); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2442,7 +3420,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderUpdateFacebookGateResponse); i {
+=======
+			switch v := v.(*ProviderCreateFacebookGateResponse); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2454,7 +3436,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderDeleteFacebookGateRequest); i {
+=======
+			switch v := v.(*ProviderGetFacebookGateRequest); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2466,7 +3452,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderDeleteFacebookGateResponse); i {
+=======
+			switch v := v.(*ProviderGetFacebookGateResponse); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2478,7 +3468,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderCreateWhatsAppGateRequest); i {
+=======
+			switch v := v.(*ProviderUpdateFacebookGateRequest); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2490,7 +3484,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderCreateWhatsAppGateResponse); i {
+=======
+			switch v := v.(*ProviderUpdateFacebookGateResponse); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2502,7 +3500,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderGetWhatsAppGateRequest); i {
+=======
+			switch v := v.(*ProviderDeleteFacebookGateRequest); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2514,7 +3516,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderGetWhatsAppGateResponse); i {
+=======
+			switch v := v.(*ProviderDeleteFacebookGateResponse); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2526,7 +3532,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderUpdateWhatsAppGateRequest); i {
+=======
+			switch v := v.(*ProviderCreateWhatsAppGateRequest); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2538,7 +3548,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderUpdateWhatsAppGateResponse); i {
+=======
+			switch v := v.(*ProviderCreateWhatsAppGateResponse); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2550,7 +3564,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderDeleteWhatsAppGateRequest); i {
+=======
+			switch v := v.(*ProviderGetWhatsAppGateRequest); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2562,7 +3580,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderDeleteWhatsAppGateResponse); i {
+=======
+			switch v := v.(*ProviderGetWhatsAppGateResponse); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2574,7 +3596,11 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
 			switch v := v.(*ProviderListGatesRequest); i {
+=======
+			switch v := v.(*ProviderUpdateWhatsAppGateRequest); i {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			case 0:
 				return &v.state
 			case 1:
@@ -2586,6 +3612,57 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 		file_service_provider_v1_messages_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
+<<<<<<< HEAD
+=======
+			switch v := v.(*ProviderUpdateWhatsAppGateResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_service_provider_v1_messages_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ProviderDeleteWhatsAppGateRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_service_provider_v1_messages_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ProviderDeleteWhatsAppGateResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_service_provider_v1_messages_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ProviderListGatesRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_service_provider_v1_messages_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			switch v := v.(*ProviderListGatesResponse); i {
 			case 0:
 				return &v.state
@@ -2598,13 +3675,25 @@ func file_service_provider_v1_messages_proto_init() {
 			}
 		}
 	}
+	file_service_provider_v1_messages_proto_msgTypes[14].OneofWrappers = []interface{}{
+		(*CreateGateRequest_Waba)(nil),
+		(*CreateGateRequest_Fb)(nil),
+	}
+	file_service_provider_v1_messages_proto_msgTypes[16].OneofWrappers = []interface{}{
+		(*GateResponse_Waba)(nil),
+	}
+	file_service_provider_v1_messages_proto_msgTypes[17].OneofWrappers = []interface{}{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_service_provider_v1_messages_proto_rawDesc,
 			NumEnums:      0,
+<<<<<<< HEAD
 			NumMessages:   32,
+=======
+			NumMessages:   36,
+>>>>>>> f08d407 (feature: add webhook template and base WA messages types)
 			NumExtensions: 0,
 			NumServices:   0,
 		},
