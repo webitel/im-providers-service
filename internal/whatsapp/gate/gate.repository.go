@@ -25,7 +25,13 @@ func (repository *gateRepository) Save(ctx context.Context, wabaGate *Gate) (*Ga
 
 	rows, err := repository.db.Query(ctx, stmt, args)
 	if err != nil {
-		if pgErr := err.(*pgconn.PgError); pgErr != nil {
+		return nil, errors.Internal("performing database save", errors.WithCause(err), errors.WithID("gate.repository.save"), errors.WithValue("stmt", postgresx.CompactSQL(stmt)))
+	}
+
+	record, err := pgx.CollectOneRow(rows, pgx.RowToAddrOfStructByNameLax[Gate])
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
 			switch pgErr.Code {
 			case postgresx.CodeCheckViolation:
 				return nil, errors.InvalidArgument("check violation for new gate record", errors.WithID("gate.repository.save"), errors.WithCause(err))
@@ -35,12 +41,6 @@ func (repository *gateRepository) Save(ctx context.Context, wabaGate *Gate) (*Ga
 				return nil, errors.InvalidArgument("meta app for given id not exists", errors.WithCause(err), errors.WithID("gate.repository.save"), errors.WithValue("meta_app_id", wabaGate.WhatsAppBusinessAccountGate.MetaAppID.String()))
 			}
 		}
-
-		return nil, errors.Internal("performing database save", errors.WithCause(err), errors.WithID("gate.repository.save"), errors.WithValue("stmt", stmt))
-	}
-
-	record, err := pgx.CollectOneRow(rows, pgx.RowToAddrOfStructByNameLax[Gate])
-	if err != nil {
 		return nil, errors.Internal("collecting saved record", errors.WithCause(err), errors.WithID("gate.repository.save"))
 	}
 
@@ -51,10 +51,10 @@ func (repository *gateRepository) prepareWhatsAppGateSaveQuery(wabaGate *Gate) (
 	stmt := `
 		with gate_insert as (
 			insert into "im_provider"."gates" (
-				"name", "type", "enabled"
+				"name", "type", "enabled", "dc"
 			)
 			values (
-				@Name, @Type, @Enabled
+				@Name, @Type, @Enabled, @DC
 			)
 			returning
 				"id", "name", "type", "enabled", "created_at", "updated_at"
@@ -73,6 +73,19 @@ func (repository *gateRepository) prepareWhatsAppGateSaveQuery(wabaGate *Gate) (
 				@AccessTokenExpiresAt,
 				@BusinessID
 			from gate_insert
+			returning "id", "meta_app_id", "phone_number", "phone_number_id", "access_token",
+			"access_token_expires_at", "business_id"
+		),
+		waba_gate_contact_ins as (
+			insert into "im_provider"."binded_contact"(
+				"id", "iss", "sub"
+			)
+			select
+				"id",
+				@Sub,
+				@Iss
+			from gate_insert
+			returning "id", "iss", "sub"
 		)
 		select
 			g.id as id,
@@ -81,9 +94,11 @@ func (repository *gateRepository) prepareWhatsAppGateSaveQuery(wabaGate *Gate) (
 			g.enabled as enabled,
 			g.created_at as created_at,
 			g.updated_at as updated_at,
-			to_jsonb(w.*) as whats_app_business_account_gate
+			to_jsonb(w.*) as whats_app_business_account_gate,
+			to_jsonb(c.*) as contact
 		from gate_insert g
 		inner join waba_gate_ins w using(id)
+		inner join waba_gate_contact_ins c using(id);
 	`
 
 	args := postgresx.NamedArgs{
@@ -96,6 +111,9 @@ func (repository *gateRepository) prepareWhatsAppGateSaveQuery(wabaGate *Gate) (
 		"AccessToken":          wabaGate.WhatsAppBusinessAccountGate.AccessTokenEncrypted,
 		"AccessTokenExpiresAt": wabaGate.WhatsAppBusinessAccountGate.AccessTokenExpiresAt,
 		"BusinessID":           wabaGate.WhatsAppBusinessAccountGate.BusinessID,
+		"DC":                   wabaGate.DC,
+		"Iss":                  wabaGate.Contact.Iss,
+		"Sub":                  wabaGate.Contact.Sub,
 	}
 
 	return stmt, args

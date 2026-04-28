@@ -34,7 +34,6 @@ func New[T any](
 		factory,
 		rpc.WithTarget(fmt.Sprintf("discovery:///%s", target)),
 		rpc.WithDialOptions(options...),
-		// [RETRY] Built-in transport-level retries (works regardless of breaker)
 		rpc.WithRetry(rpc.DefaultRetryConfig()),
 	)
 	if err != nil {

@@ -44,7 +44,7 @@ func ProvideNewDBConnection(cfg *config.Config, l *slog.Logger, lc fx.Lifecycle)
 
 func ProvideNewPostgresxConnection(cfg *config.Config, l *slog.Logger, lc fx.Lifecycle) (postgresx.DB, error) {
 	ctx := context.Background()
-	db, err := postgresx.New(ctx, cfg.Postgres.DSN)
+	db, err := postgresx.New(ctx, cfg.Postgres.DSN, cfg.Postgres.ToOpenOptions()...)
 	if err != nil {
 		return nil, err
 	}

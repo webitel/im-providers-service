@@ -1,4 +1,4 @@
-package message
+package messaging
 
 type Error struct {
 	Code      int    `json:"code"`
