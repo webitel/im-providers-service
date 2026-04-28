@@ -16,7 +16,6 @@ var Module = fx.Module("provider-grpc",
 		NewFacebookHandler,
 		NewMetaAppHandler,
 		NewMetaOauthHandler,
-		NewWhatsAppHandler,
 	),
 	fx.Invoke(RegisterProviderServices),
 )

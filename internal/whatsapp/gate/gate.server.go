@@ -2,10 +2,12 @@ package gate
 
 import (
 	"context"
+	"sync"
 
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
+	"google.golang.org/grpc/codes"
 )
 
 type GateEditor interface {
@@ -34,6 +36,7 @@ func (server *whatsAppBusinessAccountServer) CreateWhatsAppGate(ctx context.Cont
 			AccessToken:          g.Waba.GetAccessToken(),
 			AccessTokenExpiresAt: nil, //TODO
 			BusinessID:           g.Waba.GetBusinessId(),
+			ClientMu:             &sync.RWMutex{},
 		}
 	default:
 		return nil, errors.InvalidArgument("unexpected gate type in create WhatsApp gate request", errors.WithID("gate.server.create_whatsapp_gate"))
@@ -83,6 +86,12 @@ func (server *whatsAppBusinessAccountServer) CreateWhatsAppGate(ctx context.Cont
 	return &response, nil
 }
 
-func (server *whatsAppBusinessAccountServer) GetWhatsAppGate(ctx context.Context, in *impb.ProviderGetWhatsAppGateRequest) (*impb.ProviderGetWhatsAppGateResponse, error)
-func (server *whatsAppBusinessAccountServer) UpdateWhatsAppGate(ctx context.Context, in *impb.ProviderUpdateWhatsAppGateRequest) (*impb.ProviderUpdateWhatsAppGateResponse, error)
-func (server *whatsAppBusinessAccountServer) DeleteWhatsAppGate(ctx context.Context, in *impb.ProviderDeleteWhatsAppGateRequest) (*impb.ProviderDeleteWhatsAppGateResponse, error)
+func (server *whatsAppBusinessAccountServer) GetWhatsAppGate(ctx context.Context, in *impb.ProviderGetWhatsAppGateRequest) (*impb.ProviderGetWhatsAppGateResponse, error) {
+	return nil, errors.New("not implemented", errors.WithCode(codes.Unimplemented))
+}
+func (server *whatsAppBusinessAccountServer) UpdateWhatsAppGate(ctx context.Context, in *impb.ProviderUpdateWhatsAppGateRequest) (*impb.ProviderUpdateWhatsAppGateResponse, error) {
+	return nil, errors.New("not implemented", errors.WithCode(codes.Unimplemented))
+}
+func (server *whatsAppBusinessAccountServer) DeleteWhatsAppGate(ctx context.Context, in *impb.ProviderDeleteWhatsAppGateRequest) (*impb.ProviderDeleteWhatsAppGateResponse, error) {
+	return nil, errors.New("not implemented", errors.WithCode(codes.Unimplemented))
+}

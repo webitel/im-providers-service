@@ -3,9 +3,9 @@ package common
 import "github.com/google/uuid"
 
 type Contact struct {
-	ID  uuid.UUID `json:"id"`
-	Iss string    `json:"iss"`
-	Sub string    `json:"sub"`
+	ID  uuid.UUID `json:"id" db:"id"`
+	Iss string    `json:"iss" db:"iss"`
+	Sub string    `json:"sub" db:"sub"`
 }
 
 func (contact *Contact) GetSub() string   { return contact.Sub }

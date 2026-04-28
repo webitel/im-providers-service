@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/webitel/im-providers-service/internal/whatsapp/client"
+	"github.com/webitel/im-providers-service/internal/whatsapp/common"
+	"github.com/webitel/im-providers-service/internal/whatsapp/messaging"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
@@ -22,23 +24,27 @@ type gate struct {
 	logger                  *slog.Logger
 	wabaGateRepository      WABAGateRepository
 	internalContactResolver InternalContactResolver
-	encryptor               Encryptor
+	encryptor               common.Encryptor
 }
 
-func newGate(logger *slog.Logger, wabaGateRepository WABAGateRepository, internalContactResolver InternalContactResolver) *gate {
+func newGate(logger *slog.Logger, wabaGateRepository WABAGateRepository, internalContactResolver InternalContactResolver, encryptor common.Encryptor) *gate {
 	return &gate{
 		logger:                  logger,
 		wabaGateRepository:      wabaGateRepository,
 		internalContactResolver: internalContactResolver,
+		encryptor:               encryptor,
 	}
 }
 
 // TODO:
 // - add user claims via webitel authZ
 // - add broker event for created whatsapp gate
-// - add `debug` token request to graph api to check validity of provided token
+// - add gate `access_token_expires_at` set after debug token request
 func (gate *gate) Save(ctx context.Context, wabaGate *Gate) (*Gate, error) {
 	log := gate.logger.With("operation", "whatsapp.gate.save")
+
+	//TODO: add DC fetch from user session
+	wabaGate.DC = 1
 
 	if err := wabaGate.Validate(); err != nil {
 		log.Warn("validating WhatsApp Business Account creating request", "error", err)
@@ -84,6 +90,7 @@ func (gate *gate) performExternalWhatsAppAccountValidation(ctx context.Context, 
 	g.Go(func() error {
 		return gate.validateWhatsAppAccount(ctxGroup, wabaGate.PhoneNumberID, wabaGate.GetClient())
 	})
+	g.Go(func() error { return gate.validateWhatsAppAccountToken(ctxGroup, wabaGate) })
 
 	if err := g.Wait(); err != nil {
 		return err
@@ -99,9 +106,41 @@ func (gate *gate) validateWhatsAppAccount(ctx context.Context, phoneNumberID str
 	req.AddField(client.ApiRequestParamField{Name: "display_phone_number"})
 	req.AddField(client.ApiRequestParamField{Name: "verified_name"})
 
-	_, err := req.ExecuteWithContext(ctx)
+	response, err := req.ExecuteWithContext(ctx)
 	if err != nil {
 		return errors.Unauthenticated("validating WhatsApp phone", errors.WithCause(err), errors.WithID("gate.usecase.validate_whats_app_account"))
+	}
+
+	unmarshaledResponse, err := messaging.UnmarshalStatusResponse(response)
+	if err != nil {
+		return err
+	}
+
+	if unmarshaledResponse.Error != nil {
+		return errors.Wrap(unmarshaledResponse.Error.ToGRPCError(), errors.WithID("gate.usecase.validate_whats_app_account"))
+	}
+
+	return nil
+}
+
+func (gate *gate) validateWhatsAppAccountToken(ctx context.Context, waba *WhatsAppBusinessAccountGate) error {
+	requestClient := waba.GetClient()
+	req := requestClient.NewApiRequest("debug_token", http.MethodGet)
+
+	req.AddQueryParam("input_token", requestClient.AccessToken())
+
+	resp, err := req.ExecuteWithContext(ctx)
+	if err != nil {
+		return errors.Unauthenticated("token is invalid", errors.WithCause(err))
+	}
+
+	unmarshaledResponse, err := messaging.UnmarshalStatusResponse(resp)
+	if err != nil {
+		return err
+	}
+
+	if unmarshaledResponse.Error != nil {
+		return errors.Wrap(unmarshaledResponse.Error.ToGRPCError(), errors.WithID("gate.usecase.validate_whats_app_account"))
 	}
 
 	return nil

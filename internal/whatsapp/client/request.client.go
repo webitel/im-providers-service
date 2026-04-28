@@ -94,7 +94,7 @@ func (client *RequestClient) requestWithContext(ctx context.Context, params Requ
 
 	httpClient := http.DefaultClient
 	response, err := httpClient.Do(httpRequest)
-	if err != nil || response.StatusCode != http.StatusOK {
+	if err != nil {
 		return "", err
 	}
 	defer response.Body.Close()

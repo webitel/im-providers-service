@@ -1,4 +1,4 @@
-package message
+package messaging
 
 type Message struct {
 	ID                                           string                      `json:"id"`
