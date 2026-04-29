@@ -30,6 +30,7 @@ func NewMetaAppHandler(logger *slog.Logger, srv service.MetaAppManager) *MetaApp
 func (m *MetaAppHandler) CreateMetaApp(ctx context.Context, req *impb.ProviderCreateMetaAppRequest) (*impb.ProviderCreateMetaAppResponse, error) {
 	app, err := m.srv.CreateMetaApp(ctx, model.CreateMetaApp{
 		Name:             req.GetName(),
+		URI:              req.GetUri(),
 		AppID:            req.GetAppId(),
 		AppSecret:        req.GetAppSecret(),
 		OAuthRedirectURI: req.GetOauthRedirectUri(),

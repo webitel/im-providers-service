@@ -27,12 +27,12 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// ThreadPermissionService defines the gRPC service for managing thread permissions.
+// ThreadPermissionService defines the gRPC service for managing permissions for thread members.
 type ThreadPermissionClient interface {
 	// Get returns all permissions for the specified thread. Optional filter by member_id to get permissions for a specific member.
 	Get(ctx context.Context, in *GetThreadPermissionsRequest, opts ...grpc.CallOption) (*GetThreadPermissionsResponse, error)
 	// Update updates permissions for a specific member in the thread. The request must include the thread_id and member_id, along with the permissions to update.
-	Update(ctx context.Context, in *UpdateThreadPermissionsRequest, opts ...grpc.CallOption) (*ThreadPermissions, error)
+	Update(ctx context.Context, in *UpdateThreadPermissionsRequest, opts ...grpc.CallOption) (*UpdateThreadPermissionsResponse, error)
 }
 
 type threadPermissionClient struct {
@@ -53,9 +53,9 @@ func (c *threadPermissionClient) Get(ctx context.Context, in *GetThreadPermissio
 	return out, nil
 }
 
-func (c *threadPermissionClient) Update(ctx context.Context, in *UpdateThreadPermissionsRequest, opts ...grpc.CallOption) (*ThreadPermissions, error) {
+func (c *threadPermissionClient) Update(ctx context.Context, in *UpdateThreadPermissionsRequest, opts ...grpc.CallOption) (*UpdateThreadPermissionsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ThreadPermissions)
+	out := new(UpdateThreadPermissionsResponse)
 	err := c.cc.Invoke(ctx, ThreadPermission_Update_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -67,12 +67,12 @@ func (c *threadPermissionClient) Update(ctx context.Context, in *UpdateThreadPer
 // All implementations must embed UnimplementedThreadPermissionServer
 // for forward compatibility.
 //
-// ThreadPermissionService defines the gRPC service for managing thread permissions.
+// ThreadPermissionService defines the gRPC service for managing permissions for thread members.
 type ThreadPermissionServer interface {
 	// Get returns all permissions for the specified thread. Optional filter by member_id to get permissions for a specific member.
 	Get(context.Context, *GetThreadPermissionsRequest) (*GetThreadPermissionsResponse, error)
 	// Update updates permissions for a specific member in the thread. The request must include the thread_id and member_id, along with the permissions to update.
-	Update(context.Context, *UpdateThreadPermissionsRequest) (*ThreadPermissions, error)
+	Update(context.Context, *UpdateThreadPermissionsRequest) (*UpdateThreadPermissionsResponse, error)
 	mustEmbedUnimplementedThreadPermissionServer()
 }
 
@@ -86,7 +86,7 @@ type UnimplementedThreadPermissionServer struct{}
 func (UnimplementedThreadPermissionServer) Get(context.Context, *GetThreadPermissionsRequest) (*GetThreadPermissionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
-func (UnimplementedThreadPermissionServer) Update(context.Context, *UpdateThreadPermissionsRequest) (*ThreadPermissions, error) {
+func (UnimplementedThreadPermissionServer) Update(context.Context, *UpdateThreadPermissionsRequest) (*UpdateThreadPermissionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
 func (UnimplementedThreadPermissionServer) mustEmbedUnimplementedThreadPermissionServer() {}

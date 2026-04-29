@@ -12,6 +12,7 @@ type ListFilter struct {
 // Meta-specific requests.
 type CreateMetaApp struct {
 	Name             string
+	URI              string
 	AppID            string
 	AppSecret        string
 	OAuthRedirectURI string
@@ -31,9 +32,12 @@ type OAuthCallback struct {
 
 type CreateFacebook struct {
 	Name      string
+	Dc        int64
 	MetaAppID string
 	PageID    string
 	PageToken string
+	Peer      Peer // Combined Sub and Iss for identity
+	Enabled   bool
 }
 
 type CreateWhatsApp struct {
@@ -43,6 +47,7 @@ type CreateWhatsApp struct {
 	PhoneNumberID string
 	AccessToken   string
 }
+
 type UpdateMetaApp struct {
 	ID               string
 	Name             *string
@@ -56,6 +61,7 @@ type UpdateFacebook struct {
 	Name      *string
 	PageToken *string
 	Enabled   *bool
+	Peer      *Peer // Optional update for bot identity
 }
 
 type UpdateWhatsApp struct {

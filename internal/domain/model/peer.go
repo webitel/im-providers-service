@@ -16,11 +16,11 @@ const (
 )
 
 type Peer struct {
-	ID     uuid.UUID `json:"id"`
-	Type   PeerType  `json:"type"`
-	Sub    string    `json:"sub,omitempty"`
-	Issuer string    `json:"issuer,omitempty"`
-	Name   string    `json:"name,omitempty"`
+	ID   uuid.UUID `json:"id"`
+	Type PeerType  `json:"type"`
+	Sub  string    `json:"sub,omitempty"`
+	Iss  string    `json:"issuer,omitempty"`
+	Name string    `json:"name,omitempty"`
 }
 
 type PeerOption func(*Peer)
@@ -29,7 +29,7 @@ type PeerOption func(*Peer)
 func WithIdentity(sub, issuer, name string) PeerOption {
 	return func(p *Peer) {
 		p.Sub = sub
-		p.Issuer = issuer
+		p.Iss = issuer
 		p.Name = name
 	}
 }
@@ -53,8 +53,8 @@ func (p Peer) GetRoutingParts() (sub, issuer string) {
 	if p.Sub != "" {
 		sub = strings.ToLower(p.Sub)
 	}
-	if p.Issuer != "" {
-		issuer = strings.ToLower(p.Issuer)
+	if p.Iss != "" {
+		issuer = strings.ToLower(p.Iss)
 	}
 	return
 }

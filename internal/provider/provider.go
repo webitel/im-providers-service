@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/webitel/im-providers-service/internal/domain/model"
 )
@@ -29,4 +30,10 @@ type Receiver interface {
 type Provider interface {
 	Sender
 	Receiver
+}
+
+// Verifier is an optional interface for providers that require
+// handshake verification (e.g., Meta/Facebook hub challenge).
+type Verifier interface {
+	Verify(ctx context.Context, query url.Values) (string, error)
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -18,7 +19,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/provider/facebook"
 	"github.com/webitel/im-providers-service/internal/provider/whatsapp"
 	"github.com/webitel/im-providers-service/internal/service"
-	"github.com/webitel/im-providers-service/internal/store/postgres"
+	storedi "github.com/webitel/im-providers-service/internal/store/di"
 	"github.com/webitel/im-providers-service/pkg/crypto"
 	"go.uber.org/fx"
 )
@@ -31,6 +32,7 @@ func NewApp(cfg *config.Config) *fx.App {
 			ProvideWatermillLogger,
 			ProvideSD,
 			ProvideRouter,
+			ProvideRedis,
 		),
 
 		standard.Module,
@@ -46,22 +48,30 @@ func NewApp(cfg *config.Config) *fx.App {
 		grpcsrv.Module,
 		httpsrv.Module,
 		grpc.Module,
-		postgres.Module,
+		storedi.Module,
 	)
 }
 
-// ProvideRouter sets up the Chi router and returns it as an http.Handler.
-func ProvideRouter(wh *webhook.Handler, cfg *config.Config) http.Handler {
+// ProvideRouter sets up the Chi router with dynamic path parameters.
+func ProvideRouter(wh *webhook.Handler, cfg *config.Config, logger *slog.Logger) http.Handler {
 	r := chi.NewRouter()
 
-	// Resolve and sanitize webhook path
+	// Sanitize base path (e.g., "/wh")
 	path := "/" + strings.Trim(cfg.Service.WebhookPath, "/")
 	if path == "/" {
 		path = "/wh"
 	}
 
-	// [WEBHOOKS] Centralized entry point
-	r.Post(path+"/{provider}", wh.ServeHTTP)
+	// [DYNAMIC_PATTERN]: Adding /{uri} allows one route to handle infinite apps.
+	// This will match: /wh/facebook/app-one, /wh/facebook/marketing-bot, etc.
+	fullPath := path + "/{provider}/{uri}"
+
+	logger.Info("registering dynamic webhook route",
+		"pattern", fullPath,
+	)
+
+	// Handle both GET (verify) and POST (events)
+	r.HandleFunc(fullPath, wh.ServeHTTP)
 
 	return r
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
+	"github.com/redis/go-redis/v9"
 	"github.com/webitel/im-providers-service/config"
 	"github.com/webitel/im-providers-service/internal/domain/model"
 	"github.com/webitel/webitel-go-kit/infra/discovery"
@@ -217,4 +218,30 @@ func ProvideSD(cfg *config.Config, log *slog.Logger, lc fx.Lifecycle) (discovery
 	})
 
 	return provider, nil
+}
+
+func ProvideRedis(cfg *config.Config, lc fx.Lifecycle, l *slog.Logger) (*redis.Client, error) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			err := rdb.Ping(ctx).Err()
+			if err != nil {
+				l.Error("redis connection failed", slog.Any("error", err))
+				return err
+			}
+			l.Info("redis connected", slog.String("addr", cfg.Redis.Addr))
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			l.Info("closing redis connection")
+			return rdb.Close()
+		},
+	})
+
+	return rdb, nil
 }

@@ -6,13 +6,14 @@ import (
 
 // MessageResponse represents the common return value for provider send operations.
 type MessageResponse struct {
-	ID uuid.UUID      `json:"id"`
+	ID string         `json:"id"`
 	MD map[string]any `json:"metadata,omitempty"`
 }
 
 // Message is the core domain entity representing a message in the system.
 type Message struct {
 	ID        uuid.UUID      `json:"id"`
+	GateID    string         `json:"gate_id"`
 	ThreadID  uuid.UUID      `json:"thread_id"`
 	DomainID  int64          `json:"domain_id"`
 	From      Peer           `json:"from"`

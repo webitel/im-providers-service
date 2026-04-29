@@ -34,6 +34,7 @@ func NewMetaAppService(repo store.MetaAppStore, log *slog.Logger) *MetaAppServic
 func (s *MetaAppService) CreateMetaApp(ctx context.Context, req model.CreateMetaApp) (*model.MetaApp, error) {
 	app := &model.MetaApp{
 		Name:             req.Name,
+		URI:              req.URI,
 		AppID:            req.AppID,
 		AppSecret:        req.AppSecret,
 		OAuthRedirectURI: req.OAuthRedirectURI,

@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,7 +12,6 @@ import (
 )
 
 // [INTERFACE GUARD]
-// Ensure gateStore properly implements the store.GateStore interface.
 var _ store.GateStore = (*gateStore)(nil)
 
 type gateStore struct {
@@ -21,7 +19,7 @@ type gateStore struct {
 	cfg  *config.Config
 }
 
-// NewGateStore creates a new instance of the gate store with injected dependencies.
+// NewGateStore creates a new instance of the gate store.
 func NewGateStore(pool *pgxpool.Pool, cfg *config.Config) store.GateStore {
 	return &gateStore{
 		pool: pool,
@@ -31,48 +29,37 @@ func NewGateStore(pool *pgxpool.Pool, cfg *config.Config) store.GateStore {
 
 // List retrieves a paginated list of gate summaries from the database view.
 func (s *gateStore) List(ctx context.Context, f model.ListFilter) ([]*model.GateSummary, bool, error) {
-	// 1. Setup pagination parameters
 	limit := f.Size
 	if limit <= 0 {
 		limit = 20
 	}
 
-	// 2. Execute query against the simplified view (without hardcoded URLs)
-	// We fetch limit+1 to check if there is a next page available.
+	// Offset calculation
+	offset := f.Page * limit
+
+	// Fetch limit+1 to determine if there's a next page
 	const query = `SELECT * FROM im_provider.gate_summary ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 
 	var list []*model.GateSummary
-	if err := pgxscan.Select(ctx, s.pool, &list, query, limit+1, f.Page*limit); err != nil {
-		return nil, false, fmt.Errorf("failed to select gate summaries: %w", err)
+	if err := pgxscan.Select(ctx, s.pool, &list, query, limit+1, offset); err != nil {
+		return nil, false, fmt.Errorf("postgres: list gates: %w", err)
 	}
 
-	// 3. Populate dynamic fields (WebhookURL) from the application config
-	// This keeps the DB domain-agnostic and allows easy URL updates via ENV.
-	publicURL := strings.TrimSuffix(s.cfg.Service.PublicURL, "/")
-	basePath := strings.Trim(s.cfg.Service.WebhookPath, "/")
-	if basePath == "" {
-		basePath = "wh"
-	}
-
-	for _, item := range list {
-		// Use the Stringer-generated String() method of GateType (e.g., "facebook", "whatsapp")
-		item.WebhookURL = fmt.Sprintf("%s/im/%s/%s", publicURL, basePath, item.Type)
-	}
-
-	// 4. Handle pagination result
+	// Check for next page
 	next := len(list) > limit
 	if next {
 		list = list[:limit]
 	}
 
+	// WebhookURL generation is removed as it's now handled by the gateway layer or dynamically.
 	return list, next, nil
 }
 
-// Delete removes a specific gate. Cascading constraints in DB should handle related configs.
+// Delete removes a specific gate. Cascading constraints in DB handle bots and configs.
 func (s *gateStore) Delete(ctx context.Context, id string) error {
 	res, err := s.pool.Exec(ctx, `DELETE FROM im_provider.gates WHERE id = $1`, id)
 	if err != nil {
-		return fmt.Errorf("failed to execute delete query: %w", err)
+		return fmt.Errorf("postgres: delete gate: %w", err)
 	}
 
 	if res.RowsAffected() == 0 {

@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Contacts_Search_FullMethodName = "/webitel.im.api.gateway.v1.Contacts/Search"
+	Contacts_Create_FullMethodName = "/webitel.im.api.gateway.v1.Contacts/Create"
 )
 
 // ContactsClient is the client API for Contacts service.
@@ -31,6 +32,8 @@ const (
 type ContactsClient interface {
 	// Search retrieves a paginated list of contacts based on filters and search queries.
 	Search(ctx context.Context, in *SearchContactRequest, opts ...grpc.CallOption) (*ContactList, error)
+	// Create new contact ; ONLY for im-provider service ; NOT for external API
+	Create(ctx context.Context, in *CreateContactRequest, opts ...grpc.CallOption) (*Contact, error)
 }
 
 type contactsClient struct {
@@ -51,6 +54,16 @@ func (c *contactsClient) Search(ctx context.Context, in *SearchContactRequest, o
 	return out, nil
 }
 
+func (c *contactsClient) Create(ctx context.Context, in *CreateContactRequest, opts ...grpc.CallOption) (*Contact, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Contact)
+	err := c.cc.Invoke(ctx, Contacts_Create_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ContactsServer is the server API for Contacts service.
 // All implementations must embed UnimplementedContactsServer
 // for forward compatibility.
@@ -60,6 +73,8 @@ func (c *contactsClient) Search(ctx context.Context, in *SearchContactRequest, o
 type ContactsServer interface {
 	// Search retrieves a paginated list of contacts based on filters and search queries.
 	Search(context.Context, *SearchContactRequest) (*ContactList, error)
+	// Create new contact ; ONLY for im-provider service ; NOT for external API
+	Create(context.Context, *CreateContactRequest) (*Contact, error)
 	mustEmbedUnimplementedContactsServer()
 }
 
@@ -72,6 +87,9 @@ type UnimplementedContactsServer struct{}
 
 func (UnimplementedContactsServer) Search(context.Context, *SearchContactRequest) (*ContactList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Search not implemented")
+}
+func (UnimplementedContactsServer) Create(context.Context, *CreateContactRequest) (*Contact, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
 func (UnimplementedContactsServer) mustEmbedUnimplementedContactsServer() {}
 func (UnimplementedContactsServer) testEmbeddedByValue()                  {}
@@ -112,6 +130,24 @@ func _Contacts_Search_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Contacts_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateContactRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContactsServer).Create(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Contacts_Create_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContactsServer).Create(ctx, req.(*CreateContactRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Contacts_ServiceDesc is the grpc.ServiceDesc for Contacts service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -122,6 +158,10 @@ var Contacts_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Search",
 			Handler:    _Contacts_Search_Handler,
+		},
+		{
+			MethodName: "Create",
+			Handler:    _Contacts_Create_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

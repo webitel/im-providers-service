@@ -40,8 +40,9 @@ type MetaAppStore interface {
 // FacebookStore manages logic for Facebook Page integrations.
 type FacebookStore interface {
 	// Insert creates a logic gate and links it to a MetaApp.
-	Insert(ctx context.Context, g *model.FacebookGate) error
+	Insert(ctx context.Context, dc int64, g *model.FacebookGate) error
 	Select(ctx context.Context, id string) (*model.FacebookGate, error)
+	SelectByPageAndURI(ctx context.Context, pageID, uri string) (*model.FacebookGate, error)
 	Update(ctx context.Context, g *model.FacebookGate) error
 	Unbind(ctx context.Context, gateID string) error
 }
@@ -51,4 +52,36 @@ type WhatsAppStore interface {
 	Insert(ctx context.Context, g *model.WhatsAppGate) error
 	Select(ctx context.Context, id string) (*model.WhatsAppGate, error)
 	Update(ctx context.Context, g *model.WhatsAppGate) error
+}
+
+// GateState holds minimal data for fast webhook routing and filtering.
+// This structure is cached to avoid frequent database hits during high-traffic webhooks.
+type GateState struct {
+	// GateID is the internal system UUID for the gate.
+	// For external platforms, this represents:
+	// - Facebook:  Page ID
+	// - Instagram: Scoped Business ID
+	// - WhatsApp:  Phone Number ID (WABA)
+	// - Telegram:  Bot Token Hash / Bot ID
+	// - Viber:      Bot Token Hash / Bot ID
+	GateID  string
+	Enabled bool
+	Issuer  string
+	Sub     string
+}
+
+// GateCache defines the contract for high-speed gate lookups across all providers.
+type GateCache interface {
+	// Set stores a gate's state using a unique provider key (e.g., PageID, PhoneID).
+	Set(key string, state GateState)
+	// Get retrieves cached gate state by its provider key.
+	Get(key string) (GateState, bool)
+	// Delete removes a gate's state from the cache (used on updates/deletion).
+	Delete(key string)
+}
+
+// ExternalUserCache defines the contract for identity tracking
+type ExternalUserCache interface {
+	IsKnown(ctx context.Context, user *model.ExternalUser) (bool, error)
+	MarkKnown(ctx context.Context, user *model.ExternalUser) error
 }

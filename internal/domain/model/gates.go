@@ -17,6 +17,7 @@ type GateSummary struct {
 // MetaApp represents the parent OAuth configuration.
 type MetaApp struct {
 	ID               string    `json:"id" db:"id"`
+	URI              string    `json:"uri" db:"uri"`
 	Name             string    `json:"name" db:"name"`
 	AppID            string    `json:"app_id" db:"app_id"`
 	AppSecret        string    `json:"-" db:"app_secret"`
@@ -29,6 +30,7 @@ type MetaApp struct {
 
 type FacebookGate struct {
 	ID        string     `json:"id" db:"id"`
+	Peer      Peer       `json:"peer" db:"peer"` // Combined Sub and Iss for identity
 	Name      string     `json:"name" db:"name"`
 	MetaAppID string     `json:"meta_app_id" db:"meta_app_id"`
 	PageID    string     `json:"page_id" db:"page_id"`

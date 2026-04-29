@@ -2,12 +2,11 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/webitel/im-providers-service/config"
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
+	"github.com/webitel/im-providers-service/infra/auth"
 	"github.com/webitel/im-providers-service/internal/domain/model"
 	"github.com/webitel/im-providers-service/internal/service"
 	"google.golang.org/grpc/codes"
@@ -29,11 +28,18 @@ func NewFacebookHandler(logger *slog.Logger, srv service.FacebookManager, cfg *c
 
 // CreateFacebookGate handles the creation of a new Facebook integration.
 func (f *FacebookHandler) CreateFacebookGate(ctx context.Context, req *impb.ProviderCreateFacebookGateRequest) (*impb.ProviderCreateFacebookGateResponse, error) {
+	auth, ok := auth.GetIdentityFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing identity in context")
+	}
+
 	gate, err := f.srv.CreateGate(ctx, model.CreateFacebook{
 		Name:      req.GetName(),
+		Dc:        auth.GetDomainID(),
 		MetaAppID: req.GetMetaAppId(),
 		PageID:    req.GetPageId(),
 		PageToken: req.GetPageToken(),
+		Peer:      model.Peer{Sub: req.GetPeer().Sub, Iss: req.GetPeer().Iss},
 	})
 	if err != nil {
 		f.logger.Error("failed to create gate", "error", err)
@@ -65,6 +71,7 @@ func (f *FacebookHandler) UpdateFacebookGate(ctx context.Context, req *impb.Prov
 		ID:      req.GetId(),
 		Name:    &name,
 		Enabled: &enabled,
+		Peer:    &model.Peer{Sub: req.GetPeer().Sub, Iss: req.GetPeer().Iss},
 	})
 	if err != nil {
 		f.logger.Error("failed to update gate", "id", req.GetId(), "error", err)
@@ -93,17 +100,6 @@ func (f *FacebookHandler) gateToProto(g *model.FacebookGate) *impb.ProviderFaceb
 		return nil
 	}
 
-	// 1. Dynamic construction of the Webhook URL.
-	// We sanitize the PublicURL and WebhookPath from the config.
-	publicURL := strings.TrimSuffix(f.cfg.Service.PublicURL, "/")
-	basePath := strings.Trim(f.cfg.Service.WebhookPath, "/")
-	if basePath == "" {
-		basePath = "wh"
-	}
-
-	// Resulting format: https://domain.com/im/wh/facebook
-	webhookURL := fmt.Sprintf("%s/im/%s/facebook", publicURL, basePath)
-
 	// 2. Full mapping of the Facebook-specific gate fields.
 	return &impb.ProviderFacebookGate{
 		Id:        g.ID,
@@ -111,7 +107,6 @@ func (f *FacebookHandler) gateToProto(g *model.FacebookGate) *impb.ProviderFaceb
 		MetaAppId: g.MetaAppID,
 		PageId:    g.PageID,
 		PageName:  g.PageName,
-		Webhook:   webhookURL,
 		Status:    impb.ProviderStatus(g.Status),
 		CreatedAt: g.CreatedAt.UnixMilli(),
 		UpdatedAt: g.UpdatedAt.UnixMilli(),

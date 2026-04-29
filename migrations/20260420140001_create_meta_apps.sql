@@ -1,14 +1,15 @@
 -- +goose Up
 -- Create table for Meta (Facebook/WhatsApp) application configurations
 CREATE TABLE IF NOT EXISTS im_provider.meta_apps (
-    id           UUID DEFAULT uuidv7() PRIMARY KEY,
-    name         TEXT NOT NULL,
-    app_id       TEXT NOT NULL UNIQUE,
-    app_secret   TEXT NOT NULL,
-    redirect_uri TEXT NOT NULL,
-    scopes       TEXT[] NOT NULL DEFAULT '{}',
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id            UUID DEFAULT uuidv7() PRIMARY KEY,
+    name          TEXT NOT NULL,
+    app_id        TEXT NOT NULL UNIQUE,
+    app_secret    TEXT NOT NULL,
+    redirect_uri  TEXT NOT NULL,
+    uri           TEXT NOT NULL UNIQUE, 
+    scopes        TEXT[] NOT NULL DEFAULT '{}',
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Trigger to automatically update the updated_at timestamp

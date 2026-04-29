@@ -56,3 +56,28 @@ func (c *Client) SendImage(
 func (c *Client) Read(ctx context.Context, in *gatewayv1.ReadMessageRequest, opts ...grpc.CallOption) (*gatewayv1.ReadMessageResponse, error) {
 	panic("unimplemented")
 }
+
+// SendContact implements [gateway.MessageClient].
+func (c *Client) SendContact(ctx context.Context, in *gatewayv1.SendContactRequest, opts ...grpc.CallOption) (*gatewayv1.SendMessageResponse, error) {
+	panic("unimplemented")
+}
+
+// SendInteractive implements [gateway.MessageClient].
+func (c *Client) SendInteractive(ctx context.Context, in *gatewayv1.SendInteractiveMessageRequest, opts ...grpc.CallOption) (*gatewayv1.SendMessageResponse, error) {
+	panic("unimplemented")
+}
+
+// SendInteractiveCallback implements [gateway.MessageClient].
+func (c *Client) SendInteractiveCallback(ctx context.Context, in *gatewayv1.InteractiveCallbackRequest, opts ...grpc.CallOption) (*gatewayv1.InteractiveCallbackResponse, error) {
+	panic("unimplemented")
+}
+
+// SendLocation implements [gateway.MessageClient].
+func (c *Client) SendLocation(ctx context.Context, in *gatewayv1.SendLocationRequest, opts ...grpc.CallOption) (*gatewayv1.SendMessageResponse, error) {
+	panic("unimplemented")
+}
+
+// SendSystemMessage implements [gateway.MessageClient].
+func (c *Client) SendSystemMessage(ctx context.Context, in *gatewayv1.SendSystemMessageRequest, opts ...grpc.CallOption) (*gatewayv1.SendMessageResponse, error) {
+	panic("unimplemented")
+}

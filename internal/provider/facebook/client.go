@@ -1,49 +1,96 @@
 package facebook
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
 
 	"github.com/webitel/im-providers-service/internal/domain/model"
-	"github.com/webitel/im-providers-service/internal/service"
+	"github.com/webitel/im-providers-service/internal/provider/facebook/graph"
+	"github.com/webitel/im-providers-service/internal/provider/facebook/payload"
 )
 
-// Client handles low-level communication with Meta Graph API and dispatches inbound events.
+type UserProfile struct {
+	ID         string `json:"id"`
+	FirstName  string `json:"first_name" graph:"first_name"`
+	LastName   string `json:"last_name" graph:"last_name"`
+	ProfilePic string `json:"profile_pic" graph:"profile_pic"`
+	Locale     string `json:"locale"`
+	Timezone   int    `json:"timezone"`
+}
+
 type Client struct {
-	messenger service.Messenger // [CORE_LINK] Bridge to Webitel internal logic
-	// [TODO] Add http.Client, BaseURL, and Auth tokens.
+	logger *slog.Logger
+	apiURL string
 }
 
-// NewClient initializes a new Facebook API client with mandatory messenger service.
-func NewClient(messenger service.Messenger) *Client {
-	return &Client{
-		messenger: messenger,
+func NewClient(l *slog.Logger) *Client {
+	return &Client{logger: l.With("pkg", "fb.client"), apiURL: GraphBaseURL}
+}
+
+func (c *Client) GetUserProfile(ctx context.Context, psid, token string) (*UserProfile, error) {
+	u, err := graph.NewQuery(c.apiURL, psid).
+		WithFields(graph.ID, graph.FirstName, graph.LastName, graph.ProfilePic, graph.Locale, graph.Timezone).
+		WithToken(token).
+		Build()
+	if err != nil {
+		return nil, err
 	}
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("fb api error: %d, body: %s", resp.StatusCode, b)
+	}
+
+	var p UserProfile
+	return &p, json.NewDecoder(resp.Body).Decode(&p)
 }
 
-// --- [API_OUTBOUND_METHODS] ---
+func (c *Client) send(ctx context.Context, token string, body graph.OutboundPayload) (*model.MessageResponse, error) {
+	u := fmt.Sprintf("%s/me/messages?access_token=%s", c.apiURL, token)
+	raw, _ := json.Marshal(body)
 
-// SendTextMessage triggers the Meta Graph API to deliver text.
-func (c *Client) SendTextMessage(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
-	panic("unimplemented: [META_API] POST /me/messages (text)")
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewBuffer(raw))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("fb send error: %d, body: %s", resp.StatusCode, b)
+	}
+
+	var res struct {
+		ID string `json:"message_id"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&res)
+	return &model.MessageResponse{ID: res.ID}, nil
 }
 
-// SendImageMessage triggers the Meta Graph API to deliver image media.
-func (c *Client) SendImageMessage(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
-	panic("unimplemented: [META_API] POST /me/messages (image)")
+func (c *Client) ParseWebhook(data []byte) (*payload.WebhookRequest, error) {
+	var r payload.WebhookRequest
+	return &r, json.Unmarshal(data, &r)
 }
 
-// SendDocumentMessage triggers the Meta Graph API to deliver files.
-func (c *Client) SendDocumentMessage(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
-	panic("unimplemented: [META_API] POST /me/messages (document)")
+func (c *Client) SendText(ctx context.Context, token, psid, text string) (*model.MessageResponse, error) {
+	return c.send(ctx, token, graph.NewTextRequest(psid, text))
 }
 
-// --- [WEBHOOK_INBOUND_LOGIC] ---
-
-// ProcessEvent parses raw JSON from webhook and dispatches it to the Messenger service.
-func (c *Client) ProcessEvent(ctx context.Context, payload []byte) error {
-	// [FLOW]
-	// 1. Unmarshal Meta JSON
-	// 2. Map to internal dto.InboundMessage (or SendTextRequest for logic reuse)
-	// 3. Call c.messenger.SendText (or specific Inbound method)
-	panic("unimplemented: [WEBHOOK_PARSER] facebook payload analysis and dispatch to messenger")
+func (c *Client) SendMedia(ctx context.Context, token, psid, mType, url string) (*model.MessageResponse, error) {
+	return c.send(ctx, token, graph.NewMediaRequest(psid, mType, url))
 }

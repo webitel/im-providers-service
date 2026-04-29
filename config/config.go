@@ -22,7 +22,6 @@ type ServiceConfig struct {
 	ID          string           `mapstructure:"id"`
 	GRPCAddr    string           `mapstructure:"addr"`         // gRPC server address
 	HTTPAddr    string           `mapstructure:"http_addr"`    // HTTP server address
-	PublicURL   string           `mapstructure:"public_url"`   // Public URL of the service for callbacks
 	WebhookPath string           `mapstructure:"webhook_path"` // Base path for webhooks (e.g., /wh)
 	Connection  ConnectionConfig `mapstructure:"conn"`
 	SecretKey   string           `mapstructure:"secret_key"`
@@ -121,7 +120,6 @@ func defineFlags() {
 	pflag.String("service.id", "", "Service ID")
 	pflag.String("service.addr", "localhost:8080", "gRPC service address")
 	pflag.String("service.http_addr", ":8081", "HTTP service address")
-	pflag.String("service.public_url", "http://localhost:8081", "Public URL of the service for callbacks")
 	pflag.String("service.webhook_path", "/wh", "Base path for incoming webhooks")
 
 	pflag.Bool("service.conn.verify_certs", false, "Determine whether to verify certificates")

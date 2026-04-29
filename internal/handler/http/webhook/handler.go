@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -9,14 +10,11 @@ import (
 	"github.com/webitel/im-providers-service/internal/provider"
 )
 
-// Handler processes incoming webhooks from all registered messaging platforms.
 type Handler struct {
 	logger    *slog.Logger
 	providers map[string]provider.Provider
 }
 
-// NewHandler initializes the handler with a registry of providers.
-// [CONSTRUCTOR] Used by fx.Module.
 func NewHandler(logger *slog.Logger, providers []provider.Provider) *Handler {
 	m := make(map[string]provider.Provider)
 	for _, p := range providers {
@@ -28,11 +26,10 @@ func NewHandler(logger *slog.Logger, providers []provider.Provider) *Handler {
 	}
 }
 
-// ServeHTTP handles the unified webhook entry point.
-// [ROUTING] Pattern: POST /wh/{provider}
+// ServeHTTP acts as a generic entry point for all webhooks.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Extract provider type from URL using chi
 	pType := chi.URLParam(r, "provider")
+	uri := chi.URLParam(r, "uri")
 
 	p, ok := h.providers[pType]
 	if !ok {
@@ -41,20 +38,37 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// [CLEAN_VERIFICATION]: Handle GET requests using the Verifier interface.
+	// This removes provider-specific hardcoding from the handler.
+	if r.Method == http.MethodGet {
+		if v, ok := p.(provider.Verifier); ok {
+			challenge, err := v.Verify(r.Context(), r.URL.Query())
+			if err != nil {
+				h.logger.Error("verification failed", "provider", pType, "error", err)
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(challenge))
+			return
+		}
+	}
+
+	// [POST_PROCESSING]: Standard webhook event handling.
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		h.logger.Error("failed to read webhook body", "error", err)
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		h.logger.Error("failed to read body", "error", err)
+		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 
-	// [DISPATCH] Route the raw payload to the specific adapter
-	if err := p.HandleWebhook(r.Context(), body); err != nil {
-		h.logger.Error("provider failed to process webhook",
-			"provider", pType,
-			"error", err,
-		)
+	// Inject 'uri' into context for provider database lookups.
+	ctx := context.WithValue(r.Context(), "webhook_uri", uri)
+	if err := p.HandleWebhook(ctx, body); err != nil {
+		h.logger.Error("processing failed", "provider", pType, "uri", uri, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

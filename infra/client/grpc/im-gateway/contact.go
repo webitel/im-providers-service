@@ -21,3 +21,13 @@ func (c *Client) Search(
 	})
 	return resp, err
 }
+
+func (c *Client) Create(ctx context.Context, in *gatewayv1.CreateContactRequest, opts ...grpc.CallOption) (*gatewayv1.Contact, error) {
+	var resp *gatewayv1.Contact
+	err := c.contactRPC.Execute(ctx, func(api gatewayv1.ContactsClient) error {
+		var err error
+		resp, err = api.Create(ctx, in, opts...)
+		return err
+	})
+	return resp, err
+}

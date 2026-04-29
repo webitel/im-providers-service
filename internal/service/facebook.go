@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	"github.com/webitel/im-providers-service/internal/domain/model"
 	"github.com/webitel/im-providers-service/internal/store"
 )
@@ -16,14 +17,16 @@ type FacebookManager interface {
 }
 
 type FacebookService struct {
-	repo store.FacebookStore
-	log  *slog.Logger
+	repo      store.FacebookStore
+	contacter *imcontact.Client
+	log       *slog.Logger
 }
 
-func NewFacebookService(repo store.FacebookStore, log *slog.Logger) *FacebookService {
+func NewFacebookService(repo store.FacebookStore, contacter *imcontact.Client, log *slog.Logger) *FacebookService {
 	return &FacebookService{
-		repo: repo,
-		log:  log.With("layer", "service", "domain", "facebook_gate"),
+		repo:      repo,
+		contacter: contacter,
+		log:       log.With("layer", "service", "domain", "facebook_gate"),
 	}
 }
 
@@ -33,12 +36,11 @@ func (f *FacebookService) CreateGate(ctx context.Context, req model.CreateFacebo
 		MetaAppID: req.MetaAppID,
 		PageID:    req.PageID,
 		PageToken: req.PageToken,
+		Peer:      req.Peer,
 		Enabled:   true,
 	}
 
-	// TODO: Perform Facebook Graph API call to subscribe the app to the page webhooks here.
-
-	if err := f.repo.Insert(ctx, gate); err != nil {
+	if err := f.repo.Insert(ctx, req.Dc, gate); err != nil {
 		f.log.Error("failed to create facebook gate", "page_id", req.PageID, "err", err)
 		return nil, err
 	}
@@ -66,13 +68,16 @@ func (f *FacebookService) UpdateGate(ctx context.Context, req model.UpdateFacebo
 	if req.PageToken != nil {
 		gate.PageToken = *req.PageToken
 	}
+	if req.Peer != nil {
+		gate.Peer = *req.Peer
+	}
 
 	if err := f.repo.Update(ctx, gate); err != nil {
 		f.log.Error("failed to update facebook gate", "id", req.ID, "err", err)
 		return nil, err
 	}
 
-	f.log.Info("facebook gate updated", "id", gate.ID) // Use f.log to keep context
+	f.log.Info("facebook gate updated", "id", gate.ID)
 	return gate, nil
 }
 

@@ -30,8 +30,8 @@ func NewMetaAppStore(pool *pgxpool.Pool, crypt crypto.Encryptor) store.MetaAppSt
 // Insert registers a new Meta application and returns the fully populated struct.
 func (s *metaAppStore) Insert(ctx context.Context, a *model.MetaApp) error {
 	const query = `
-		INSERT INTO im_provider.meta_apps (name, app_id, app_secret, redirect_uri, scopes)
-		VALUES (@name, @app_id, @app_secret, @redirect_uri, @scopes)
+		INSERT INTO im_provider.meta_apps (name, uri, app_id, app_secret, redirect_uri, scopes)
+		VALUES (@name, @uri, @app_id, @app_secret, @redirect_uri, @scopes)
 		RETURNING *`
 
 	secret, err := s.crypto.Encrypt(a.AppSecret)
@@ -41,6 +41,7 @@ func (s *metaAppStore) Insert(ctx context.Context, a *model.MetaApp) error {
 
 	args := pgx.NamedArgs{
 		"name":         a.Name,
+		"uri":          a.URI,
 		"app_id":       a.AppID,
 		"app_secret":   secret,
 		"redirect_uri": a.OAuthRedirectURI,

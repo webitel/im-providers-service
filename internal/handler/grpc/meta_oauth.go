@@ -58,9 +58,10 @@ func (h *MetaOauthHandler) MetaOAuthCallback(ctx context.Context, req *impb.Prov
 	linkedPages := make([]*impb.ProviderMetaLinkedPage, len(pages))
 	for i, p := range pages {
 		linkedPages[i] = &impb.ProviderMetaLinkedPage{
-			PageId:   p.PageID,
-			PageName: p.Name,
-			Platform: "facebook",
+			PageId:      p.PageID,
+			PageName:    p.Name,
+			AccessToken: p.PageToken,
+			Platform:    "facebook",
 		}
 	}
 
