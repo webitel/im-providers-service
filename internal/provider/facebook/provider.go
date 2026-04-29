@@ -137,7 +137,7 @@ func (p *facebookProvider) usrsync(ctx context.Context, g *model.FacebookGate, p
 	if ok, _ := p.userCache.IsKnown(ctx, u); ok {
 		return nil
 	}
-	_, err := p.gatewayer.Create(ctx, &gatewayv1.CreateContactRequest{
+	internalUsr, err := p.gatewayer.Create(ctx, &gatewayv1.CreateContactRequest{
 		IssId:    g.Peer.Iss,
 		Type:     p.Type(),
 		Name:     u.FirstName,
@@ -145,6 +145,7 @@ func (p *facebookProvider) usrsync(ctx context.Context, g *model.FacebookGate, p
 		Subject:  u.ID,
 		IsBot:    false,
 	})
+	p.logger.Debug("Internal user creation result", "psid", psid, "internal_user_id", internalUsr.Sub, "err", err)
 	if err == nil {
 		_ = p.userCache.MarkKnown(ctx, u)
 	}

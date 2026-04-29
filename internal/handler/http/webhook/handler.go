@@ -38,8 +38,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// [CLEAN_VERIFICATION]: Handle GET requests using the Verifier interface.
-	// This removes provider-specific hardcoding from the handler.
 	if r.Method == http.MethodGet {
 		if v, ok := p.(provider.Verifier); ok {
 			challenge, err := v.Verify(r.Context(), r.URL.Query())
