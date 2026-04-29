@@ -58,3 +58,5 @@ func (messaging *messaging) prepareMessageManager(ctx context.Context, from comm
 
 	return whatsAppBusinessAccountMessageManager, nil
 }
+
+func (messaging *messaging) SendText(ctx context.Context)
