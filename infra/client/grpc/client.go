@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	infratls "github.com/webitel/im-providers-service/infra/tls"
 	ds "github.com/webitel/webitel-go-kit/infra/discovery"
@@ -14,6 +15,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/keepalive"
 )
 
 func New[T any](
@@ -68,6 +70,13 @@ func New[T any](
 		rpc.WithTarget(fmt.Sprintf("discovery:///%s", target)),
 		rpc.WithDialOptions(options...),
 		rpc.WithRetry(rpc.DefaultRetryConfig()),
+		rpc.WithKeepalive(
+			keepalive.ClientParameters{
+				Time:                10 * time.Minute,
+				Timeout:             20 * time.Second,
+				PermitWithoutStream: false,
+			},
+		),
 	)
 	if err != nil {
 		return nil, err

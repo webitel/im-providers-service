@@ -5,7 +5,11 @@ import (
 
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	"github.com/webitel/im-providers-service/infra/db/postgresx"
+	"github.com/webitel/im-providers-service/internal/provider"
+	"github.com/webitel/im-providers-service/internal/service"
 	"github.com/webitel/im-providers-service/internal/whatsapp/gate"
+	"github.com/webitel/im-providers-service/internal/whatsapp/resolver"
+	"github.com/webitel/im-providers-service/internal/whatsapp/webhook"
 	"github.com/webitel/im-providers-service/pkg/crypto"
 	"go.uber.org/fx"
 )
@@ -17,5 +21,28 @@ var Module = fx.Module(
 			gateWire := gate.NewGateModule(logger, db, internalContactResolver, encryptor)
 			return gateWire.GateServer
 		},
+	),
+
+	fx.Provide(
+		fx.Annotate(
+			func(logger *slog.Logger, db postgresx.DB, encryptor crypto.Encryptor, coreMessanger service.Messenger, client *imgateway.Client) *webhook.WebhookManager {
+				resolver := resolver.NewResolverModule[*webhook.WhatsAppBusinessAccountResolveQuery](logger, db)
+
+				webhookConfig := webhook.WebhookManagerConfig{
+					Secret: "my-ahueniy-secret", //TODO
+					Logger: logger,
+				}
+
+				webhhokModule, err := webhook.NewWebhookModule(webhookConfig, encryptor, coreMessanger, resolver.Resolver, client)
+				if err != nil {
+					logger.Error("whatsapp:wire:constructing new webhook module", "error", err)
+					return nil
+				}
+
+				return webhhokModule.WebhookManager
+			},
+			fx.As(new(provider.Provider)),
+			fx.ResultTags(`group:"providers"`),
+		),
 	),
 )

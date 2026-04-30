@@ -77,13 +77,14 @@ func (repository *gateRepository) prepareWhatsAppGateSaveQuery(wabaGate *Gate) (
 			"access_token_expires_at", "business_id"
 		),
 		waba_gate_contact_ins as (
-			insert into "im_provider"."binded_contact"(
-				"id", "iss", "sub"
+			insert into "im_provider"."bots"(
+				"id", "gate_id", "iss", "sub"
 			)
 			select
 				"id",
-				@Sub,
-				@Iss
+				"id",
+				@Iss,
+				@Sub
 			from gate_insert
 			returning "id", "iss", "sub"
 		)

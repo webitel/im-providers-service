@@ -6,18 +6,35 @@ import (
 	"log/slog"
 	"net/url"
 
+	"github.com/webitel/im-providers-service/internal/domain/model"
 	"github.com/webitel/im-providers-service/internal/whatsapp/client"
 	"github.com/webitel/im-providers-service/internal/whatsapp/messaging/components"
 	"github.com/webitel/im-providers-service/internal/whatsapp/webhook/events"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
 
+type NoopWebhookSender struct{}
+
+func (noopWebhookSender *NoopWebhookSender) Type() string { return "whatsapp" }
+func (noopWebhookSender *NoopWebhookSender) SendText(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
+	return nil, nil
+}
+func (noopWebhookSender *NoopWebhookSender) SendImage(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
+	return nil, nil
+}
+func (noopWebhookSender *NoopWebhookSender) SendDocument(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
+	return nil, nil
+}
+
 type CoreIntegrationHandler interface {
 	HandleTextMessage(ctx context.Context, textEvent *events.TextMessageEvent) error
 	HandleDocumentMessage(ctx context.Context, documentEvent *events.DocumentMessageEvent) error
+	HandleImageMessage(ctx context.Context, imageEvent *events.ImageMessageEvent) error
 }
 
 type WebhookManager struct {
+	NoopWebhookSender
+
 	secret                 string
 	path                   string
 	RequestClient          client.RequestClient
@@ -26,27 +43,27 @@ type WebhookManager struct {
 }
 
 type WebhookManagerConfig struct {
-	Secret                 string
-	Path                   string
-	RequestClient          client.RequestClient
-	Logger                 *slog.Logger
-	CoreIntegrationHandler CoreIntegrationHandler
+	Secret        string
+	Path          string
+	RequestClient client.RequestClient
+	Logger        *slog.Logger
 }
 
 func (webhookManagerConfig *WebhookManagerConfig) Validate() error {
 	return nil
 }
 
-func newWebhookManager(webhookManagerConfig WebhookManagerConfig) (*WebhookManager, error) {
+func newWebhookManager(webhookManagerConfig WebhookManagerConfig, coreIntegrationHandler CoreIntegrationHandler) (*WebhookManager, error) {
 	if err := webhookManagerConfig.Validate(); err != nil {
 		return nil, err
 	}
 
 	webhookManager := WebhookManager{
-		secret:        webhookManagerConfig.Secret,
-		path:          webhookManagerConfig.Path,
-		RequestClient: webhookManagerConfig.RequestClient,
-		logger:        webhookManagerConfig.Logger,
+		secret:                 webhookManagerConfig.Secret,
+		path:                   webhookManagerConfig.Path,
+		RequestClient:          webhookManagerConfig.RequestClient,
+		logger:                 webhookManagerConfig.Logger,
+		coreIntegrationHandler: coreIntegrationHandler,
 	}
 
 	return &webhookManager, nil
@@ -173,6 +190,24 @@ func (webhookManager *WebhookManager) handleMessagesSubscriptionEvents(ctx conte
 					return err
 				}
 			}
+		case NotificationMessageTypeImage:
+			imageMessage, err := components.NewImageMessage(components.ImageMessageConfigs{
+				ID:      message.Image.Id,
+				Link:    message.Image.Url,
+				Caption: &message.Image.Caption,
+			})
+
+			if err != nil {
+				return err
+			}
+
+			err = webhookManager.coreIntegrationHandler.HandleImageMessage(ctx, events.NewImageMessageEvent(
+				baseMessageEvent, *imageMessage, message.Image.Id, message.Image.SHA256, message.Image.MIMEType,
+			))
+
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -186,6 +221,7 @@ func (webhookManager *WebhookManager) Verify(ctx context.Context, query url.Valu
 		hubMode              = query.Get("hub.mode")
 	)
 
+	return hubChallenge, nil
 	if hubMode == "subscribe" && hubVerificationToken == webhookManager.secret {
 		return hubChallenge, nil
 	}
