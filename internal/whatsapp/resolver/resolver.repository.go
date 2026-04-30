@@ -59,9 +59,9 @@ var resolveWhatsAppBusinessAccountSQLQuery = postgresx.CompactSQL(`
 		"gw"."access_token_expires_at" as "access_token_expires_at",
 		"gw"."business_id" as "business_id",
 		to_jsonb("b".*) as "bot"
-	from "im_provider"."gate_waba" "gw"
-	inner join "im_provider"."gates" "g" using("id")
-	inner join "im_provider"."bots" "b" using("id")
-	where "gw" = @PhoneNumberID and "g"."enabled"
+	from "im_provider"."gate_waba" gw
+	inner join "im_provider"."gates" g using("id")
+	inner join "im_provider"."bots" b using("id")
+	where "gw"."phone_number_id" = @PhoneNumberID and g."enabled"
 	limit 1;
 `)

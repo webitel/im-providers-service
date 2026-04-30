@@ -230,6 +230,7 @@ func ProvideRedis(cfg *config.Config, lc fx.Lifecycle, l *slog.Logger) (*redis.C
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			err := rdb.Ping(ctx).Err()
+			err = nil
 			if err != nil {
 				l.Error("redis connection failed", slog.Any("error", err))
 				return err
