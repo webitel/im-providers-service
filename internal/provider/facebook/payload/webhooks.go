@@ -25,12 +25,13 @@ type InboundMessage struct {
 }
 
 type InboundAttachment struct {
-	Type    string `json:"type"` // "image", "file", "video", "audio"
+	Type    string `json:"type"`
 	Payload struct {
-		URL string `json:"url"`
+		URL   string `json:"url,omitempty"`
+		Title string `json:"title,omitempty"`
+		Name  string `json:"name,omitempty"`
 	} `json:"payload"`
 }
-
 type InboundPostback struct {
 	Title   string `json:"title"`
 	Payload string `json:"payload"` // The data sent back from a button click

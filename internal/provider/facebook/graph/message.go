@@ -21,7 +21,7 @@ type Attachment struct {
 }
 
 type URL struct {
-	Value string `json:"url"`
+	URL string `json:"url"`
 }
 
 func NewTextRequest(psid, text string) OutboundPayload {
@@ -39,7 +39,7 @@ func NewMediaRequest(psid, mType, url string) OutboundPayload {
 		Message: Message{
 			Attachment: &Attachment{
 				Type:    mType,
-				Payload: URL{Value: url},
+				Payload: URL{URL: url},
 			},
 		},
 	}

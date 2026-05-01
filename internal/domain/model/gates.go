@@ -30,12 +30,13 @@ type MetaApp struct {
 
 type FacebookGate struct {
 	ID        string     `json:"id" db:"id"`
-	Peer      Peer       `json:"peer" db:"peer"` // Combined Sub and Iss for identity
+	DomainID  int64      `json:"domain_id" db:"domain_id"`
+	Peer      Peer       `json:"peer" db:"peer"`
 	Name      string     `json:"name" db:"name"`
 	MetaAppID string     `json:"meta_app_id" db:"meta_app_id"`
 	PageID    string     `json:"page_id" db:"page_id"`
 	PageName  string     `json:"page_name" db:"page_name"`
-	PageToken string     `json:"-" db:"page_token"` // Used for encrypted token storage
+	PageToken string     `json:"-" db:"page_token"`
 	Webhook   string     `json:"webhook" db:"webhook"`
 	Status    GateStatus `json:"status" db:"status"`
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`

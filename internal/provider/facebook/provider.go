@@ -6,14 +6,22 @@ import (
 	"log/slog"
 	"net/url"
 	"strings"
+	"time"
 
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
+	client "github.com/webitel/im-providers-service/infra/client/grpc"
+	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	"github.com/webitel/im-providers-service/internal/domain/model"
 	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/provider/facebook/graph"
+	"github.com/webitel/im-providers-service/internal/provider/facebook/payload"
 	"github.com/webitel/im-providers-service/internal/service"
 	"github.com/webitel/im-providers-service/internal/store"
 )
+
+type gateIdentity string
+
+func (g gateIdentity) Identity() string { return string(g) }
 
 type facebookProvider struct {
 	api       *Client
@@ -22,10 +30,18 @@ type facebookProvider struct {
 	gateCache store.GateCache
 	userCache store.ExternalUserCache
 	repo      store.FacebookStore
-	gatewayer gatewayv1.ContactsClient
+	gatewayer *imgateway.Client
 }
 
-func New(m service.Messenger, l *slog.Logger, gc store.GateCache, uc store.ExternalUserCache, repo store.FacebookStore, core gatewayv1.ContactsClient) provider.Provider {
+func New(
+	m service.Messenger,
+	l *slog.Logger,
+	gc store.GateCache,
+	uc store.ExternalUserCache,
+	repo store.FacebookStore,
+	gatewayer *imgateway.Client,
+) provider.Provider {
+	l.Info("facebook.New called with messenger", "type", fmt.Sprintf("%T", m))
 	return &facebookProvider{
 		api:       NewClient(l),
 		logger:    l.With("provider", "facebook"),
@@ -33,7 +49,7 @@ func New(m service.Messenger, l *slog.Logger, gc store.GateCache, uc store.Exter
 		gateCache: gc,
 		userCache: uc,
 		repo:      repo,
-		gatewayer: core,
+		gatewayer: gatewayer,
 	}
 }
 
@@ -59,26 +75,97 @@ func (p *facebookProvider) HandleWebhook(ctx context.Context, data []byte) error
 
 		fbusr, err := p.api.GetUserProfile(ctx, psid, gate.PageToken)
 		if err != nil {
-			p.logger.Error("profile fetch failed", "psid", psid, "err", err)
+			p.logger.Error("failed to fetch user profile", "psid", psid, "err", err)
 			continue
 		}
 
-		p.logDebug(uri, req.Entry[0].ID, psid, fbusr)
-
-		if err := p.usrsync(ctx, gate, psid, fbusr); err != nil {
+		contact, err := p.externalUserSync(ctx, gate, psid, fbusr)
+		if err != nil {
 			p.logger.Error("sync failed", "psid", psid, "err", err)
 			continue
 		}
 
+		from := model.Peer{Sub: contact.Sub, Iss: gate.Peer.Iss}
+		to := model.Peer{Sub: gate.Peer.Sub, Iss: gate.Peer.Iss}
+
+		// Handle plain text
 		if m.Message != nil && m.Message.Text != "" {
-			p.messenger.SendText(ctx, &model.SendTextRequest{
-				From: model.Peer{Sub: psid, Iss: gate.Peer.Iss},
-				To:   model.Peer{Sub: gate.Peer.Sub, Iss: gate.Peer.Iss},
-				Body: m.Message.Text,
+			_, _ = p.messenger.SendText(ctx, &model.SendTextRequest{
+				From:     from,
+				To:       to,
+				Body:     m.Message.Text,
+				DomainID: gate.DomainID,
 			})
+		}
+
+		// Handle media attachments
+		if m.Message != nil && len(m.Message.Attachments) > 0 {
+			p.handleAttachments(ctx, gate.DomainID, from, to, m.Message.Attachments)
 		}
 	}
 	return nil
+}
+
+func (p *facebookProvider) handleAttachments(ctx context.Context, domainID int64, from, to model.Peer, attachments []payload.InboundAttachment) {
+	for _, attach := range attachments {
+		url := attach.Payload.URL
+		if url == "" {
+			continue
+		}
+
+		switch attach.Type {
+		case "image":
+			_, _ = p.messenger.SendImage(ctx, &model.SendImageRequest{
+				DomainID: domainID,
+				From:     from,
+				To:       to,
+				Image: model.ImageRequest{
+					Images: []*model.Image{{
+						URL:      url,
+						FileName: p.generateFileName(attach),
+					}},
+				},
+			})
+
+		case "file", "video", "audio":
+			_, _ = p.messenger.SendDocument(ctx, &model.SendDocumentRequest{
+				DomainID: domainID,
+				From:     from,
+				To:       to,
+				Document: model.DocumentRequest{
+					Documents: []*model.Document{{
+						URL:      url,
+						FileName: p.generateFileName(attach),
+					}},
+				},
+			})
+		}
+	}
+}
+
+func (p *facebookProvider) generateFileName(attach payload.InboundAttachment) string {
+	name := attach.Payload.Title
+	if name == "" {
+		name = attach.Payload.Name
+	}
+	if name != "" {
+		return name
+	}
+
+	// Fallback
+	ext := ""
+	switch attach.Type {
+	case "image":
+		ext = ".jpg"
+	case "video":
+		ext = ".mp4"
+	case "audio":
+		ext = ".mp3"
+	default:
+		ext = ".bin"
+	}
+
+	return fmt.Sprintf("fb_%s_%d%s", attach.Type, time.Now().Unix(), ext)
 }
 
 func (p *facebookProvider) SendText(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
@@ -113,17 +200,11 @@ func (p *facebookProvider) SendDocument(ctx context.Context, req *model.Message)
 	return p.api.SendMedia(ctx, g.PageToken, req.To.Sub, MediaFile, u)
 }
 
-// Verify implements the provider.Verifier interface for Facebook's subscription handshake.
 func (p *facebookProvider) Verify(ctx context.Context, query url.Values) (string, error) {
-	// Call the parser from the metadata package
 	req := graph.ParseVerify(query)
-
 	if req.Mode != "subscribe" {
 		return "", fmt.Errorf("unexpected hub.mode: %s", req.Mode)
 	}
-
-	// Logic: Fetch the gate from DB using the URI to validate the specific token
-	// This ensures only Meta servers knowing your secret can verify the webhook.
 	if req.VerifyToken == "" {
 		return "", fmt.Errorf("missing verify_token")
 	}
@@ -132,24 +213,32 @@ func (p *facebookProvider) Verify(ctx context.Context, query url.Values) (string
 	return req.Challenge, nil
 }
 
-func (p *facebookProvider) usrsync(ctx context.Context, g *model.FacebookGate, psid string, prof *UserProfile) error {
+func (p *facebookProvider) externalUserSync(ctx context.Context, g *model.FacebookGate, psid string, prof *UserProfile) (*gatewayv1.Contact, error) {
 	u := &model.ExternalUser{ID: psid, FirstName: prof.FirstName, LastName: prof.LastName}
+
 	if ok, _ := p.userCache.IsKnown(ctx, u); ok {
-		return nil
+		return &gatewayv1.Contact{Sub: psid}, nil
 	}
-	internalUsr, err := p.gatewayer.Create(ctx, &gatewayv1.CreateContactRequest{
-		IssId:    g.Peer.Iss,
-		Type:     p.Type(),
-		Name:     u.FirstName,
-		Username: u.LastName,
-		Subject:  u.ID,
-		IsBot:    false,
-	})
-	p.logger.Debug("Internal user creation result", "psid", psid, "internal_user_id", internalUsr.Sub, "err", err)
-	if err == nil {
-		_ = p.userCache.MarkKnown(ctx, u)
+
+	// Internal identity for cross-service authorization
+	authCtx := client.WithIdentity(ctx, gateIdentity(fmt.Sprintf("%d.%s", g.DomainID, g.Peer.Sub)))
+
+	internalUsr, err := p.gatewayer.Create(
+		authCtx,
+		&gatewayv1.CreateContactRequest{
+			IssId:    g.Peer.Iss,
+			Type:     p.Type(),
+			Name:     u.FirstName,
+			Username: u.LastName,
+			Subject:  u.ID,
+			IsBot:    false,
+		})
+	if err != nil {
+		return nil, fmt.Errorf("gateway sync failed: %w", err)
 	}
-	return err
+
+	_ = p.userCache.MarkKnown(ctx, u)
+	return internalUsr, nil
 }
 
 func (p *facebookProvider) resolveGate(ctx context.Context, uri, pageID string) (*model.FacebookGate, error) {
@@ -161,12 +250,14 @@ func (p *facebookProvider) resolveGate(ctx context.Context, uri, pageID string) 
 	if err != nil {
 		return nil, err
 	}
-	p.gateCache.Set(k, store.GateState{GateID: g.ID, Enabled: g.Enabled, Issuer: g.Peer.Iss, Sub: g.Peer.Sub})
+	p.gateCache.Set(k, store.GateState{
+		GateID:  g.ID,
+		Enabled: g.Enabled,
+		Issuer:  g.Peer.Iss,
+		Sub:     g.Peer.Sub,
+		Domain:  g.DomainID,
+	})
 	return g, nil
-}
-
-func (p *facebookProvider) logDebug(uri, pageID, psid string, prof *UserProfile) {
-	fmt.Printf("\033[35m[FB]\033[0m %s (Page: %s) | \033[32m%s %s\033[0m (ID: %s)\n", uri, pageID, prof.FirstName, prof.LastName, psid)
 }
 
 func (p *facebookProvider) normalizeURI(ctx context.Context) string {

@@ -68,6 +68,7 @@ type GateState struct {
 	Enabled bool
 	Issuer  string
 	Sub     string
+	Domain  int64
 }
 
 // GateCache defines the contract for high-speed gate lookups across all providers.

@@ -107,9 +107,17 @@ func (s *facebookStore) Select(ctx context.Context, id string) (*model.FacebookG
 func (s *facebookStore) SelectByPageAndURI(ctx context.Context, pageID, uri string) (*model.FacebookGate, error) {
 	const query = `
 	SELECT 
-		g.id, g.name, g.enabled, g.created_at, g.updated_at, 
-		b.sub AS "peer.sub", b.iss AS "peer.iss",
-		fb.meta_app_id, fb.page_id, fb.page_token
+		g.id, 
+		g.dc AS domain_id, 
+		g.name, 
+		g.enabled, 
+		g.created_at, 
+		g.updated_at, 
+		b.sub AS "peer.sub", 
+		b.iss AS "peer.iss",
+		fb.meta_app_id, 
+		fb.page_id, 
+		fb.page_token
 	FROM im_provider.gates g
 	JOIN im_provider.bots b ON g.id = b.gate_id
 	JOIN im_provider.facebook fb ON g.id = fb.gate_id
@@ -129,6 +137,7 @@ func (s *facebookStore) SelectByPageAndURI(ctx context.Context, pageID, uri stri
 	}
 
 	s.mapVirtualFields(&g)
+
 	return &g, nil
 }
 

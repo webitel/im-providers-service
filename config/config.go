@@ -119,7 +119,7 @@ func defineFlags() {
 
 	pflag.String("service.id", "", "Service ID")
 	pflag.String("service.addr", "localhost:8080", "gRPC service address")
-	pflag.String("service.http_addr", ":8081", "HTTP service address")
+	pflag.String("service.http_addr", ":8082", "HTTP service address")
 	pflag.String("service.webhook_path", "/wh", "Base path for incoming webhooks")
 
 	pflag.Bool("service.conn.verify_certs", false, "Determine whether to verify certificates")
