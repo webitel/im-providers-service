@@ -30,6 +30,8 @@ type CoreIntegrationHandler interface {
 	HandleTextMessage(ctx context.Context, textEvent *events.TextMessageEvent) error
 	HandleDocumentMessage(ctx context.Context, documentEvent *events.DocumentMessageEvent) error
 	HandleImageMessage(ctx context.Context, imageEvent *events.ImageMessageEvent) error
+	HandleLocationMessage(ctx context.Context, locationEvent *events.LocationMessageEvent) error
+	HandleContactsMessage(ctx context.Context, contacts *events.ContactMessageEvent) error
 }
 
 type WebhookManager struct {
@@ -206,6 +208,20 @@ func (webhookManager *WebhookManager) handleMessagesSubscriptionEvents(ctx conte
 			))
 
 			if err != nil {
+				return err
+			}
+		case NotificationMessageTypeLocation:
+			locationMessage := components.NewLocationMessage(message.Location.Latitude, message.Location.Longitude)
+
+			locationMessage.SetName(message.Location.Name).SetAddress(message.Location.Address)
+
+			if err := webhookManager.coreIntegrationHandler.HandleLocationMessage(ctx, events.NewLocationMessageEvent(baseMessageEvent, *locationMessage)); err != nil {
+				return err
+			}
+
+		case NotificationMessageTypeContacts:
+			contactMessage := components.NewContactMessage(message.Contacts)
+			if err := webhookManager.coreIntegrationHandler.HandleContactsMessage(ctx, events.NewContactsMessageEvent(baseMessageEvent, *contactMessage)); err != nil {
 				return err
 			}
 		}

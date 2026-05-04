@@ -118,3 +118,20 @@ func (decoratedCoreMessanger *decoratedCoreMessanger) SendDocument(ctx context.C
 
 	return decoratedCoreMessanger.CoreMessanger.SendDocument(requestContext, in)
 }
+
+func (decoratedCoreMessanger *decoratedCoreMessanger) SendLocation(ctx context.Context, in *model.SendLocationRequest) (*model.SendResponse, error) {
+	requestContext, err := decoratedCoreMessanger.prepareOutgoingSendCoreRequest(ctx, in.From, in.To, in.DomainID)
+	if err != nil {
+		return nil, err
+	}
+
+	return decoratedCoreMessanger.CoreMessanger.SendLocation(requestContext, in)
+}
+
+func (decoratedCoreMessanger *decoratedCoreMessanger) SendContact(ctx context.Context, in *model.SendContactRequest) (*model.SendResponse, error) {
+	requestContext, err := decoratedCoreMessanger.prepareOutgoingSendCoreRequest(ctx, in.From, in.To, in.DomainID)
+	if err != nil {
+		return nil, err
+	}
+	return decoratedCoreMessanger.CoreMessanger.SendContact(requestContext, in)
+}

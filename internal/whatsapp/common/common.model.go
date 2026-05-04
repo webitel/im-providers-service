@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/webitel/im-providers-service/internal/whatsapp/client"
+	"github.com/webitel/im-providers-service/internal/whatsapp/media"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
 
@@ -111,4 +112,19 @@ func (whatsappBusinessAccount *WhatsappBusinessAccount) CreateRequestClient() (*
 	}
 
 	return requestClient, nil
+}
+
+func (whatsappBusinessAccount *WhatsappBusinessAccount) CreateMediaClient() (*media.MediaManager, error) {
+	if whatsappBusinessAccount == nil {
+		return nil, errors.InvalidArgument("received nil pointer whatsapp business account caller", errors.WithID("whatsapp.common.model.create_media_client"))
+	}
+
+	requestClient, err := whatsappBusinessAccount.CreateRequestClient()
+	if err != nil {
+		return nil, errors.Wrap(err, errors.WithID("whatsapp.common.model.create_media_client"))
+	}
+
+	mediaClient := media.NewMediaManager(*requestClient)
+
+	return mediaClient, nil
 }

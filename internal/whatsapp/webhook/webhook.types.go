@@ -1,5 +1,7 @@
 package webhook
 
+import "github.com/webitel/im-providers-service/internal/whatsapp/messaging/components"
+
 type WhatsappApiNotificationPayloadSchemaType struct {
 	Object string  `json:"object"`
 	Entry  []Entry `json:"entry"`
@@ -104,6 +106,8 @@ type Message struct {
 	NotificationPayloadTextMessageSchemaType     `json:",inline"`
 	NotificationPayloadImageMessageSchemaType    `json:",inline"`
 	NotificationPayloadDocumentMessageSchemaType `json:",inline"`
+	NotificationPayloadLocationMessageSchemaType `json:",inline"`
+	NotificationPayloadContactMessageSchemaType  `json:",inline"`
 }
 
 type NotificationMessageTypeEnum string
@@ -162,4 +166,17 @@ type NotificationPayloadDocumentMessageSchemaType struct {
 		Filename string `json:"filename,omitempty"`
 		Link     string `json:"link,omitempty"`
 	} `json:"document,omitempty"`
+}
+
+type NotificationPayloadLocationMessageSchemaType struct {
+	Location struct {
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+		Name      string  `json:"name,omitempty"`
+		Address   string  `json:"address,omitempty"`
+	} `json:"location,omitempty"`
+}
+
+type NotificationPayloadContactMessageSchemaType struct {
+	Contacts []components.Contact `json:"contacts"`
 }

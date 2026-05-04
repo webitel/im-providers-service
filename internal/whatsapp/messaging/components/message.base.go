@@ -12,6 +12,8 @@ const (
 	MessageTypeText     MessageType = "text"
 	MessageTypeDocument MessageType = "document"
 	MessageTypeImage    MessageType = "image"
+	MessageTypeLocation MessageType = "location"
+	MessageTypeContact  MessageType = "contact"
 )
 
 type ApiCompatibleJsonConverterConfigs struct {

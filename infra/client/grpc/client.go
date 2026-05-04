@@ -14,8 +14,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 )
 
 func New[T any](
@@ -61,6 +61,12 @@ func New[T any](
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig.Client)))
 	} else {
 		// Fallback to insecure if no TLS config is provided
+		options = append(options, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	}
+
+	if tlsCong != nil {
+		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlsCong.Client)))
+	} else {
 		options = append(options, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 

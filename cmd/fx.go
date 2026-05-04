@@ -20,6 +20,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/core/webhook"
 	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
+	"github.com/webitel/im-providers-service/internal/media"
 	"github.com/webitel/im-providers-service/internal/provider/facebook"
 	"github.com/webitel/im-providers-service/internal/service"
 	storedi "github.com/webitel/im-providers-service/internal/store/di"
@@ -43,6 +44,8 @@ func NewApp(cfg *config.Config) *fx.App {
 		tls.Module,
 		crypto.Module,
 		imgateway.Module,
+		storage.Module,
+		media.Module,
 		imauth.Module,
 		storage.Module,
 		imcontact.Module,
