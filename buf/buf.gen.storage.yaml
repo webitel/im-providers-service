@@ -1,0 +1,34 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package
+      module: buf.build/webitel/storage
+      value: "github.com/webitel/im-providers-service/gen/go/storage;storage"
+    - file_option: go_package
+      module: buf.build/webitel/engine
+      value: "github.com/webitel/storage/gen/engine;engine"
+  disable:
+    - module: buf.build/googleapis/googleapis
+    - module: buf.build/bufbuild/protovalidate
+
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.34.1
+    out: ../gen/go/storage
+    opt:
+      - module=github.com/webitel/im-providers-service/gen/go/storage
+
+  - remote: buf.build/grpc/go:v1.5.1
+    out: ../gen/go/storage
+    include_imports: true
+    opt:
+      - module=github.com/webitel/im-providers-service/gen/go/storage
+
+#inputs:
+#  - module: buf.build/webitel/storage
+
+inputs:
+  - git_repo: https://github.com/webitel/protos.git
+    branch: main
+    subdir: storage
+    depth: 1
