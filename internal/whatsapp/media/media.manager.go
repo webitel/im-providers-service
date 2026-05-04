@@ -158,27 +158,5 @@ func (mediaManager *MediaManager) DownloadMedia(ctx context.Context, id string) 
 }
 
 func (mediaManager *MediaManager) DownloadMediaByURL(ctx context.Context, url string) (io.ReadCloser, string, error) {
-	//TODO: add response body io limit?
-	// -add correct request url build
-	if url == "" {
-		return nil, "", errors.InvalidArgument("url is required", errors.WithID("whatsapp.media.manager.download_media_by_url"))
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, "", errors.Internal("creating outgoing download media request", errors.WithCause(err), errors.WithID("whatsapp.media.manager.download_media_by_url"))
-	}
-	req.Header.Set("Authorization", "Bearer "+mediaManager.client.AccessToken())
-
-	response, err := http.DefaultClient.Do(req)
-	if err != nil { //TODO: add 404 response check
-		return nil, "", err
-	}
-
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		response.Body.Close()
-		return nil, "", errors.NotFound("bad media download response status", errors.WithCause(err), errors.WithID("whatsapp.media.manager.download_media_by_url"))
-	}
-
-	return response.Body, response.Header.Get("Content-Type"), nil
+	return mediaManager.client.RequestMediaDownloadByURLWithContext(ctx, url)
 }

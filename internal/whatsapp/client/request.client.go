@@ -213,6 +213,8 @@ func (client *RequestClient) RequestMultipartWithContext(ctx context.Context, me
 	if err != nil {
 		return "", errors.Internal("creating http request", errors.WithID("client.request.client.request_multipart"), errors.WithCause(err))
 	}
+	httpRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", client.accessToken))
+	httpRequest.Header.Set("Content-Type", contentType)
 
 	httpClient := http.DefaultClient
 	response, err := httpClient.Do(httpRequest)
@@ -226,4 +228,38 @@ func (client *RequestClient) RequestMultipartWithContext(ctx context.Context, me
 		return "", errors.Internal("reading response body", errors.WithID("client.request.client.request_multipart"), errors.WithCause(err))
 	}
 	return string(respBody), nil
+}
+
+// Download media files using URLs obtained from media retrieval endpoints.
+// Requires User Access Token with whatsapp_business_messaging permission.
+// Media URLs expire after 5 minutes and must be re-retrieved if expired.
+// Returns binary content with appropriate MIME type headers.
+func (client *RequestClient) RequestMediaDownloadByURLWithContext(ctx context.Context, url string) (io.ReadCloser, string, error) {
+	//TODO: add response body io limit?
+	if url == "" {
+		return nil, "", errors.InvalidArgument("media url is required", errors.WithID("whatsapp.request.client.request_media_download_by_url_with_context"))
+	}
+
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, "", errors.Internal("creating download whatsapp media request", errors.WithCause(err), errors.WithID("whatsapp.request.client.request_media_download_by_url_with_context"))
+	}
+	httpRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", client.accessToken))
+	httpRequest.Header.Set("Content-Type", "application/json")
+
+	response, err := http.DefaultClient.Do(httpRequest)
+	if err != nil {
+		return nil, "", errors.Wrap(err, errors.WithID("whatsapp.request.client.request_media_download_by_url_with_context"))
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 { //TODO: add falback
+		response.Body.Close()
+		return nil, "", errors.NotFound(
+			"bad media download response status",
+			errors.WithID("whatsapp.request.client.request_media_download_by_url_with_context"),
+			errors.WithValue("response_status_code", response.StatusCode),
+		)
+	}
+
+	return response.Body, response.Header.Get("Content-Type"), nil
 }

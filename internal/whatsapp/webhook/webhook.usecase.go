@@ -2,18 +2,29 @@ package webhook
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log/slog"
+	"strconv"
+	"time"
 
 	"github.com/webitel/im-providers-service/internal/domain/model"
+	"github.com/webitel/im-providers-service/internal/media"
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/im-providers-service/internal/whatsapp/webhook/events"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
 
+type MediaUploader interface {
+	UploadFile(ctx context.Context, uploadMetadata media.UploadFileRequestMetadata, body io.Reader) (media.UploadFileMetadata, error)
+}
+
 type CoreMessanger interface {
 	SendText(ctx context.Context, in *model.SendTextRequest) (*model.SendTextResponse, error)
 	SendImage(ctx context.Context, in *model.SendImageRequest) (*model.SendImageResponse, error)
 	SendDocument(ctx context.Context, in *model.SendDocumentRequest) (*model.SendDocumentResponse, error)
+	SendContact(ctx context.Context, in *model.SendContactRequest) (*model.SendResponse, error)
+	SendLocation(ctx context.Context, in *model.SendLocationRequest) (*model.SendResponse, error)
 }
 
 type WhatsAppBusinessAccountResolveQuery struct {
@@ -33,11 +44,24 @@ type webhook struct {
 	coreMessanger                   CoreMessanger
 	whatsAppBusinessAccountResolver WhatsAppBusinessAccountResolver
 	encryptor                       common.Encryptor
+	mediaUploader                   MediaUploader
 }
 
-func newWebhook(logger *slog.Logger, coreMessanger CoreMessanger, whatsAppBusinessAccountResolver WhatsAppBusinessAccountResolver, encryptor common.Encryptor) *webhook {
+func newWebhook(
+	logger *slog.Logger,
+	coreMessanger CoreMessanger,
+	whatsAppBusinessAccountResolver WhatsAppBusinessAccountResolver,
+	encryptor common.Encryptor,
+	mediaUploader MediaUploader,
+) *webhook {
 	log := logger.With("component", "whatsapp_webhook_usecase")
-	return &webhook{logger: log, coreMessanger: coreMessanger, whatsAppBusinessAccountResolver: whatsAppBusinessAccountResolver, encryptor: encryptor}
+	return &webhook{
+		logger:                          log,
+		coreMessanger:                   coreMessanger,
+		whatsAppBusinessAccountResolver: whatsAppBusinessAccountResolver,
+		encryptor:                       encryptor,
+		mediaUploader:                   mediaUploader,
+	}
 }
 
 func (webhook *webhook) resolveWhatsappBusinessAccount(ctx context.Context, phoneNumberID string) (*common.WhatsappBusinessAccount, error) {
@@ -55,6 +79,35 @@ func (webhook *webhook) resolveWhatsappBusinessAccount(ctx context.Context, phon
 	}
 
 	return &preparedBusinessAccount, nil
+}
+
+func (webhook *webhook) uploadReceivedMedia(ctx context.Context, metadata media.UploadFileRequestMetadata, whatsAppBusinessAccount *common.WhatsappBusinessAccount) (media.UploadFileMetadata, error) {
+	urlObj := metadata.URL
+	mediaClient, err := whatsAppBusinessAccount.CreateMediaClient()
+	if err != nil {
+		return media.UploadFileMetadata{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"), errors.WithValue("phone_number_id", whatsAppBusinessAccount.PhoneNumberID))
+	}
+
+	if urlObj == "" {
+		if urlObj, err = mediaClient.GetMediaURLByID(ctx, metadata.ExternalID); err != nil {
+			return media.UploadFileMetadata{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"))
+		}
+	}
+
+	file, mime, err := mediaClient.DownloadMediaByURL(ctx, urlObj) // add fallback to retrive URL by ID in case of 404
+	if err != nil {
+		return media.UploadFileMetadata{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"))
+	}
+	defer file.Close()
+
+	metadata.MimeType = mime
+
+	uploadedMetadata, err := webhook.mediaUploader.UploadFile(ctx, metadata, file)
+	if err != nil {
+		return media.UploadFileMetadata{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"))
+	}
+
+	return uploadedMetadata, nil
 }
 
 func (webhook *webhook) HandleTextMessage(ctx context.Context, textEvent *events.TextMessageEvent) error {
@@ -137,6 +190,23 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 		return nil
 	}
 
+	uploadedMd, err := webhook.uploadReceivedMedia(
+		ctx,
+		media.UploadFileRequestMetadata{
+			DomainID:   int64(whatsAppBusinessAccount.DC),
+			MimeType:   documentEvent.MimeType,
+			Name:       documentEvent.Document.FileName,
+			URL:        documentEvent.Document.Link,
+			ExternalID: documentEvent.Document.ID,
+		},
+		whatsAppBusinessAccount,
+	)
+
+	if err != nil {
+		log.Error("uploading received document to internal storage", "error", err)
+		return err
+	}
+
 	coreDocumentMessage := model.SendDocumentRequest{
 		From: extractPeerFromWebhookInput(documentEvent.From, documentEvent.SenderName),
 		To:   extractPeerFromWhatsAppBusinessAccount(whatsAppBusinessAccount),
@@ -146,8 +216,8 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 				{
 					FileName: documentEvent.Document.FileName,
 					MimeType: documentEvent.MimeType,
-					Size:     0,
-					URL:      documentEvent.Document.Link,
+					Size:     uploadedMd.Size,
+					ID:       strconv.Itoa(int(uploadedMd.ID)),
 				},
 			},
 		},
@@ -180,6 +250,23 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 		return nil
 	}
 
+	mediaMetadata, err := webhook.uploadReceivedMedia(
+		ctx,
+		media.UploadFileRequestMetadata{
+			DomainID:   int64(whatsAppBusinessAccount.DC),
+			MimeType:   imageEvent.MimeType,
+			Name:       fmt.Sprintf("%s-%s", imageEvent.SenderName, time.Now().String()),
+			URL:        imageEvent.Image.Link,
+			ExternalID: imageEvent.MediaId,
+		},
+		whatsAppBusinessAccount,
+	)
+
+	if err != nil {
+		log.Error("uploading received document to internal storage", "error", err)
+		return err
+	}
+
 	coreImageMessage := model.SendImageRequest{
 		From: extractPeerFromWebhookInput(imageEvent.From, imageEvent.SenderName),
 		To:   extractPeerFromWhatsAppBusinessAccount(whatsAppBusinessAccount),
@@ -187,7 +274,7 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 			Images: []*model.Image{
 				{
 					MimeType: imageEvent.MimeType,
-					URL:      imageEvent.Image.Link,
+					ID:       strconv.Itoa(int(mediaMetadata.ID)),
 				},
 			},
 			Body: *imageEvent.Image.Caption,
@@ -198,6 +285,106 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 	if _, err := webhook.coreMessanger.SendImage(ctx, &coreImageMessage); err != nil {
 		log.Error("sending image request to IM core", "error", err, "from", imageEvent.From, "to", whatsAppBusinessAccount.Bot.Sub)
 		return err
+	}
+
+	return nil
+}
+
+func (webhook *webhook) HandleLocationMessage(ctx context.Context, locationEvent *events.LocationMessageEvent) error {
+	log := webhook.logger.With("operation", "handle_location_message")
+
+	if locationEvent == nil {
+		log.Warn("received nil pointer send location event")
+		return errors.InvalidArgument("received nil pointer send location event", errors.WithID("whatsapp.webhook.usecase.handle_location_message"))
+	}
+
+	whatsappBusinessAccount, err := webhook.resolveWhatsappBusinessAccount(ctx, locationEvent.PhoneNumber.ID)
+	if err != nil {
+		log.Error("resolving whatsapp business account", "error", err)
+		return errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.handle_location_message"))
+	}
+
+	if whatsappBusinessAccount == nil {
+		return nil
+	}
+
+	var namePtr, addressPtr *string
+	if locationEvent.Location.Name != "" {
+		namePtr = &locationEvent.Location.Name
+	}
+	if locationEvent.Location.Address != "" {
+		addressPtr = &locationEvent.Location.Address
+	}
+
+	locationMessage := model.SendLocationRequest{
+		From:       extractPeerFromWebhookInput(locationEvent.From, locationEvent.SenderName),
+		To:         extractPeerFromWhatsAppBusinessAccount(whatsappBusinessAccount),
+		Latitude:   locationEvent.Location.Latitude,
+		Longitude:  locationEvent.Location.Longitude,
+		Name:       namePtr,
+		Address:    addressPtr,
+		ExternalID: locationEvent.MessageID,
+		DomainID:   whatsappBusinessAccount.DC,
+	}
+
+	if _, err = webhook.coreMessanger.SendLocation(ctx, &locationMessage); err != nil {
+		log.Error("sending location message to IM core", "error", err)
+		return errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.handle_location_message"))
+	}
+
+	return nil
+}
+
+func (webhook *webhook) HandleContactsMessage(ctx context.Context, contacts *events.ContactMessageEvent) error {
+	log := webhook.logger.With("operation", "handle_contacts_message")
+	if contacts == nil {
+		log.Warn("received nil pointer contacts event")
+		return errors.InvalidArgument("contacts event is required", errors.WithID("whatsapp.webhook.usecase.handle_contacts_message"))
+	}
+
+	whatsappBusinessAccount, err := webhook.resolveWhatsappBusinessAccount(ctx, contacts.PhoneNumber.ID)
+	if err != nil {
+		log.Error("resolving whatsapp business account")
+		return errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.handle_contacts_message"))
+	}
+
+	if whatsappBusinessAccount == nil {
+		return nil
+	}
+
+	fromPeer := extractPeerFromWebhookInput(contacts.From, contacts.SenderName)
+	toPeer := extractPeerFromWhatsAppBusinessAccount(whatsappBusinessAccount)
+
+	for _, contact := range contacts.Contacts.Contacts { //TODO: add worker pool to send IM messages concurrently
+		var namePtr, emailPtr, phoneNumberPtr *string
+		if len(contact.Emails) > 0 {
+			emailPtr = &contact.Emails[0].Email
+		}
+
+		if contact.Name.FormattedName != "" {
+			namePtr = &contact.Name.FormattedName
+		}
+
+		if len(contact.Phones) > 0 {
+			phoneNumberPtr = &contact.Phones[0].Phone
+		}
+
+		contactMessage := model.SendContactRequest{
+			From:        fromPeer,
+			To:          toPeer,
+			Name:        namePtr,
+			Email:       emailPtr,
+			PhoneNumber: phoneNumberPtr,
+			Metadata:    contact.AsMetadata(),
+			ExternalID:  "",
+			DomainID:    whatsappBusinessAccount.DC,
+		}
+
+		if _, err := webhook.coreMessanger.SendContact(ctx, &contactMessage); err != nil {
+			log.Error("sending contact message to IM core", "error", err, "from", contacts.From, "phone_number_id", whatsappBusinessAccount.PhoneNumberID)
+			return err
+		}
+
 	}
 
 	return nil

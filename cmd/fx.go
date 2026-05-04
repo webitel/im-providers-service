@@ -11,11 +11,13 @@ import (
 	imauth "github.com/webitel/im-providers-service/infra/client/grpc/im-auth"
 	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
+	"github.com/webitel/im-providers-service/infra/client/grpc/storage"
 	grpcsrv "github.com/webitel/im-providers-service/infra/srv/grpc"
 	httpsrv "github.com/webitel/im-providers-service/infra/srv/http"
 	"github.com/webitel/im-providers-service/infra/tls"
 	"github.com/webitel/im-providers-service/internal/handler/grpc"
 	"github.com/webitel/im-providers-service/internal/handler/http/webhook"
+	"github.com/webitel/im-providers-service/internal/media"
 	"github.com/webitel/im-providers-service/internal/provider/facebook"
 	"github.com/webitel/im-providers-service/internal/service"
 	storedi "github.com/webitel/im-providers-service/internal/store/di"
@@ -39,6 +41,8 @@ func NewApp(cfg *config.Config) *fx.App {
 		tls.Module,
 		crypto.Module,
 		imgateway.Module,
+		storage.Module,
+		media.Module,
 		imauth.Module,
 		imcontact.Module,
 		service.Module,
