@@ -10,6 +10,8 @@ var Module = fx.Module("service",
 		fx.Annotate(NewMetaOAuthService, fx.As(new(MetaOAuthManager))),
 		fx.Annotate(NewWhatsAppService, fx.As(new(WhatsAppManager))),
 		fx.Annotate(NewAuthService, fx.As(new(Auther))),
+		fx.Annotate(NewMediaService, fx.As(new(MediaManager))),
+
 		fx.Annotate(
 			NewMessageService,
 			fx.ResultTags(`name:"baseMessenger"`),

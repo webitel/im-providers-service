@@ -10,6 +10,7 @@ type Image struct {
 	FileName string `json:"file_name"`
 	MimeType string `json:"mime_type"`
 	URL      string `json:"url"`
+	Size     int64  `json:"size"`
 }
 
 // ImageRequest wraps images and an optional caption.
@@ -37,3 +38,4 @@ func (i *Image) GetID() string       { return i.ID }
 func (i *Image) GetURL() string      { return i.URL }
 func (i *Image) GetMimeType() string { return i.MimeType }
 func (i *Image) GetName() string     { return i.FileName }
+func (i *Image) GetSize() int64      { return i.Size }

@@ -45,6 +45,7 @@ func (m *messageService) SendText(ctx context.Context, in *model.SendTextRequest
 		Body: in.Body,
 	})
 	if err != nil {
+		m.logger.Error("failed to send text message", "error", err)
 		return nil, err
 	}
 
@@ -65,6 +66,7 @@ func (m *messageService) SendImage(ctx context.Context, in *model.SendImageReque
 		Images: m.mapImages(in.Image.Images),
 	})
 	if err != nil {
+		m.logger.Error("failed to send image message", "error", err)
 		return nil, err
 	}
 
@@ -85,6 +87,7 @@ func (m *messageService) SendDocument(ctx context.Context, in *model.SendDocumen
 		Documents: m.mapDocuments(in.Document.Documents),
 	})
 	if err != nil {
+		m.logger.Error("failed to send document message", "error", err)
 		return nil, err
 	}
 

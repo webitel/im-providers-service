@@ -7,12 +7,13 @@
 package storage
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	engine "github.com/webitel/storage/gen/engine"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -992,22 +993,24 @@ func file_backend_profile_proto_rawDescGZIP() []byte {
 	return file_backend_profile_proto_rawDescData
 }
 
-var file_backend_profile_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
-var file_backend_profile_proto_goTypes = []interface{}{
-	(*DeleteBackendProfileRequest)(nil), // 0: storage.DeleteBackendProfileRequest
-	(*PatchBackendProfileRequest)(nil),  // 1: storage.PatchBackendProfileRequest
-	(*UpdateBackendProfileRequest)(nil), // 2: storage.UpdateBackendProfileRequest
-	(*ReadBackendProfileRequest)(nil),   // 3: storage.ReadBackendProfileRequest
-	(*SearchBackendProfileRequest)(nil), // 4: storage.SearchBackendProfileRequest
-	(*ListBackendProfile)(nil),          // 5: storage.ListBackendProfile
-	(*BackendProfile)(nil),              // 6: storage.BackendProfile
-	(*CreateBackendProfileRequest)(nil), // 7: storage.CreateBackendProfileRequest
-	nil,                                 // 8: storage.PatchBackendProfileRequest.PropertiesEntry
-	nil,                                 // 9: storage.UpdateBackendProfileRequest.PropertiesEntry
-	nil,                                 // 10: storage.BackendProfile.PropertiesEntry
-	nil,                                 // 11: storage.CreateBackendProfileRequest.PropertiesEntry
-	(*engine.Lookup)(nil),               // 12: engine.Lookup
-}
+var (
+	file_backend_profile_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+	file_backend_profile_proto_goTypes  = []interface{}{
+		(*DeleteBackendProfileRequest)(nil), // 0: storage.DeleteBackendProfileRequest
+		(*PatchBackendProfileRequest)(nil),  // 1: storage.PatchBackendProfileRequest
+		(*UpdateBackendProfileRequest)(nil), // 2: storage.UpdateBackendProfileRequest
+		(*ReadBackendProfileRequest)(nil),   // 3: storage.ReadBackendProfileRequest
+		(*SearchBackendProfileRequest)(nil), // 4: storage.SearchBackendProfileRequest
+		(*ListBackendProfile)(nil),          // 5: storage.ListBackendProfile
+		(*BackendProfile)(nil),              // 6: storage.BackendProfile
+		(*CreateBackendProfileRequest)(nil), // 7: storage.CreateBackendProfileRequest
+		nil,                                 // 8: storage.PatchBackendProfileRequest.PropertiesEntry
+		nil,                                 // 9: storage.UpdateBackendProfileRequest.PropertiesEntry
+		nil,                                 // 10: storage.BackendProfile.PropertiesEntry
+		nil,                                 // 11: storage.CreateBackendProfileRequest.PropertiesEntry
+		(*engine.Lookup)(nil),               // 12: engine.Lookup
+	}
+)
 var file_backend_profile_proto_depIdxs = []int32{
 	8,  // 0: storage.PatchBackendProfileRequest.properties:type_name -> storage.PatchBackendProfileRequest.PropertiesEntry
 	9,  // 1: storage.UpdateBackendProfileRequest.properties:type_name -> storage.UpdateBackendProfileRequest.PropertiesEntry

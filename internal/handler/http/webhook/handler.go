@@ -1,7 +1,10 @@
 package webhook
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -38,6 +41,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// [GET] Verification (for Facebook/WhatsApp/etc.)
 	if r.Method == http.MethodGet {
 		if v, ok := p.(provider.Verifier); ok {
 			challenge, err := v.Verify(r.Context(), r.URL.Query())
@@ -54,7 +58,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// [POST_PROCESSING]: Standard webhook event handling.
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.logger.Error("failed to read body", "error", err)
@@ -63,7 +66,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// Inject 'uri' into context for provider database lookups.
+	h.prettyPrintJSON(pType, uri, body)
+
 	ctx := context.WithValue(r.Context(), "webhook_uri", uri)
 	if err := p.HandleWebhook(ctx, body); err != nil {
 		h.logger.Error("processing failed", "provider", pType, "uri", uri, "error", err)
@@ -72,4 +76,29 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) prettyPrintJSON(pType, uri string, data []byte) {
+	if len(data) == 0 {
+		return
+	}
+
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, data, "", "  "); err != nil {
+		h.logger.Debug("incoming webhook body (non-json)", "provider", pType, "body", string(data))
+		return
+	}
+
+	const (
+		reset  = "\033[0m"
+		bold   = "\033[1m"
+		cyan   = "\033[36m"
+		green  = "\033[32m"
+		yellow = "\033[33m"
+		gray   = "\033[90m"
+	)
+
+	fmt.Printf("\n%s%s─── %s RECEIVED WEBHOOK [%s | %s] ───%s\n", bold, cyan, pType, pType, uri, reset)
+	fmt.Printf("%s%s%s\n", green, prettyJSON.String(), reset)
+	fmt.Printf("%s%s──────────────────────────────────────────────────%s\n\n", bold, gray, reset)
 }

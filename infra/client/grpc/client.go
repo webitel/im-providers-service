@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -46,11 +47,19 @@ func New[T any](
 		return invoker(metadata.NewOutgoingContext(ctx, md), method, req, reply, cc, opts...)
 	}
 
+	// Basic options
 	options := []grpc.DialOption{
-		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig.Client)),
 		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 		grpc.WithResolvers(discovery.NewBuilder(dp, discovery.WithInsecure(true))),
 		grpc.WithChainUnaryInterceptor(authInterceptor),
+	}
+
+	// FIX: Safety check for TLS configuration to avoid nil pointer dereference
+	if tlsConfig != nil && tlsConfig.Client != nil {
+		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig.Client)))
+	} else {
+		// Fallback to insecure if no TLS config is provided
+		options = append(options, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
 	client, err := rpc.NewClient(
