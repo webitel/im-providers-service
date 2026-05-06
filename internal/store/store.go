@@ -33,6 +33,7 @@ type GateStore interface {
 type MetaAppStore interface {
 	Insert(ctx context.Context, a *model.MetaApp) error
 	Select(ctx context.Context, id string) (*model.MetaApp, error)
+	SelectByURI(ctx context.Context, uri string) (*model.MetaApp, error)
 	Update(ctx context.Context, a *model.MetaApp) error
 	Delete(ctx context.Context, id string) error
 }

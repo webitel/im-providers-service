@@ -35,6 +35,7 @@ func (m *MetaAppHandler) CreateMetaApp(ctx context.Context, req *impb.ProviderCr
 		AppSecret:        req.GetAppSecret(),
 		OAuthRedirectURI: req.GetOauthRedirectUri(),
 		Scopes:           req.GetScopes(),
+		VerifyToken:      req.GetVerifyToken(),
 	})
 	if err != nil {
 		m.logger.Error("failed to create meta app", slog.Any("err", err))
@@ -64,6 +65,7 @@ func (m *MetaAppHandler) UpdateMetaApp(ctx context.Context, req *impb.ProviderUp
 	name := req.GetName()
 	secret := req.GetAppSecret()
 	uri := req.GetOauthRedirectUri()
+	verifyToken := req.GetVerifyToken()
 
 	app, err := m.srv.UpdateMetaApp(ctx, model.UpdateMetaApp{
 		ID:               req.GetId(),
@@ -71,6 +73,7 @@ func (m *MetaAppHandler) UpdateMetaApp(ctx context.Context, req *impb.ProviderUp
 		AppSecret:        &secret,
 		OAuthRedirectURI: &uri,
 		Scopes:           req.GetScopes(),
+		VerifyToken:      &verifyToken,
 	})
 	if err != nil {
 		m.logger.Error("failed to update meta app", slog.String("id", req.GetId()), slog.Any("err", err))
@@ -105,6 +108,7 @@ func toProto(a *model.MetaApp) *impb.ProviderMetaApp {
 		AppId:            a.AppID,
 		OauthRedirectUri: a.OAuthRedirectURI,
 		Scopes:           a.Scopes,
+		VerifyToken:      a.VerifyToken,
 		CreatedAt:        a.CreatedAt.UnixMilli(),
 		UpdatedAt:        a.UpdatedAt.UnixMilli(),
 	}

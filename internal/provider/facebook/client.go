@@ -35,13 +35,16 @@ func NewClient(l *slog.Logger) *Client {
 func (c *Client) GetUserProfile(ctx context.Context, psid, token string) (*UserProfile, error) {
 	u, err := graph.NewQuery(c.apiURL, psid).
 		WithFields(graph.ID, graph.FirstName, graph.LastName, graph.ProfilePic, graph.Locale, graph.Timezone).
-		WithToken(token).
 		Build()
 	if err != nil {
 		return nil, err
 	}
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -58,11 +61,18 @@ func (c *Client) GetUserProfile(ctx context.Context, psid, token string) (*UserP
 }
 
 func (c *Client) send(ctx context.Context, token string, body graph.OutboundPayload) (*model.MessageResponse, error) {
-	u := fmt.Sprintf("%s/me/messages?access_token=%s", c.apiURL, token)
-	raw, _ := json.Marshal(body)
+	u := fmt.Sprintf("%s/me/messages", c.apiURL)
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("marshal outbound payload: %w", err)
+	}
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewBuffer(raw))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewBuffer(raw))
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -78,7 +88,9 @@ func (c *Client) send(ctx context.Context, token string, body graph.OutboundPayl
 	var res struct {
 		ID string `json:"message_id"`
 	}
-	_ = json.NewDecoder(resp.Body).Decode(&res)
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		c.logger.Warn("failed to decode send response", "err", err)
+	}
 	return &model.MessageResponse{ID: res.ID}, nil
 }
 

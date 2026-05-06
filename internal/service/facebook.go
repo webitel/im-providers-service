@@ -9,6 +9,8 @@ import (
 	"github.com/webitel/im-providers-service/internal/store"
 )
 
+var _ FacebookManager = (*FacebookService)(nil)
+
 type FacebookManager interface {
 	CreateGate(ctx context.Context, req model.CreateFacebook) (*model.FacebookGate, error)
 	GetGate(ctx context.Context, id string) (*model.FacebookGate, error)

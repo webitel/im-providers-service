@@ -21,7 +21,7 @@ type MetaApp struct {
 	Name             string    `json:"name" db:"name"`
 	AppID            string    `json:"app_id" db:"app_id"`
 	AppSecret        string    `json:"-" db:"app_secret"`
-	SystemUserToken  string    `json:"-" db:"system_user_token"`
+	VerifyToken      string    `json:"-" db:"verify_token"`
 	OAuthRedirectURI string    `json:"oauth_redirect_uri" db:"redirect_uri"`
 	Scopes           []string  `json:"scopes" db:"scopes"`
 	CreatedAt        time.Time `json:"created_at" db:"created_at"`

@@ -43,10 +43,6 @@ func (q *QueryBuilder) WithFields(fields ...ProfileField) *QueryBuilder {
 	return q
 }
 
-func (q *QueryBuilder) WithToken(token string) *QueryBuilder {
-	q.query.Set("access_token", token)
-	return q
-}
 
 func (q *QueryBuilder) Build() (string, error) {
 	u, err := url.Parse(fmt.Sprintf("%s/%s", q.base, q.node))

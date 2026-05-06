@@ -1,6 +1,7 @@
 package payload
 
-// WebhookRequest is the top-level Meta webhook structure.
+// API payloads for Facebook Messenger webhooks
+// https://developers.facebook.com/documentation/business-messaging/messenger-platform/reference/webhook-events/messages#attachments
 type WebhookRequest struct {
 	Object string `json:"object"`
 	Entry  []struct {

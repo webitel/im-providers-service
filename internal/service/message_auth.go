@@ -8,10 +8,6 @@ import (
 	"github.com/webitel/im-providers-service/internal/domain/model"
 )
 
-type gateIdentity string
-
-func (g gateIdentity) Identity() string { return string(g) }
-
 type messengerAuthMiddleware struct {
 	next Messenger
 }
@@ -21,21 +17,17 @@ func NewMessengerAuthMiddleware(next Messenger) Messenger {
 }
 
 func (m *messengerAuthMiddleware) withIdentity(ctx context.Context, dc int64, sub string) context.Context {
-	id := fmt.Sprintf("%d.%s", dc, sub)
-	return client.WithIdentity(ctx, gateIdentity(id))
+	return client.WithIdentity(ctx, client.StringIdentity(fmt.Sprintf("%d.%s", dc, sub)))
 }
 
 func (m *messengerAuthMiddleware) SendText(ctx context.Context, in *model.SendTextRequest) (*model.SendTextResponse, error) {
-	ctx = m.withIdentity(ctx, in.DomainID, in.From.Sub)
-	return m.next.SendText(ctx, in)
+	return m.next.SendText(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
 }
 
 func (m *messengerAuthMiddleware) SendImage(ctx context.Context, in *model.SendImageRequest) (*model.SendImageResponse, error) {
-	ctx = m.withIdentity(ctx, in.DomainID, in.From.Sub)
-	return m.next.SendImage(ctx, in)
+	return m.next.SendImage(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
 }
 
 func (m *messengerAuthMiddleware) SendDocument(ctx context.Context, in *model.SendDocumentRequest) (*model.SendDocumentResponse, error) {
-	ctx = m.withIdentity(ctx, in.DomainID, in.From.Sub)
-	return m.next.SendDocument(ctx, in)
+	return m.next.SendDocument(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
 }

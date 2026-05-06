@@ -12,7 +12,6 @@ import (
 	"github.com/webitel/im-providers-service/pkg/crypto"
 )
 
-// [INTERFACE GUARD]
 var _ store.MetaAppStore = (*metaAppStore)(nil)
 
 type metaAppStore struct {
@@ -30,8 +29,8 @@ func NewMetaAppStore(pool *pgxpool.Pool, crypt crypto.Encryptor) store.MetaAppSt
 // Insert registers a new Meta application and returns the fully populated struct.
 func (s *metaAppStore) Insert(ctx context.Context, a *model.MetaApp) error {
 	const query = `
-		INSERT INTO im_provider.meta_apps (name, uri, app_id, app_secret, redirect_uri, scopes)
-		VALUES (@name, @uri, @app_id, @app_secret, @redirect_uri, @scopes)
+		INSERT INTO im_provider.meta_apps (name, uri, app_id, app_secret, redirect_uri, scopes, verify_token)
+		VALUES (@name, @uri, @app_id, @app_secret, @redirect_uri, @scopes, @verify_token)
 		RETURNING *`
 
 	secret, err := s.crypto.Encrypt(a.AppSecret)
@@ -46,6 +45,7 @@ func (s *metaAppStore) Insert(ctx context.Context, a *model.MetaApp) error {
 		"app_secret":   secret,
 		"redirect_uri": a.OAuthRedirectURI,
 		"scopes":       a.Scopes,
+		"verify_token": a.VerifyToken,
 	}
 
 	if err := pgxscan.Get(ctx, s.pool, a, query, args); err != nil {
@@ -73,14 +73,33 @@ func (s *metaAppStore) Select(ctx context.Context, id string) (*model.MetaApp, e
 	return &a, nil
 }
 
+// SelectByURI finds a MetaApp by its URI slug.
+func (s *metaAppStore) SelectByURI(ctx context.Context, uri string) (*model.MetaApp, error) {
+	const query = `SELECT * FROM im_provider.meta_apps WHERE uri = $1`
+
+	var a model.MetaApp
+	if err := pgxscan.Get(ctx, s.pool, &a, query, uri); err != nil {
+		if pgxscan.NotFound(err) {
+			return nil, store.ErrNotFound
+		}
+		return nil, err
+	}
+
+	if err := s.decryptSecret(&a); err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
 // Update updates the application settings and refreshes the struct state.
 func (s *metaAppStore) Update(ctx context.Context, a *model.MetaApp) error {
 	const query = `
-		UPDATE im_provider.meta_apps 
-		SET name = @name, 
-		    app_secret = @app_secret, 
-		    redirect_uri = @redirect_uri, 
-		    scopes = @scopes, 
+		UPDATE im_provider.meta_apps
+		SET name = @name,
+		    app_secret = @app_secret,
+		    redirect_uri = @redirect_uri,
+		    scopes = @scopes,
+		    verify_token = @verify_token,
 		    updated_at = NOW()
 		WHERE id = @id
 		RETURNING *`
@@ -96,6 +115,7 @@ func (s *metaAppStore) Update(ctx context.Context, a *model.MetaApp) error {
 		"app_secret":   secret,
 		"redirect_uri": a.OAuthRedirectURI,
 		"scopes":       a.Scopes,
+		"verify_token": a.VerifyToken,
 	}
 
 	if err := pgxscan.Get(ctx, s.pool, a, query, args); err != nil {

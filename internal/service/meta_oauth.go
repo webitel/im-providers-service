@@ -16,7 +16,6 @@ import (
 	"github.com/webitel/im-providers-service/internal/store"
 )
 
-// [INTERFACE GUARD]
 var _ MetaOAuthManager = (*MetaOAuthService)(nil)
 
 type MetaOAuthManager interface {
@@ -54,14 +53,18 @@ func (s *MetaOAuthService) StartOAuth(ctx context.Context, req model.OAuthStart)
 		return "", "", fmt.Errorf("oauth: state generation failed: %w", err)
 	}
 
-	u, _ := url.Parse(fmt.Sprintf("https://www.facebook.com/%s/dialog/oauth", metaAPIVersion))
-	q := u.Query()
+	q := url.Values{}
 	q.Set("client_id", app.AppID)
 	q.Set("redirect_uri", app.OAuthRedirectURI)
 	q.Set("state", state)
 	q.Set("response_type", "code")
 	q.Set("scope", strings.Join(app.Scopes, ","))
-	u.RawQuery = q.Encode()
+	u := &url.URL{
+		Scheme:   "https",
+		Host:     "www.facebook.com",
+		Path:     fmt.Sprintf("/%s/dialog/oauth", metaAPIVersion),
+		RawQuery: q.Encode(),
+	}
 
 	s.logger.Debug("OAuth flow started",
 		slog.String("app_id", app.AppID),
@@ -175,11 +178,15 @@ func (s *MetaOAuthService) doPOSTTokenRequest(apiURL string, val url.Values) (st
 }
 
 func (s *MetaOAuthService) fetchUserPages(userToken string) ([]*model.FacebookGate, error) {
-	u, _ := url.Parse(fmt.Sprintf("https://graph.facebook.com/%s/me/accounts", metaAPIVersion))
-	q := u.Query()
+	q := url.Values{}
 	q.Set("access_token", userToken)
 	q.Set("fields", "id,name,access_token")
-	u.RawQuery = q.Encode()
+	u := &url.URL{
+		Scheme:   "https",
+		Host:     "graph.facebook.com",
+		Path:     fmt.Sprintf("/%s/me/accounts", metaAPIVersion),
+		RawQuery: q.Encode(),
+	}
 
 	resp, err := s.client.Get(u.String())
 	if err != nil {

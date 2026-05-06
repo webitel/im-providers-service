@@ -39,6 +39,7 @@ func (s *MetaAppService) CreateMetaApp(ctx context.Context, req model.CreateMeta
 		AppSecret:        req.AppSecret,
 		OAuthRedirectURI: req.OAuthRedirectURI,
 		Scopes:           req.Scopes,
+		VerifyToken:      req.VerifyToken,
 	}
 
 	if err := s.repo.Insert(ctx, app); err != nil {
@@ -104,5 +105,8 @@ func patchMetaModel(app *model.MetaApp, req model.UpdateMetaApp) {
 	}
 	if req.Scopes != nil {
 		app.Scopes = req.Scopes
+	}
+	if req.VerifyToken != nil {
+		app.VerifyToken = *req.VerifyToken
 	}
 }

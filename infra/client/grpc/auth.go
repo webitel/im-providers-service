@@ -7,6 +7,11 @@ type IdentityProvider interface {
 	Identity() string
 }
 
+// StringIdentity is a convenience type that lets any string satisfy IdentityProvider.
+type StringIdentity string
+
+func (s StringIdentity) Identity() string { return string(s) }
+
 type authKey struct{}
 
 // WithIdentity injects an IdentityProvider into the context.

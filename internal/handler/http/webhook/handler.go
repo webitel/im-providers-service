@@ -1,10 +1,7 @@
 package webhook
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -44,7 +41,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// [GET] Verification (for Facebook/WhatsApp/etc.)
 	if r.Method == http.MethodGet {
 		if v, ok := p.(provider.Verifier); ok {
-			challenge, err := v.Verify(r.Context(), r.URL.Query())
+			gCtx := context.WithValue(r.Context(), provider.WebhookURIKey, uri)
+			challenge, err := v.Verify(gCtx, r.URL.Query())
 			if err != nil {
 				h.logger.Error("verification failed", "provider", pType, "error", err)
 				http.Error(w, "forbidden", http.StatusForbidden)
@@ -66,9 +64,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	h.prettyPrintJSON(pType, uri, body)
+	h.logger.Debug("incoming webhook", "provider", pType, "uri", uri, "body", string(body))
 
-	ctx := context.WithValue(r.Context(), "webhook_uri", uri)
+	ctx := context.WithValue(r.Context(), provider.WebhookURIKey, uri)
+
+	if sv, ok := p.(provider.SignatureValidator); ok {
+		sig := r.Header.Get("X-Hub-Signature-256")
+		if err := sv.ValidateSignature(ctx, sig, body); err != nil {
+			h.logger.Warn("signature validation failed", "provider", pType, "uri", uri, "err", err)
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+	}
+
 	if err := p.HandleWebhook(ctx, body); err != nil {
 		h.logger.Error("processing failed", "provider", pType, "uri", uri, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -76,29 +84,4 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-}
-
-func (h *Handler) prettyPrintJSON(pType, uri string, data []byte) {
-	if len(data) == 0 {
-		return
-	}
-
-	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, data, "", "  "); err != nil {
-		h.logger.Debug("incoming webhook body (non-json)", "provider", pType, "body", string(data))
-		return
-	}
-
-	const (
-		reset  = "\033[0m"
-		bold   = "\033[1m"
-		cyan   = "\033[36m"
-		green  = "\033[32m"
-		yellow = "\033[33m"
-		gray   = "\033[90m"
-	)
-
-	fmt.Printf("\n%s%s─── %s RECEIVED WEBHOOK [%s | %s] ───%s\n", bold, cyan, pType, pType, uri, reset)
-	fmt.Printf("%s%s%s\n", green, prettyJSON.String(), reset)
-	fmt.Printf("%s%s──────────────────────────────────────────────────%s\n\n", bold, gray, reset)
 }

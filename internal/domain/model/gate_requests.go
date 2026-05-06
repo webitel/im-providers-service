@@ -17,6 +17,7 @@ type CreateMetaApp struct {
 	AppSecret        string
 	OAuthRedirectURI string
 	Scopes           []string
+	VerifyToken      string
 }
 
 type OAuthStart struct {
@@ -54,6 +55,7 @@ type UpdateMetaApp struct {
 	AppSecret        *string
 	OAuthRedirectURI *string
 	Scopes           []string
+	VerifyToken      *string
 }
 
 type UpdateFacebook struct {
