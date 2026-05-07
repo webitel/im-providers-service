@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,6 +14,12 @@ import (
 	"github.com/webitel/im-providers-service/internal/provider/facebook/graph"
 	"github.com/webitel/im-providers-service/internal/provider/facebook/payload"
 )
+
+// ErrTokenInvalid is returned when Facebook rejects the page token (OAuth error code 190).
+//
+// See: [Meta Error Codes](https://developers.facebook.com/docs/graph-api/guides/error-handling#errorcodes)
+// The gate must be re-authorized via StartMetaOAuth → MetaOAuthCallback → UpdateFacebookGate.
+var ErrTokenInvalid = errors.New("facebook: page token invalid or revoked")
 
 type UserProfile struct {
 	ID         string `json:"id"`
@@ -82,6 +89,9 @@ func (c *Client) send(ctx context.Context, token string, body graph.OutboundPayl
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
+		if isTokenInvalidError(b) {
+			return nil, ErrTokenInvalid
+		}
 		return nil, fmt.Errorf("fb send error: %d, body: %s", resp.StatusCode, b)
 	}
 
@@ -105,4 +115,14 @@ func (c *Client) SendText(ctx context.Context, token, psid, text string) (*model
 
 func (c *Client) SendMedia(ctx context.Context, token, psid, mType, url string) (*model.MessageResponse, error) {
 	return c.send(ctx, token, graph.NewMediaRequest(psid, mType, url))
+}
+
+// isTokenInvalidError checks if the Facebook API error body contains OAuth error code 190.
+func isTokenInvalidError(body []byte) bool {
+	var e struct {
+		Error struct {
+			Code int `json:"code"`
+		} `json:"error"`
+	}
+	return json.Unmarshal(body, &e) == nil && e.Error.Code == 190
 }
