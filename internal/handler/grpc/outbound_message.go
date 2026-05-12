@@ -15,30 +15,25 @@ import (
 	"github.com/webitel/im-providers-service/internal/provider/facebook"
 )
 
-// Ensure ProviderMessageHandler implements the generated gRPC server interface.
-var _ impb.ProviderMessageServiceServer = (*ProviderMessageHandler)(nil)
+// Ensure OutboundMessageHandler implements the generated gRPC server interface.
+var _ impb.ProviderMessageServiceServer = (*OutboundMessageHandler)(nil)
 
-// ProviderMessageHandler handles incoming gRPC requests for sending messages.
-type ProviderMessageHandler struct {
-	logger *slog.Logger
-	// Registry of platform-specific senders (Facebook, WhatsApp, etc.)
-	senders map[string]provider.Sender
+// OutboundMessageHandler handles incoming gRPC requests for sending messages.
+type OutboundMessageHandler struct {
+	logger   *slog.Logger
+	registry *provider.Registry
 	impb.UnimplementedProviderMessageServiceServer
 }
 
-// NewProviderMessageHandler creates a new instance of the message handler.
-func NewProviderMessageHandler(logger *slog.Logger, senders []provider.Sender) *ProviderMessageHandler {
-	m := make(map[string]provider.Sender)
-	for _, s := range senders {
-		m[s.Type()] = s
-	}
-	return &ProviderMessageHandler{
-		logger:  logger,
-		senders: m,
+// NewOutboundMessageHandler creates a new instance of the message handler.
+func NewOutboundMessageHandler(logger *slog.Logger, registry *provider.Registry) *OutboundMessageHandler {
+	return &OutboundMessageHandler{
+		logger:   logger,
+		registry: registry,
 	}
 }
 
-func (p *ProviderMessageHandler) resolveSender(t impb.ProviderType) (provider.Sender, error) {
+func (p *OutboundMessageHandler) resolveSender(t impb.ProviderType) (provider.Sender, error) {
 	var key string
 	switch t {
 	case impb.ProviderType_PROVIDER_TYPE_FACEBOOK:
@@ -56,15 +51,15 @@ func (p *ProviderMessageHandler) resolveSender(t impb.ProviderType) (provider.Se
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "unsupported provider type: %s", t)
 	}
-	s, ok := p.senders[key]
-	if !ok {
+	prov, err := p.registry.Get(key)
+	if err != nil {
 		return nil, status.Errorf(codes.Unimplemented, "provider not registered: %s", key)
 	}
-	return s, nil
+	return prov, nil
 }
 
 // SendText handles outgoing plain text messages.
-func (p *ProviderMessageHandler) SendText(ctx context.Context, req *impb.ProviderSendTextRequest) (*impb.ProviderSendMessageResponse, error) {
+func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.ProviderSendTextRequest) (*impb.ProviderSendMessageResponse, error) {
 	sender, err := p.resolveSender(req.GetType())
 	if err != nil {
 		return nil, err
@@ -88,7 +83,7 @@ func (p *ProviderMessageHandler) SendText(ctx context.Context, req *impb.Provide
 }
 
 // SendImage handles outgoing messages containing images.
-func (p *ProviderMessageHandler) SendImage(ctx context.Context, req *impb.ProviderSendImageRequest) (*impb.ProviderSendMessageResponse, error) {
+func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.ProviderSendImageRequest) (*impb.ProviderSendMessageResponse, error) {
 	sender, err := p.resolveSender(req.GetType())
 	if err != nil {
 		return nil, err
@@ -120,7 +115,7 @@ func (p *ProviderMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 }
 
 // SendDocument handles outgoing messages containing documents/files.
-func (p *ProviderMessageHandler) SendDocument(ctx context.Context, req *impb.ProviderSendDocumentRequest) (*impb.ProviderSendMessageResponse, error) {
+func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.ProviderSendDocumentRequest) (*impb.ProviderSendMessageResponse, error) {
 	sender, err := p.resolveSender(req.GetType())
 	if err != nil {
 		return nil, err

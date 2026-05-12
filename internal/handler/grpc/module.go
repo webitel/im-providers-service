@@ -11,6 +11,7 @@ import (
 var Module = fx.Module("provider-grpc",
 	fx.Provide(
 		NewGateHandler,
+		NewOutboundMessageHandler,
 		NewFacebookHandler,
 		NewMetaAppHandler,
 		NewMetaOauthHandler,
@@ -23,6 +24,7 @@ var Module = fx.Module("provider-grpc",
 func RegisterProviderServices(
 	server *grpcsrv.Server,
 	gate *GateHandler,
+	outboundMessage *OutboundMessageHandler,
 	facebook *FacebookHandler,
 	metaApp *MetaAppHandler,
 	metaOAuth *MetaOauthHandler,
@@ -34,4 +36,5 @@ func RegisterProviderServices(
 	impb.RegisterMetaAppServiceServer(server.Server, metaApp)
 	impb.RegisterMetaOAuthServiceServer(server.Server, metaOAuth)
 	impb.RegisterWhatsAppServiceServer(server.Server, whatsapp)
+	impb.RegisterProviderMessageServiceServer(server.Server, outboundMessage)
 }

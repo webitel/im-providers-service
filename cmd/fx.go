@@ -17,6 +17,7 @@ import (
 	"github.com/webitel/im-providers-service/infra/tls"
 	"github.com/webitel/im-providers-service/internal/handler/grpc"
 	"github.com/webitel/im-providers-service/internal/handler/http/webhook"
+	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/provider/facebook"
 	"github.com/webitel/im-providers-service/internal/provider/whatsapp"
 	"github.com/webitel/im-providers-service/internal/service"
@@ -44,6 +45,7 @@ func NewApp(cfg *config.Config) *fx.App {
 		storage.Module,
 		imcontact.Module,
 		service.Module,
+		provider.Module,
 		facebook.Module,
 		whatsapp.Module,
 		webhook.Module,
