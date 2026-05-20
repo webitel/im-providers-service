@@ -15,13 +15,12 @@ import (
 	grpcsrv "github.com/webitel/im-providers-service/infra/srv/grpc"
 	httpsrv "github.com/webitel/im-providers-service/infra/srv/http"
 	"github.com/webitel/im-providers-service/infra/tls"
-	"github.com/webitel/im-providers-service/internal/handler/grpc"
-	"github.com/webitel/im-providers-service/internal/handler/http/webhook"
+	sharedhandler "github.com/webitel/im-providers-service/internal/core/handler"
+	"github.com/webitel/im-providers-service/internal/core/webhook"
+	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
-	"github.com/webitel/im-providers-service/internal/provider/facebook"
-	"github.com/webitel/im-providers-service/internal/provider/whatsapp"
-	"github.com/webitel/im-providers-service/internal/service"
-	storedi "github.com/webitel/im-providers-service/internal/store/di"
+	"github.com/webitel/im-providers-service/internal/core"
+	"github.com/webitel/im-providers-service/internal/whatsapp"
 	"github.com/webitel/im-providers-service/pkg/crypto"
 	"go.uber.org/fx"
 )
@@ -44,15 +43,14 @@ func NewApp(cfg *config.Config) *fx.App {
 		imauth.Module,
 		storage.Module,
 		imcontact.Module,
-		service.Module,
+		core.Module,
 		provider.Module,
 		facebook.Module,
 		whatsapp.Module,
 		webhook.Module,
 		grpcsrv.Module,
 		httpsrv.Module,
-		grpc.Module,
-		storedi.Module,
+		sharedhandler.Module,
 	)
 }
 

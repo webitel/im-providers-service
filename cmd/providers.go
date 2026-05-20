@@ -10,7 +10,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/redis/go-redis/v9"
 	"github.com/webitel/im-providers-service/config"
-	"github.com/webitel/im-providers-service/internal/domain/model"
+	"github.com/webitel/im-providers-service/internal/core/model"
 	"github.com/webitel/webitel-go-kit/infra/discovery"
 	_ "github.com/webitel/webitel-go-kit/infra/discovery/consul"
 	otelsdk "github.com/webitel/webitel-go-kit/infra/otel/sdk"
