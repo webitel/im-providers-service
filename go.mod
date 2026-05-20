@@ -23,7 +23,6 @@ require (
 	github.com/webitel/webitel-go-kit/infra/otel v0.0.0-20251222125635-d60448d23a82
 	github.com/webitel/webitel-go-kit/infra/transport v0.0.0-20260202123728-94059b0e19be
 	github.com/webitel/webitel-go-kit/pkg/interceptors v0.0.0-20260202123728-94059b0e19be
-	github.com/webitel/wlog v0.0.0-20250325101442-de4f125c1ec7
 	go.opentelemetry.io/contrib/bridges/otelslog v0.14.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.65.0
 	go.opentelemetry.io/otel/sdk v1.40.0
@@ -94,7 +93,6 @@ require (
 	github.com/webitel/webitel-go-kit/pkg/errors v0.0.0-20251222125635-d60448d23a82
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/bridges/otelzap v0.12.0 // indirect
 	go.opentelemetry.io/otel v1.41.0
 	go.opentelemetry.io/otel/log v0.15.0 // indirect
 	go.opentelemetry.io/otel/metric v1.41.0 // indirect
