@@ -32,6 +32,10 @@ var Module = fx.Module(
 					return err
 				}
 
+				if err := client.viasRPC.Close(); err != nil {
+					return err
+				}
+
 				return nil
 			},
 		})

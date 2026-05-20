@@ -121,11 +121,7 @@ type PUSHSubscription_Apn struct {
 }
 
 type PUSHSubscription_Web struct {
-	// For 10 web push, the token must be a JSON-encoded object with the following keys:
-	// endpoint: Absolute URL exposed by the push service where the application server can send push messages
-	// keys: P-256 elliptic curve Diffie-Hellman parameters in the following object
-	// p256dh: Base64url-encoded P-256 elliptic curve Diffie-Hellman public key
-	// auth: Base64url-encoded authentication secret
+	// For web push: endpoint + keys (P-256 ECDH)
 	Web *WebPushSubscription `protobuf:"bytes,3,opt,name=web,proto3,oneof"`
 }
 

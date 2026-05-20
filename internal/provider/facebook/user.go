@@ -39,6 +39,16 @@ func (p *facebookProvider) externalUserSync(ctx context.Context, g *model.Facebo
 		return nil, fmt.Errorf("gateway sync failed: %w", err)
 	}
 
+	if _, viaErr := p.gatewayer.CreateVia(authCtx, &gatewayv1.ViasServiceCreateRequest{
+		ContactId: internalUsr.Sub,
+		Via:       psid,
+	}); viaErr != nil {
+		st, ok := status.FromError(viaErr)
+		if !ok || st.Code() != codes.AlreadyExists {
+			p.logger.Warn("failed to create via for facebook contact", "contact_sub", internalUsr.Sub, "psid", psid, "err", viaErr)
+		}
+	}
+
 	_ = p.userCache.MarkKnown(ctx, u)
 	return internalUsr, nil
 }

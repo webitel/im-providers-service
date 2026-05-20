@@ -26,6 +26,7 @@ type Client struct {
 	msgRPC     *rpc.Client[gatewayv1.MessageClient]
 	accountRPC *rpc.Client[gatewayv1.AccountClient]
 	contactRPC *rpc.Client[gatewayv1.ContactsClient]
+	viasRPC    *rpc.Client[gatewayv1.ViasServiceClient]
 }
 
 // New initializes a resilient gRPC client for the IM Gateway service.
@@ -76,11 +77,26 @@ func New(
 		return nil, fmt.Errorf("[im-gateway-client] contacts init failed: %w", err)
 	}
 
+	// Initialize Vias Client
+	vias, err := webitel.New(
+		logger,
+		discovery,
+		ServiceName,
+		tls,
+		func(conn *grpc.ClientConn) gatewayv1.ViasServiceClient {
+			return gatewayv1.NewViasServiceClient(conn)
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("[im-gateway-client] vias init failed: %w", err)
+	}
+
 	return &Client{
 		logger:     logger,
 		msgRPC:     msg,
 		accountRPC: acc,
 		contactRPC: cnt,
+		viasRPC:    vias,
 	}, nil
 }
 
@@ -101,6 +117,12 @@ func (c *Client) Close() error {
 
 	if c.contactRPC != nil {
 		if err := c.contactRPC.Close(); err != nil {
+			return err
+		}
+	}
+
+	if c.viasRPC != nil {
+		if err := c.viasRPC.Close(); err != nil {
 			return err
 		}
 	}
