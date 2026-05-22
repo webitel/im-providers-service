@@ -2,7 +2,7 @@ package webhook
 
 import (
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
-	"github.com/webitel/im-providers-service/internal/media"
+	"github.com/webitel/im-providers-service/internal/service"
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 )
 
@@ -16,7 +16,7 @@ func NewWebhookModule(
 	coreMessanger CoreMessanger,
 	whatsAppBusinessAccountResolver WhatsAppBusinessAccountResolver,
 	client *imgateway.Client,
-	media *media.Media,
+	media service.MediaManager,
 ) (*webhookModule, error) {
 	var (
 		coreMessangerDecorated = newDecoratedCoreMessanger(coreMessanger, client)

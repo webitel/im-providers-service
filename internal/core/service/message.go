@@ -19,9 +19,11 @@ import (
 var _ Messenger = (*messageService)(nil)
 
 type Messenger interface {
-	SendText(ctx context.Context, in *sharedmodel.SendTextRequest) (*sharedmodel.SendTextResponse, error)
-	SendImage(ctx context.Context, in *sharedmodel.SendImageRequest) (*sharedmodel.SendImageResponse, error)
-	SendDocument(ctx context.Context, in *sharedmodel.SendDocumentRequest) (*sharedmodel.SendDocumentResponse, error)
+	SendText(ctx context.Context, in *model.SendTextRequest) (*model.SendTextResponse, error)
+	SendImage(ctx context.Context, in *model.SendImageRequest) (*model.SendImageResponse, error)
+	SendDocument(ctx context.Context, in *model.SendDocumentRequest) (*model.SendDocumentResponse, error)
+	SendLocation(ctx context.Context, in *model.SendLocationRequest) (*model.SendResponse, error)
+	SendContact(ctx context.Context, in *model.SendContactRequest) (*model.SendResponse, error)
 }
 
 type messageService struct {
@@ -70,7 +72,7 @@ func transformDomainPeerIntoPB(peer model.Peer) *gatewayv1.Peer {
 	}
 }
 
-func (m *MessageService) SendLocation(ctx context.Context, in *model.SendLocationRequest) (*model.SendResponse, error) {
+func (m *messageService) SendLocation(ctx context.Context, in *model.SendLocationRequest) (*model.SendResponse, error) {
 	resp, err := m.gatewayer.SendLocation(ctx, &gatewayv1.SendLocationRequest{
 		To:        transformDomainPeerIntoPB(in.To),
 		Latitude:  in.Latitude,
@@ -90,7 +92,7 @@ func (m *MessageService) SendLocation(ctx context.Context, in *model.SendLocatio
 	}, nil
 }
 
-func (m *MessageService) SendContact(ctx context.Context, in *model.SendContactRequest) (*model.SendResponse, error) {
+func (m *messageService) SendContact(ctx context.Context, in *model.SendContactRequest) (*model.SendResponse, error) {
 	contactMatadata, err := structpb.NewStruct(in.Metadata)
 	if err != nil {
 		return nil, errors.InvalidArgument("converting model metadata to structb", errors.WithCause(err), errors.WithID("service.message.send_contact"))
@@ -116,7 +118,7 @@ func (m *MessageService) SendContact(ctx context.Context, in *model.SendContactR
 }
 
 // SendImage handles image gallery delivery.
-func (m *MessageService) SendImage(ctx context.Context, in *model.SendImageRequest) (*model.SendImageResponse, error) {
+func (m *messageService) SendImage(ctx context.Context, in *model.SendImageRequest) (*model.SendImageResponse, error) {
 	m.logger.Info("dispatching image message to gateway",
 		"from_sub", in.From.Sub,
 		"images_count", len(in.Image.Images),

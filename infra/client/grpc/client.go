@@ -56,16 +56,8 @@ func New[T any](
 		grpc.WithChainUnaryInterceptor(authInterceptor),
 	}
 
-	// FIX: Safety check for TLS configuration to avoid nil pointer dereference
 	if tlsConfig != nil && tlsConfig.Client != nil {
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig.Client)))
-	} else {
-		// Fallback to insecure if no TLS config is provided
-		options = append(options, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	}
-
-	if tlsCong != nil {
-		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlsCong.Client)))
 	} else {
 		options = append(options, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}

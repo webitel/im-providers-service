@@ -5,18 +5,16 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"strconv"
 	"time"
 
 	"github.com/webitel/im-providers-service/internal/domain/model"
-	"github.com/webitel/im-providers-service/internal/media"
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/im-providers-service/internal/whatsapp/webhook/events"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
 
 type MediaUploader interface {
-	UploadFile(ctx context.Context, uploadMetadata media.UploadFileRequestMetadata, body io.Reader) (media.UploadFileMetadata, error)
+	UploadFile(ctx context.Context, uploadMetadata model.UploadRequest, body io.Reader) (model.UploadResponse, error)
 }
 
 type CoreMessanger interface {
@@ -81,22 +79,22 @@ func (webhook *webhook) resolveWhatsappBusinessAccount(ctx context.Context, phon
 	return &preparedBusinessAccount, nil
 }
 
-func (webhook *webhook) uploadReceivedMedia(ctx context.Context, metadata media.UploadFileRequestMetadata, whatsAppBusinessAccount *common.WhatsappBusinessAccount) (media.UploadFileMetadata, error) {
+func (webhook *webhook) uploadReceivedMedia(ctx context.Context, metadata model.UploadRequest, whatsAppBusinessAccount *common.WhatsappBusinessAccount) (model.UploadResponse, error) {
 	urlObj := metadata.URL
 	mediaClient, err := whatsAppBusinessAccount.CreateMediaClient()
 	if err != nil {
-		return media.UploadFileMetadata{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"), errors.WithValue("phone_number_id", whatsAppBusinessAccount.PhoneNumberID))
+		return model.UploadResponse{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"), errors.WithValue("phone_number_id", whatsAppBusinessAccount.PhoneNumberID))
 	}
 
 	if urlObj == "" {
 		if urlObj, err = mediaClient.GetMediaURLByID(ctx, metadata.ExternalID); err != nil {
-			return media.UploadFileMetadata{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"))
+			return model.UploadResponse{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"))
 		}
 	}
 
 	file, mime, err := mediaClient.DownloadMediaByURL(ctx, urlObj) // add fallback to retrive URL by ID in case of 404
 	if err != nil {
-		return media.UploadFileMetadata{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"))
+		return model.UploadResponse{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"))
 	}
 	defer file.Close()
 
@@ -104,7 +102,7 @@ func (webhook *webhook) uploadReceivedMedia(ctx context.Context, metadata media.
 
 	uploadedMetadata, err := webhook.mediaUploader.UploadFile(ctx, metadata, file)
 	if err != nil {
-		return media.UploadFileMetadata{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"))
+		return model.UploadResponse{}, errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.upload_received_media"))
 	}
 
 	return uploadedMetadata, nil
@@ -192,7 +190,7 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 
 	uploadedMd, err := webhook.uploadReceivedMedia(
 		ctx,
-		media.UploadFileRequestMetadata{
+		model.UploadRequest{
 			DomainID:   int64(whatsAppBusinessAccount.DC),
 			MimeType:   documentEvent.MimeType,
 			Name:       documentEvent.Document.FileName,
@@ -217,7 +215,7 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 					FileName: documentEvent.Document.FileName,
 					MimeType: documentEvent.MimeType,
 					Size:     uploadedMd.Size,
-					ID:       strconv.Itoa(int(uploadedMd.ID)),
+					ID:       uploadedMd.ID,
 				},
 			},
 		},
@@ -252,7 +250,7 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 
 	mediaMetadata, err := webhook.uploadReceivedMedia(
 		ctx,
-		media.UploadFileRequestMetadata{
+		model.UploadRequest{
 			DomainID:   int64(whatsAppBusinessAccount.DC),
 			MimeType:   imageEvent.MimeType,
 			Name:       fmt.Sprintf("%s-%s", imageEvent.SenderName, time.Now().String()),
@@ -274,7 +272,7 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 			Images: []*model.Image{
 				{
 					MimeType: imageEvent.MimeType,
-					ID:       strconv.Itoa(int(mediaMetadata.ID)),
+					ID:       mediaMetadata.ID,
 				},
 			},
 			Body: *imageEvent.Image.Caption,
@@ -384,7 +382,6 @@ func (webhook *webhook) HandleContactsMessage(ctx context.Context, contacts *eve
 			log.Error("sending contact message to IM core", "error", err, "from", contacts.From, "phone_number_id", whatsappBusinessAccount.PhoneNumberID)
 			return err
 		}
-
 	}
 
 	return nil

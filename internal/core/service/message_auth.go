@@ -9,17 +9,18 @@ import (
 )
 
 type messengerAuthMiddleware struct {
-	next Messenger
+	Messenger
 }
 
 func NewMessengerAuthMiddleware(next Messenger) Messenger {
-	return &messengerAuthMiddleware{next: next}
+	return &messengerAuthMiddleware{Messenger: next}
 }
 
 func (m *messengerAuthMiddleware) withIdentity(ctx context.Context, dc int64, sub string) context.Context {
 	return client.WithIdentity(ctx, client.StringIdentity(fmt.Sprintf("%d.%s", dc, sub)))
 }
 
+<<<<<<< HEAD:internal/core/service/message_auth.go
 func (m *messengerAuthMiddleware) SendText(ctx context.Context, in *sharedmodel.SendTextRequest) (*sharedmodel.SendTextResponse, error) {
 	return m.next.SendText(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
 }

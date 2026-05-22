@@ -5,7 +5,6 @@ import (
 
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	"github.com/webitel/im-providers-service/infra/db/postgresx"
-	"github.com/webitel/im-providers-service/internal/media"
 	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/service"
 	"github.com/webitel/im-providers-service/internal/whatsapp/gate"
@@ -30,9 +29,9 @@ var Module = fx.Module(
 				logger *slog.Logger,
 				db postgresx.DB,
 				encryptor crypto.Encryptor,
-				coreMessanger *service.MessageService,
+				coreMessanger service.Messenger,
 				client *imgateway.Client,
-				media *media.Media,
+				media *service.MediaService,
 			) *webhook.WebhookManager {
 				resolver := resolver.NewResolverModule[*webhook.WhatsAppBusinessAccountResolveQuery](logger, db)
 
