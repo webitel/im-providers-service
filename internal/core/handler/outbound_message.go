@@ -93,14 +93,14 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 		GateID: req.GetGateId(),
 		To:     sharedmodel.Peer{Sub: req.GetExternalUserId()},
 	}
-	if f := req.GetImage(); f != nil {
-		msg.Images = []*sharedmodel.Image{{
+	for _, f := range req.GetImages() {
+		msg.Images = append(msg.Images, &sharedmodel.Image{
 			ID:       f.GetId(),
 			URL:      f.GetUrl(),
 			FileName: f.GetName(),
 			MimeType: f.GetMimeType(),
 			Size:     f.GetSize(),
-		}}
+		})
 	}
 
 	resp, err := sender.SendImage(ctx, msg)
@@ -125,14 +125,14 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 		GateID: req.GetGateId(),
 		To:     sharedmodel.Peer{Sub: req.GetExternalUserId()},
 	}
-	if f := req.GetDocument(); f != nil {
-		msg.Documents = []*sharedmodel.Document{{
+	for _, f := range req.GetDocuments() {
+		msg.Documents = append(msg.Documents, &sharedmodel.Document{
 			ID:       f.GetId(),
 			URL:      f.GetUrl(),
 			FileName: f.GetName(),
 			MimeType: f.GetMimeType(),
 			Size:     f.GetSize(),
-		}}
+		})
 	}
 
 	resp, err := sender.SendDocument(ctx, msg)
