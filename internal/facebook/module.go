@@ -6,6 +6,7 @@ import (
 	fbhandler "github.com/webitel/im-providers-service/internal/facebook/handler"
 	fbservice "github.com/webitel/im-providers-service/internal/facebook/service"
 	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
+	fbpostgres "github.com/webitel/im-providers-service/internal/facebook/store/postgres"
 	"github.com/webitel/im-providers-service/internal/provider"
 	"go.uber.org/fx"
 )
@@ -20,8 +21,8 @@ var Module = fx.Module("facebook",
 		),
 
 		// Store implementations
-		fx.Annotate(fbstore.NewFacebookStore, fx.As(new(fbstore.FacebookStore))),
-		fx.Annotate(fbstore.NewMetaAppStore, fx.As(new(fbstore.MetaAppStore))),
+		fx.Annotate(fbpostgres.NewFacebookStore, fx.As(new(fbstore.FacebookStore))),
+		fx.Annotate(fbpostgres.NewMetaAppStore, fx.As(new(fbstore.MetaAppStore))),
 
 		// Services
 		fx.Annotate(fbservice.NewFacebookService, fx.As(new(fbservice.FacebookManager))),

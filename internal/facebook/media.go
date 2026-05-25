@@ -65,6 +65,8 @@ func (p *facebookProvider) handleAttachments(ctx context.Context, gate *fbmodel.
 			}); err != nil {
 				p.logger.Error("failed to send document", "fileName", name, "err", err)
 			}
+		default:
+			p.logger.Warn("unsupported attachment type, skipping", "type", attach.Type, "fileName", name)
 		}
 	}
 }

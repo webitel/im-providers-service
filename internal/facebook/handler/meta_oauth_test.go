@@ -11,14 +11,14 @@ import (
 
 type mockMetaOAuthService struct {
 	startFn    func(ctx context.Context, req fbmodel.OAuthStart) (string, string, error)
-	callbackFn func(ctx context.Context, req fbmodel.OAuthCallback) (string, []*fbmodel.FacebookGate, error)
+	callbackFn func(ctx context.Context, req fbmodel.OAuthCallback) (string, []fbmodel.LinkedPage, error)
 }
 
 func (m *mockMetaOAuthService) StartOAuth(ctx context.Context, req fbmodel.OAuthStart) (string, string, error) {
 	return m.startFn(ctx, req)
 }
 
-func (m *mockMetaOAuthService) HandleCallback(ctx context.Context, req fbmodel.OAuthCallback) (string, []*fbmodel.FacebookGate, error) {
+func (m *mockMetaOAuthService) HandleCallback(ctx context.Context, req fbmodel.OAuthCallback) (string, []fbmodel.LinkedPage, error) {
 	return m.callbackFn(ctx, req)
 }
 
@@ -61,13 +61,13 @@ func TestStartMetaOAuth_ServiceError(t *testing.T) {
 
 func TestMetaOAuthCallback_Success(t *testing.T) {
 	svc := &mockMetaOAuthService{
-		callbackFn: func(_ context.Context, req fbmodel.OAuthCallback) (string, []*fbmodel.FacebookGate, error) {
+		callbackFn: func(_ context.Context, req fbmodel.OAuthCallback) (string, []fbmodel.LinkedPage, error) {
 			if req.Code != "auth-code" {
 				t.Errorf("unexpected code: %s", req.Code)
 			}
-			return "long-user-token", []*fbmodel.FacebookGate{
-				{PageID: "page-1", Name: "Page One", PageToken: "page-tok"},
-				{PageID: "page-2", Name: "Page Two", PageToken: "page-tok-2"},
+			return "long-user-token", []fbmodel.LinkedPage{
+				{PageID: "page-1", PageName: "Page One", PageToken: "page-tok"},
+				{PageID: "page-2", PageName: "Page Two", PageToken: "page-tok-2"},
 			}, nil
 		},
 	}
@@ -96,7 +96,7 @@ func TestMetaOAuthCallback_Success(t *testing.T) {
 
 func TestMetaOAuthCallback_EmptyPages(t *testing.T) {
 	svc := &mockMetaOAuthService{
-		callbackFn: func(_ context.Context, _ fbmodel.OAuthCallback) (string, []*fbmodel.FacebookGate, error) {
+		callbackFn: func(_ context.Context, _ fbmodel.OAuthCallback) (string, []fbmodel.LinkedPage, error) {
 			return "token", nil, nil
 		},
 	}
@@ -112,7 +112,7 @@ func TestMetaOAuthCallback_EmptyPages(t *testing.T) {
 
 func TestMetaOAuthCallback_ServiceError(t *testing.T) {
 	svc := &mockMetaOAuthService{
-		callbackFn: func(_ context.Context, _ fbmodel.OAuthCallback) (string, []*fbmodel.FacebookGate, error) {
+		callbackFn: func(_ context.Context, _ fbmodel.OAuthCallback) (string, []fbmodel.LinkedPage, error) {
 			return "", nil, errors.New("invalid code")
 		},
 	}

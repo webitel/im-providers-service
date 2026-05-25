@@ -59,7 +59,7 @@ func stubFBGate() *fbmodel.FacebookGate {
 }
 
 func newFBService(repo fbstore.FacebookStore) *FacebookService {
-	return NewFacebookService(repo, nil, noopLogger)
+	return NewFacebookService(repo, noopLogger)
 }
 
 // -- tests --
