@@ -5,26 +5,22 @@ import (
 	"sync"
 )
 
-// Registry manages all registered messaging providers.
+// Registry is a thread-safe map of registered provider adapters keyed by Type().
 type Registry struct {
 	mu        sync.RWMutex
 	providers map[string]Provider
 }
 
-// NewRegistry creates a new registry instance.
+// NewRegistry builds a Registry from a slice of providers (populated via fx value group).
 func NewRegistry(providers []Provider) *Registry {
-	reg := &Registry{
-		providers: make(map[string]Provider),
-	}
-
+	reg := &Registry{providers: make(map[string]Provider, len(providers))}
 	for _, p := range providers {
 		reg.providers[p.Type()] = p
 	}
-
 	return reg
 }
 
-// Get retrieves a provider by its unique type identifier (e.g., "facebook").
+// Get retrieves a provider by its type identifier. Returns an error if not registered.
 func (r *Registry) Get(pType string) (Provider, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

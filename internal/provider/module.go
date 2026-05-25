@@ -2,7 +2,7 @@ package provider
 
 import "go.uber.org/fx"
 
-// Module ensures the Registry is provided with all adapters from the "providers" group.
+// Module wires the Registry, collecting all adapters from the "providers" fx group.
 var Module = fx.Module("provider",
 	fx.Provide(
 		fx.Annotate(
