@@ -6,8 +6,8 @@ import (
 
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	grpcclient "github.com/webitel/im-providers-service/infra/client/grpc"
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -29,12 +29,12 @@ func (p *facebookProvider) syncContact(
 
 	authCtx := withGatewayIdentity(ctx, gate)
 
-	contact, err := p.ensureContact(authCtx, gate, user)
+	contact, err := p.ensureContact(authCtx, user)
 	if err != nil {
 		return nil, err
 	}
 
-	p.ensureVia(authCtx, contact.Sub, psid)
+	p.ensureVia(authCtx, &contact.Sub, &contact.Iss, psid)
 	_ = p.userCache.MarkKnown(ctx, user)
 
 	return contact, nil
@@ -42,13 +42,9 @@ func (p *facebookProvider) syncContact(
 
 // ensureContact creates the internal contact or returns a stub when the
 // contact already exists (idempotent by design on the gateway side).
-func (p *facebookProvider) ensureContact(
-	ctx context.Context,
-	gate *fbmodel.FacebookGate,
-	user *sharedmodel.ExternalUser,
-) (*gatewayv1.Contact, error) {
+func (p *facebookProvider) ensureContact(ctx context.Context, user *sharedmodel.ExternalUser) (*gatewayv1.Contact, error) {
 	contact, err := p.gatewayer.Create(ctx, &gatewayv1.CreateContactRequest{
-		IssId:    gate.Peer.Iss,
+		IssId:    p.Type(),
 		Type:     p.Type(),
 		Name:     user.FirstName,
 		Username: user.LastName,
@@ -65,11 +61,14 @@ func (p *facebookProvider) ensureContact(
 
 // ensureVia links the Facebook PSID to the internal contact as a "via"
 // channel. Errors are non-fatal — AlreadyExists is silently ignored.
-func (p *facebookProvider) ensureVia(ctx context.Context, contactSub, psid string) {
-	_, err := p.gatewayer.CreateVia(ctx, &gatewayv1.ViasServiceCreateRequest{
-		ContactId: contactSub,
-		Via:       psid,
+func (p *facebookProvider) ensureVia(ctx context.Context, contactSub, contactIss *string, psid string) {
+	via, err := p.gatewayer.CreateVia(ctx, &gatewayv1.ViasServiceCreateRequest{
+		Via: psid,
+		Iss: contactIss,
+		Sub: contactSub,
 	})
+	p.logger.Debug("create via: done", "contact", contactSub, "psid", psid, "via", via)
+
 	if err != nil && !isAlreadyExists(err) {
 		p.logger.Warn("create via: skipped", "contact", contactSub, "psid", psid, "err", err)
 	}
