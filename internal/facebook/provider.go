@@ -12,6 +12,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
+	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
@@ -31,8 +32,9 @@ type facebookProvider struct {
 	metaAppRepo fbstore.MetaAppStore
 	gatewayer   *imgateway.Client
 	media       sharedsvc.MediaManager
-	// psidCache maps internal contact UUID → Facebook PSID to avoid a gateway
-	// round-trip on every outbound message.
+	contactClient *imcontact.Client
+	// psidCache maps internal contact UUID → Facebook PSID to avoid an
+	// im-contact round-trip on every outbound message.
 	psidCache *lru.Cache[string, string]
 	// httpClient is used exclusively for media downloads; kept separate from
 	// api.http so the two timeouts can be tuned independently.

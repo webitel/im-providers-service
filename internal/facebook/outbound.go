@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
+	contactv1 "github.com/webitel/im-providers-service/gen/go/contact/v1"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 )
 
 func (p *facebookProvider) SendText(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
@@ -48,27 +48,28 @@ func (p *facebookProvider) SendDocument(ctx context.Context, req *sharedmodel.Me
 
 // resolvePSID returns the Facebook PSID for the given sub.
 // If sub is already a numeric PSID it is returned as-is; otherwise it is
-// treated as an internal contact UUID and resolved via the gateway Locate RPC.
-func (p *facebookProvider) resolvePSID(ctx context.Context, gate *fbmodel.FacebookGate, sub string) (string, error) {
-	if !strings.Contains(sub, "-") {
-		return sub, nil
+// treated as an internal contact UUID and resolved via the gateway Search RPC.
+func (p *facebookProvider) resolvePSID(ctx context.Context, gate *fbmodel.FacebookGate, contactID string) (string, error) {
+	if !strings.Contains(contactID, "-") {
+		return contactID, nil
 	}
-	if psid, ok := p.psidCache.Get(sub); ok {
+	if psid, ok := p.psidCache.Get(contactID); ok {
 		return psid, nil
 	}
 	authCtx := withGatewayIdentity(ctx, gate)
-	resp, err := p.gatewayer.Locate(authCtx, &gatewayv1.LocateConatctRequest{
-		Id:       sub,
-		DomainId: gate.DomainID,
+	resp, err := p.contactClient.SearchContact(authCtx, &contactv1.SearchContactRequest{
+		Fields: []string{"id", "subject"},
+		Ids:    []string{contactID},
 	})
 	if err != nil {
-		return "", fmt.Errorf("resolve psid for %s: %w", sub, err)
+		return "", fmt.Errorf("resolve psid for %s: %w", contactID, err)
 	}
-	psid := resp.GetItem().GetSub()
-	if psid == "" {
-		return "", fmt.Errorf("resolve psid for %s: contact has no sub", sub)
+	items := resp.GetContacts()
+	if len(items) == 0 || items[0].GetSubject() == "" {
+		return "", fmt.Errorf("resolve psid for %s: contact not found or has no subject", contactID)
 	}
-	p.psidCache.Add(sub, psid)
+	psid := items[0].GetSubject()
+	p.psidCache.Add(contactID, psid)
 	return psid, nil
 }
 
