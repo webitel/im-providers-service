@@ -34,7 +34,7 @@ func (p *facebookProvider) syncContact(
 		return nil, err
 	}
 
-	p.ensureVia(authCtx, &contact.Sub, &contact.Iss, gate.ID)
+	p.ensureVia(authCtx, &psid, &contact.Iss, gate.ID)
 	_ = p.userCache.MarkKnown(ctx, user)
 
 	return contact, nil
