@@ -33,7 +33,7 @@ func ProvideTLSConfig(cfg *config.Config) (*Config, error) {
 		return conf, nil
 	}
 
-	conf.Server, err = Load(connConfig.TLS, tls.NoClientCert)
+	conf.Server, err = Load(connConfig.TLS, tls.RequestClientCert)
 	if err != nil {
 		return nil, err
 	}
