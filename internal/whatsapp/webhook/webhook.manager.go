@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/url"
 
-	"github.com/webitel/im-providers-service/internal/domain/model"
+	"github.com/webitel/im-providers-service/internal/core/model"
 	"github.com/webitel/im-providers-service/internal/whatsapp/client"
 	"github.com/webitel/im-providers-service/internal/whatsapp/messaging/components"
 	"github.com/webitel/im-providers-service/internal/whatsapp/webhook/events"

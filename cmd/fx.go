@@ -18,11 +18,6 @@ import (
 	"github.com/webitel/im-providers-service/internal/core"
 	sharedhandler "github.com/webitel/im-providers-service/internal/core/handler"
 	"github.com/webitel/im-providers-service/internal/core/webhook"
-	"github.com/webitel/im-providers-service/internal/facebook"
-	"github.com/webitel/im-providers-service/internal/provider"
-	"github.com/webitel/im-providers-service/internal/provider/facebook"
-	"github.com/webitel/im-providers-service/internal/service"
-	storedi "github.com/webitel/im-providers-service/internal/store/di"
 	"github.com/webitel/im-providers-service/internal/whatsapp"
 	"github.com/webitel/im-providers-service/pkg/crypto"
 	"go.uber.org/fx"
@@ -48,8 +43,6 @@ func NewApp(cfg *config.Config) *fx.App {
 		storage.Module,
 		imcontact.Module,
 		core.Module,
-		provider.Module,
-		facebook.Module,
 		whatsapp.Module,
 		webhook.Module,
 		grpcsrv.Module,

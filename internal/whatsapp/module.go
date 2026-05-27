@@ -5,8 +5,8 @@ import (
 
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	"github.com/webitel/im-providers-service/infra/db/postgresx"
+	"github.com/webitel/im-providers-service/internal/core/service"
 	"github.com/webitel/im-providers-service/internal/provider"
-	"github.com/webitel/im-providers-service/internal/service"
 	"github.com/webitel/im-providers-service/internal/whatsapp/gate"
 	"github.com/webitel/im-providers-service/internal/whatsapp/resolver"
 	"github.com/webitel/im-providers-service/internal/whatsapp/webhook"

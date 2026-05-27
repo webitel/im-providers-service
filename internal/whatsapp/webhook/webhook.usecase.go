@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/webitel/im-providers-service/internal/domain/model"
+	"github.com/webitel/im-providers-service/internal/core/model"
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/im-providers-service/internal/whatsapp/webhook/events"
 	"github.com/webitel/webitel-go-kit/pkg/errors"

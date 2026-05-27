@@ -15,14 +15,12 @@ var Module = fx.Module("store",
 		ProvideNewDBConnection,
 		ProvideNewPostgresxConnection,
 		pg.ProvidePgxPool,
-		NewGateStore,
+
 		NewMetaAppStore,
 		NewFacebookStore,
-		NewWhatsAppStore,
 
 		// 2. Provide the Root Store aggregator as the main interface
 		// This will satisfy dependencies on store.Store
-		NewStore,
 	),
 )
 

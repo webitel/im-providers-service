@@ -2,7 +2,7 @@ package webhook
 
 import (
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
-	"github.com/webitel/im-providers-service/internal/service"
+	"github.com/webitel/im-providers-service/internal/core/service"
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 )
 

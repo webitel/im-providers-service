@@ -7,23 +7,19 @@ import (
 	"github.com/google/uuid"
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
-<<<<<<< HEAD:internal/core/service/message.go
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
-=======
-	"github.com/webitel/im-providers-service/internal/domain/model"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 	"google.golang.org/protobuf/types/known/structpb"
->>>>>>> 953c460 (feature(whatsapp): add location/contact support):internal/service/message.go
 )
 
 var _ Messenger = (*messageService)(nil)
 
 type Messenger interface {
-	SendText(ctx context.Context, in *model.SendTextRequest) (*model.SendTextResponse, error)
-	SendImage(ctx context.Context, in *model.SendImageRequest) (*model.SendImageResponse, error)
-	SendDocument(ctx context.Context, in *model.SendDocumentRequest) (*model.SendDocumentResponse, error)
-	SendLocation(ctx context.Context, in *model.SendLocationRequest) (*model.SendResponse, error)
-	SendContact(ctx context.Context, in *model.SendContactRequest) (*model.SendResponse, error)
+	SendText(ctx context.Context, in *sharedmodel.SendTextRequest) (*sharedmodel.SendTextResponse, error)
+	SendImage(ctx context.Context, in *sharedmodel.SendImageRequest) (*sharedmodel.SendImageResponse, error)
+	SendDocument(ctx context.Context, in *sharedmodel.SendDocumentRequest) (*sharedmodel.SendDocumentResponse, error)
+	SendLocation(ctx context.Context, in *sharedmodel.SendLocationRequest) (*sharedmodel.SendResponse, error)
+	SendContact(ctx context.Context, in *sharedmodel.SendContactRequest) (*sharedmodel.SendResponse, error)
 }
 
 type messageService struct {
@@ -60,8 +56,7 @@ func (m *messageService) SendText(ctx context.Context, in *sharedmodel.SendTextR
 	return &sharedmodel.SendTextResponse{To: in.To, ID: m.parseUUID(resp.GetId())}, nil
 }
 
-
-func transformDomainPeerIntoPB(peer model.Peer) *gatewayv1.Peer {
+func transformDomainPeerIntoPB(peer sharedmodel.Peer) *gatewayv1.Peer {
 	return &gatewayv1.Peer{
 		Kind: &gatewayv1.Peer_Contact{
 			Contact: &gatewayv1.PeerIdentity{
@@ -72,7 +67,7 @@ func transformDomainPeerIntoPB(peer model.Peer) *gatewayv1.Peer {
 	}
 }
 
-func (m *messageService) SendLocation(ctx context.Context, in *model.SendLocationRequest) (*model.SendResponse, error) {
+func (m *messageService) SendLocation(ctx context.Context, in *sharedmodel.SendLocationRequest) (*sharedmodel.SendResponse, error) {
 	resp, err := m.gatewayer.SendLocation(ctx, &gatewayv1.SendLocationRequest{
 		To:        transformDomainPeerIntoPB(in.To),
 		Latitude:  in.Latitude,
@@ -86,13 +81,13 @@ func (m *messageService) SendLocation(ctx context.Context, in *model.SendLocatio
 		return nil, errors.Wrap(err, errors.WithID("service.message.send_location"))
 	}
 
-	return &model.SendResponse{
+	return &sharedmodel.SendResponse{
 		ID: m.parseUUID(resp.GetId()),
 		To: in.To,
 	}, nil
 }
 
-func (m *messageService) SendContact(ctx context.Context, in *model.SendContactRequest) (*model.SendResponse, error) {
+func (m *messageService) SendContact(ctx context.Context, in *sharedmodel.SendContactRequest) (*sharedmodel.SendResponse, error) {
 	contactMatadata, err := structpb.NewStruct(in.Metadata)
 	if err != nil {
 		return nil, errors.InvalidArgument("converting model metadata to structb", errors.WithCause(err), errors.WithID("service.message.send_contact"))
@@ -111,14 +106,14 @@ func (m *messageService) SendContact(ctx context.Context, in *model.SendContactR
 		return nil, errors.Wrap(err, errors.WithID("service.message.send_contact"))
 	}
 
-	return &model.SendResponse{
+	return &sharedmodel.SendResponse{
 		ID: m.parseUUID(resp.GetId()),
 		To: in.To,
 	}, nil
 }
 
 // SendImage handles image gallery delivery.
-func (m *messageService) SendImage(ctx context.Context, in *model.SendImageRequest) (*model.SendImageResponse, error) {
+func (m *messageService) SendImage(ctx context.Context, in *sharedmodel.SendImageRequest) (*sharedmodel.SendImageResponse, error) {
 	m.logger.Info("dispatching image message to gateway",
 		"from_sub", in.From.Sub,
 		"images_count", len(in.Image.Images),

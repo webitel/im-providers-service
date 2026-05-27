@@ -1,4 +1,4 @@
-package webhook
+package common
 
 import (
 	"context"
@@ -12,6 +12,14 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+type CoreMessanger interface {
+	SendText(ctx context.Context, in *model.SendTextRequest) (*model.SendTextResponse, error)
+	SendImage(ctx context.Context, in *model.SendImageRequest) (*model.SendImageResponse, error)
+	SendDocument(ctx context.Context, in *model.SendDocumentRequest) (*model.SendDocumentResponse, error)
+	SendContact(ctx context.Context, in *model.SendContactRequest) (*model.SendResponse, error)
+	SendLocation(ctx context.Context, in *model.SendLocationRequest) (*model.SendResponse, error)
+}
 
 const newContactsSource string = "whatsapp"
 
@@ -59,7 +67,7 @@ func (decoratedCoreMessanger *decoratedCoreMessanger) resolveInternalContactIden
 		return err
 	}
 
-	_, err = decoratedCoreMessanger.gatewayClient.Create(outgoingContext, &gateway.CreateContactRequest{
+	createdContact, err := decoratedCoreMessanger.gatewayClient.Create(outgoingContext, &gateway.CreateContactRequest{
 		IssId:    from.Iss,
 		Type:     newContactsSource,
 		Name:     from.Name,
@@ -70,11 +78,33 @@ func (decoratedCoreMessanger *decoratedCoreMessanger) resolveInternalContactIden
 		IsBot:    false,
 	})
 
+	if err != nil && status.Code(err) != codes.AlreadyExists {
+		return errors.Internal("executing create contact gateway request", errors.WithCause(err), errors.WithID("whatsapp.webhook.core.messanger.resolve_internal_contact_identity"))
+	}
+
+	_, err = decoratedCoreMessanger.gatewayClient.CreateVia(
+		outgoingContext,
+		&gateway.ViasServiceCreateRequest{
+			Iss: &createdContact.Iss,
+			Sub: &createdContact.Sub,
+			Via: to.ID.String(),
+		},
+	)
+
 	if err != nil {
-		if status.Code(err) == codes.AlreadyExists {
+		errorCode := status.Code(err)
+		if errorCode == codes.AlreadyExists {
 			return nil
 		}
-		return errors.Internal("executing create contact gateway request", errors.WithCause(err), errors.WithID("whatsapp.webhook.core.messanger.resolve_internal_contact_identity"))
+
+		return errors.New(
+			"executing create via gateway request",
+			errors.WithCode(errorCode),
+			errors.WithCause(err),
+			errors.WithID("whatsapp.webhook.core.messanger.resolve_internal_contact_identity"),
+			errors.WithValue("iss", from.Iss),
+			errors.WithValue("sub", from.Sub),
+		)
 	}
 
 	return nil
@@ -133,5 +163,6 @@ func (decoratedCoreMessanger *decoratedCoreMessanger) SendContact(ctx context.Co
 	if err != nil {
 		return nil, err
 	}
+
 	return decoratedCoreMessanger.CoreMessanger.SendContact(requestContext, in)
 }

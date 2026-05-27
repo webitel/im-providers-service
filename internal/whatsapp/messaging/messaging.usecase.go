@@ -17,17 +17,17 @@ type WhatsAppBusinessAccountResolver interface {
 	Resolve(ctx context.Context, query ResolveWhatsAppBusinessAccountQuery) (*WhatsAppBusinessAccount, error)
 }
 
-type messaging struct {
+type Messaging struct {
 	logger                          *slog.Logger
 	encryptor                       common.Encryptor
 	whatsAppBusinessAccountResolver WhatsAppBusinessAccountResolver
 }
 
-func newMessaging(logger *slog.Logger, encryptor common.Encryptor, whatsAppBusinessAccountResolver WhatsAppBusinessAccountResolver) *messaging {
-	return &messaging{logger: logger, encryptor: encryptor, whatsAppBusinessAccountResolver: whatsAppBusinessAccountResolver}
+func newMessaging(logger *slog.Logger, encryptor common.Encryptor, whatsAppBusinessAccountResolver WhatsAppBusinessAccountResolver) *Messaging {
+	return &Messaging{logger: logger, encryptor: encryptor, whatsAppBusinessAccountResolver: whatsAppBusinessAccountResolver}
 }
 
-func (messaging *messaging) prepareMessageManager(ctx context.Context, from common.Contact) (*MessageManager, error) {
+func (messaging *Messaging) prepareMessageManager(ctx context.Context, from common.Contact) (*MessageManager, error) {
 	resolveQuery := ResolveWhatsAppBusinessAccountQuery{BotIss: from.Iss, BotSub: from.Sub}
 
 	whatsAppBusinessAccount, err := messaging.whatsAppBusinessAccountResolver.Resolve(ctx, resolveQuery)
@@ -59,4 +59,4 @@ func (messaging *messaging) prepareMessageManager(ctx context.Context, from comm
 	return whatsAppBusinessAccountMessageManager, nil
 }
 
-func (messaging *messaging) SendText(ctx context.Context) {}
+func (messaging *Messaging) SendText(ctx context.Context) {}
