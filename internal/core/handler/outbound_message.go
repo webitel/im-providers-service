@@ -38,21 +38,30 @@ func (p *OutboundMessageHandler) resolveSender(t impb.ProviderType) (provider.Se
 	switch t {
 	case impb.ProviderType_PROVIDER_TYPE_FACEBOOK:
 		key = "facebook"
+		p.logger.Debug("routing to facebook sender")
 	case impb.ProviderType_PROVIDER_TYPE_WHATSAPP:
 		key = "whatsapp"
+		p.logger.Debug("routing to whatsapp sender")
 	case impb.ProviderType_PROVIDER_TYPE_INSTAGRAM:
+		p.logger.Warn("provider not implemented", slog.String("provider", "instagram"))
 		return nil, status.Errorf(codes.Unimplemented, "instagram provider not implemented yet")
 	case impb.ProviderType_PROVIDER_TYPE_TELEGRAM_APP:
+		p.logger.Warn("provider not implemented", slog.String("provider", "telegram_app"))
 		return nil, status.Errorf(codes.Unimplemented, "telegram app provider not implemented yet")
 	case impb.ProviderType_PROVIDER_TYPE_TELEGRAM_BOT:
+		p.logger.Warn("provider not implemented", slog.String("provider", "telegram_bot"))
 		return nil, status.Errorf(codes.Unimplemented, "telegram bot provider not implemented yet")
 	case impb.ProviderType_PROVIDER_TYPE_VIBER:
+		p.logger.Warn("provider not implemented", slog.String("provider", "viber"))
 		return nil, status.Errorf(codes.Unimplemented, "viber provider not implemented yet")
 	default:
+		p.logger.Warn("unsupported provider type", slog.String("provider", t.String()))
 		return nil, status.Errorf(codes.InvalidArgument, "unsupported provider type: %s", t)
 	}
+	p.logger.Debug("resolved sender", slog.String("provider", key))
 	prov, err := p.registry.Get(key)
 	if err != nil {
+		p.logger.Error("provider not registered in registry", slog.String("provider", key))
 		return nil, status.Errorf(codes.Unimplemented, "provider not registered: %s", key)
 	}
 	return prov, nil
@@ -60,8 +69,17 @@ func (p *OutboundMessageHandler) resolveSender(t impb.ProviderType) (provider.Se
 
 // SendText handles outgoing plain text messages.
 func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.ProviderSendTextRequest) (*impb.ProviderSendMessageResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendText"),
+		slog.String("provider", req.GetType().String()),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+	)
+	log.InfoContext(ctx, "outbound text message request received")
+
 	sender, err := p.resolveSender(req.GetType())
 	if err != nil {
+		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
 		return nil, err
 	}
 
@@ -73,9 +91,11 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 
 	resp, err := sender.SendText(ctx, msg)
 	if err != nil {
+		log.ErrorContext(ctx, "failed to send text message", slog.String("error", err.Error()))
 		return nil, toGRPCError(err)
 	}
 
+	log.InfoContext(ctx, "text message sent", slog.String("external_id", resp.ID))
 	return &impb.ProviderSendMessageResponse{
 		ExternalId: resp.ID,
 		CreatedAt:  time.Now().Unix(),
@@ -84,8 +104,18 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 
 // SendImage handles outgoing messages containing images.
 func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.ProviderSendImageRequest) (*impb.ProviderSendMessageResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendImage"),
+		slog.String("provider", req.GetType().String()),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+		slog.Int("images_count", len(req.GetImages())),
+	)
+	log.InfoContext(ctx, "outbound image message request received")
+
 	sender, err := p.resolveSender(req.GetType())
 	if err != nil {
+		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
 		return nil, err
 	}
 
@@ -105,9 +135,11 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 
 	resp, err := sender.SendImage(ctx, msg)
 	if err != nil {
+		log.ErrorContext(ctx, "failed to send image message", slog.String("error", err.Error()))
 		return nil, toGRPCError(err)
 	}
 
+	log.InfoContext(ctx, "image message sent", slog.String("external_id", resp.ID))
 	return &impb.ProviderSendMessageResponse{
 		ExternalId: resp.ID,
 		CreatedAt:  time.Now().Unix(),
@@ -116,8 +148,18 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 
 // SendDocument handles outgoing messages containing documents/files.
 func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.ProviderSendDocumentRequest) (*impb.ProviderSendMessageResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendDocument"),
+		slog.String("provider", req.GetType().String()),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+		slog.Int("documents_count", len(req.GetDocuments())),
+	)
+	log.InfoContext(ctx, "outbound document message request received")
+
 	sender, err := p.resolveSender(req.GetType())
 	if err != nil {
+		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
 		return nil, err
 	}
 
@@ -137,9 +179,11 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 
 	resp, err := sender.SendDocument(ctx, msg)
 	if err != nil {
+		log.ErrorContext(ctx, "failed to send document message", slog.String("error", err.Error()))
 		return nil, toGRPCError(err)
 	}
 
+	log.InfoContext(ctx, "document message sent", slog.String("external_id", resp.ID))
 	return &impb.ProviderSendMessageResponse{
 		ExternalId: resp.ID,
 		CreatedAt:  time.Now().Unix(),
