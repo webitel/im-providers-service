@@ -41,13 +41,12 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 		return fmt.Errorf("fetch profile [psid=%s]: %w", psid, err)
 	}
 
-	contact, err := p.syncContact(ctx, gate, psid, profile)
-	if err != nil {
+	if _, err := p.syncContact(ctx, gate, psid, profile); err != nil {
 		return fmt.Errorf("sync contact [psid=%s]: %w", psid, err)
 	}
 
 	peers := peerPair{
-		from: sharedmodel.Peer{Sub: contact.Sub, Iss: gate.Peer.Iss},
+		from: sharedmodel.Peer{Sub: psid, Iss: gate.Peer.Iss},
 		to:   sharedmodel.Peer{Sub: gate.Peer.Sub, Iss: gate.Peer.Iss},
 	}
 
