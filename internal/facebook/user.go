@@ -34,7 +34,7 @@ func (p *facebookProvider) syncContact(
 		return nil, err
 	}
 
-	p.ensureVia(authCtx, &contact.Sub, &contact.Iss, psid)
+	p.ensureVia(authCtx, &contact.Sub, &contact.Iss, gate.ID)
 	_ = p.userCache.MarkKnown(ctx, user)
 
 	return contact, nil
@@ -59,18 +59,18 @@ func (p *facebookProvider) ensureContact(ctx context.Context, user *sharedmodel.
 	return contact, nil
 }
 
-// ensureVia links the Facebook PSID to the internal contact as a "via"
-// channel. Errors are non-fatal — AlreadyExists is silently ignored.
-func (p *facebookProvider) ensureVia(ctx context.Context, contactSub, contactIss *string, psid string) {
+// ensureVia links the gate to the internal contact as a "via" channel.
+// Errors are non-fatal — AlreadyExists is silently ignored.
+func (p *facebookProvider) ensureVia(ctx context.Context, contactSub, contactIss *string, gateID string) {
 	via, err := p.gatewayer.CreateVia(ctx, &gatewayv1.ViasServiceCreateRequest{
-		Via: psid,
+		Via: gateID,
 		Iss: contactIss,
 		Sub: contactSub,
 	})
-	p.logger.Debug("create via: done", "contact", contactSub, "psid", psid, "via", via)
+	p.logger.Debug("create via: done", "contact", contactSub, "gate_id", gateID, "via", via)
 
 	if err != nil && !isAlreadyExists(err) {
-		p.logger.Warn("create via: skipped", "contact", contactSub, "psid", psid, "err", err)
+		p.logger.Warn("create via: skipped", "contact", contactSub, "gate_id", gateID, "err", err)
 	}
 }
 
