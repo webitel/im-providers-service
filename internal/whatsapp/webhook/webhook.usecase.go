@@ -158,6 +158,7 @@ func extractPeerFromWhatsAppBusinessAccount(whatsAppBusinessAccount *common.What
 		Type: model.PeerUser,
 		Sub:  whatsAppBusinessAccount.Bot.GetSub(),
 		Iss:  whatsAppBusinessAccount.Bot.GetIss(),
+		ID:   whatsAppBusinessAccount.ID,
 	}
 }
 
@@ -255,7 +256,7 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 			MimeType:   imageEvent.MimeType,
 			Name:       fmt.Sprintf("%s-%s", imageEvent.SenderName, time.Now().String()),
 			URL:        imageEvent.Image.Link,
-			ExternalID: imageEvent.MediaId,
+			ExternalID: imageEvent.MediaID,
 		},
 		whatsAppBusinessAccount,
 	)

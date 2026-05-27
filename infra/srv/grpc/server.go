@@ -15,7 +15,6 @@ import (
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 
 	intrcp "github.com/webitel/webitel-go-kit/pkg/interceptors"
 
@@ -144,7 +143,7 @@ func New(addr string, opts ...Option) (*Server, error) {
 		serverOpts = append(serverOpts, grpc.Creds(credentials.NewTLS(conf.TLS)))
 	}
 
-	serverOpts = append(serverOpts, grpc.Creds(insecure.NewCredentials()))
+	// serverOpts = append(serverOpts, grpc.Creds(insecure.NewCredentials()))
 	// Initialize gRPC server with interceptor chain
 	s := grpc.NewServer(serverOpts...)
 

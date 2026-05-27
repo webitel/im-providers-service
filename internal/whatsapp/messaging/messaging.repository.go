@@ -60,14 +60,21 @@ func (repository *messagingRepository) prepareResolveWhatsAppBusinessAccountQuer
 		from "im_provider"."binded_contact" "bc"
 		inner join "im_provider"."gates" "g" using("id")
 		inner join "im_provider"."gate_waba" "gw" using("id")
-		where ("bc"."iss", "bc"."sub")=(@Iss,@Sub)
+		where
+		(
+			("bc"."iss", "bc"."sub")=(@Iss,@Sub)
+			and (
+				@GateID is null or "g"."id" = @GateID
+			)
+		)
 			and "g"."enabled"
 		limit 1;
 	`
 
 	args := postgresx.NamedArgs{
-		"Iss": query.BotIss,
-		"Sub": query.BotSub,
+		"Iss":    query.BotIss,
+		"Sub":    query.BotSub,
+		"GateID": query.GateID,
 	}
 
 	return stmt, args

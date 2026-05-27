@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/webitel/im-providers-service/internal/whatsapp/client"
+	"github.com/webitel/im-providers-service/internal/whatsapp/messaging/components"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 	"google.golang.org/grpc/codes"
 )
@@ -30,7 +31,7 @@ func (apiCompatibleJsonConverterConfigs *apiCompatibleJsonConverterConfigs) Send
 }
 
 type BaseMessage interface {
-	ToJson(configs ApiCompatibleJsonConverterConfigs) ([]byte, error)
+	ToJson(configs components.ApiCompatibleJsonConverterConfigs) ([]byte, error)
 }
 
 type MessageSendResponse struct {
@@ -104,8 +105,8 @@ func newMessageManager(requester client.RequestClient, phoneNumberID string) *Me
 }
 
 func (messageManager *MessageManager) Send(ctx context.Context, message BaseMessage, phoneNumber string) (*MessageSendResponse, error) {
-	body, err := message.ToJson(&apiCompatibleJsonConverterConfigs{
-		SendPhoneNumber: phoneNumber,
+	body, err := message.ToJson(components.ApiCompatibleJsonConverterConfigs{
+		SendingPhoneNumber: phoneNumber,
 	})
 
 	if err != nil {
@@ -138,9 +139,9 @@ func (messageManager *MessageManager) Send(ctx context.Context, message BaseMess
 }
 
 func (messageManager *MessageManager) Reply(ctx context.Context, message BaseMessage, phoneNumber, replyTo string) (*MessageSendResponse, error) {
-	body, err := message.ToJson(&apiCompatibleJsonConverterConfigs{
-		SendPhoneNumber: phoneNumber,
-		ReplyToMessage:  replyTo,
+	body, err := message.ToJson(components.ApiCompatibleJsonConverterConfigs{
+		SendingPhoneNumber: phoneNumber,
+		ReplyToMessage:     replyTo,
 	})
 
 	if err != nil {

@@ -1,6 +1,17 @@
 package events
 
-import "github.com/webitel/im-providers-service/internal/whatsapp/client"
+import (
+	"context"
+	"net/http"
+
+	"github.com/webitel/im-providers-service/internal/whatsapp/client"
+	"github.com/webitel/im-providers-service/internal/whatsapp/messaging/components"
+	"github.com/webitel/webitel-go-kit/pkg/errors"
+)
+
+type BaseMessage interface {
+	ToJSON(configs components.ApiCompatibleJsonConverterConfigs) (string, error)
+}
 
 type BusinessPhoneNumber struct {
 	DisplayNumber string `json:"display_number"`
@@ -31,9 +42,46 @@ type BaseMessageEvent struct {
 
 func (baseMessageEvent *BaseMessageEvent) GetEventType() string { return "message" }
 
+func (baseMessageEvent *BaseMessageEvent) Reply(ctx context.Context, message BaseMessage) (string, error) {
+	body, err := message.ToJSON(components.ApiCompatibleJsonConverterConfigs{
+		ReplyToMessage:     baseMessageEvent.MessageID,
+		SendingPhoneNumber: baseMessageEvent.SenderName,
+	})
+
+	if err != nil {
+		return "", errors.Internal(
+			"converting message to json",
+			errors.WithCause(err),
+			errors.WithID("events.base.reply"),
+			errors.WithValue("from", baseMessageEvent.From),
+			errors.WithValue("message_id", baseMessageEvent.MessageID),
+		)
+	}
+
+	apiRequest := baseMessageEvent.Requester.NewApiRequest(
+		baseMessageEvent.PhoneNumber.ID+"/messages",
+		http.MethodPost,
+	)
+	apiRequest.SetBody(body)
+
+	response, err := apiRequest.ExecuteWithContext(ctx)
+	if err != nil {
+		return "", errors.New(
+			"executing wapi reply request",
+			errors.WithCause(err),
+			errors.WithID("events.base.reply"),
+			errors.WithValue("from", baseMessageEvent.From),
+			errors.WithValue("message_id", baseMessageEvent.MessageID),
+		)
+	}
+
+	return response, nil
+}
+
 type BaseMediaMessageEvent struct {
 	BaseMessageEvent `json:",inline"`
-	MediaId          string `json:"media_id"`
-	MimeType         string `json:"mime_type"`
-	Sha256           string `json:"sha256"`
+
+	MediaID  string `json:"media_id"`
+	MimeType string `json:"mime_type"`
+	Sha256   string `json:"sha256"`
 }

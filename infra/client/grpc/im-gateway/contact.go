@@ -40,4 +40,5 @@ func (c *Client) Locate(ctx context.Context, in *gatewayv1.LocateConatctRequest,
 		return err
 	})
 	return resp, err
+
 }

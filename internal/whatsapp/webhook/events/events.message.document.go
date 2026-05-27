@@ -11,7 +11,7 @@ func NewDocumentMessageEvent(baseMessageEvent BaseMessageEvent, document compone
 	return &DocumentMessageEvent{
 		BaseMediaMessageEvent: BaseMediaMessageEvent{
 			BaseMessageEvent: baseMessageEvent,
-			MediaId:          mediaID,
+			MediaID:          mediaID,
 			MimeType:         mimeType,
 			Sha256:           sha256,
 		},

@@ -8,6 +8,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/core/service"
 	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/whatsapp/gate"
+	"github.com/webitel/im-providers-service/internal/whatsapp/messaging"
 	"github.com/webitel/im-providers-service/internal/whatsapp/resolver"
 	"github.com/webitel/im-providers-service/internal/whatsapp/webhook"
 	"github.com/webitel/im-providers-service/pkg/crypto"
@@ -32,20 +33,30 @@ var Module = fx.Module(
 				coreMessanger service.Messenger,
 				client *imgateway.Client,
 				media *service.MediaService,
-			) *webhook.WebhookManager {
-				resolver := resolver.NewResolverModule[*webhook.WhatsAppBusinessAccountResolveQuery](logger, db)
+			) *WhatsApp {
+				webhookResolver := resolver.NewResolverModule[*webhook.WhatsAppBusinessAccountResolveQuery](logger, db)
 
 				webhookConfig := webhook.WebhookManagerConfig{
 					Logger: logger,
 				}
 
-				webhhokModule, err := webhook.NewWebhookModule(webhookConfig, encryptor, coreMessanger, resolver.Resolver, client, media)
+				webhhokModule, err := webhook.NewWebhookModule(webhookConfig, encryptor, coreMessanger, webhookResolver.Resolver, client, media)
 				if err != nil {
 					logger.Error("whatsapp:wire:constructing new webhook module", "error", err)
 					return nil
 				}
 
-				return webhhokModule.WebhookManager
+				whatsAppMessagingClient := messaging.NewMessagingWire(
+					logger,
+					encryptor,
+					client,
+					db,
+				)
+
+				return &WhatsApp{
+					WebhookManager: webhhokModule.WebhookManager,
+					Messaging:      whatsAppMessagingClient.Messaging,
+				}
 			},
 			fx.As(new(provider.Provider)),
 			fx.ResultTags(`group:"providers"`),

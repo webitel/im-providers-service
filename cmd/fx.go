@@ -40,7 +40,6 @@ func NewApp(cfg *config.Config) *fx.App {
 		imgateway.Module,
 		storage.Module,
 		imauth.Module,
-		storage.Module,
 		imcontact.Module,
 		core.Module,
 		whatsapp.Module,

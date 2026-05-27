@@ -50,7 +50,7 @@ func (decoratedCoreMessanger *decoratedCoreMessanger) prepareOutgoingSendCoreReq
 		return ctx, err
 	}
 
-	return outgoingContext, nil
+	return metadata.NewOutgoingContext(outgoingContext, metadata.Pairs("x-webitel-via", to.ID.String())), nil
 }
 
 func (decoratedCoreMessanger *decoratedCoreMessanger) resolveInternalContactIdentity(ctx context.Context, to, from model.Peer, dc int) error {
@@ -70,11 +70,33 @@ func (decoratedCoreMessanger *decoratedCoreMessanger) resolveInternalContactIden
 		IsBot:    false,
 	})
 
+	if err != nil && status.Code(err) != codes.AlreadyExists {
+		return errors.Internal("executing create contact gateway request", errors.WithCause(err), errors.WithID("whatsapp.webhook.core.messanger.resolve_internal_contact_identity"))
+	}
+
+	_, err = decoratedCoreMessanger.gatewayClient.CreateVia(
+		outgoingContext,
+		&gateway.ViasServiceCreateRequest{
+			Iss: &from.Iss,
+			Sub: &from.Sub,
+			Via: to.ID.String(),
+		},
+	)
+
 	if err != nil {
-		if status.Code(err) == codes.AlreadyExists {
+		errorCode := status.Code(err)
+		if errorCode == codes.AlreadyExists {
 			return nil
 		}
-		return errors.Internal("executing create contact gateway request", errors.WithCause(err), errors.WithID("whatsapp.webhook.core.messanger.resolve_internal_contact_identity"))
+
+		return errors.New(
+			"executing create via gateway request",
+			errors.WithCode(errorCode),
+			errors.WithCause(err),
+			errors.WithID("whatsapp.webhook.core.messanger.resolve_internal_contact_identity"),
+			errors.WithValue("iss", from.Iss),
+			errors.WithValue("sub", from.Sub),
+		)
 	}
 
 	return nil

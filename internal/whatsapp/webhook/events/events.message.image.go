@@ -12,7 +12,7 @@ func NewImageMessageEvent(baseMessageEvent BaseMessageEvent, image components.Im
 	return &ImageMessageEvent{
 		BaseMediaMessageEvent: BaseMediaMessageEvent{
 			BaseMessageEvent: baseMessageEvent,
-			MediaId:          mediaID,
+			MediaID:          mediaID,
 			MimeType:         mimeType,
 			Sha256:           sha256,
 		},
