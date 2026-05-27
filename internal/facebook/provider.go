@@ -50,20 +50,22 @@ func New(
 	metaAppRepo fbstore.MetaAppStore,
 	gatewayer *imgateway.Client,
 	media sharedsvc.MediaManager,
+	contactClient *imcontact.Client,
 ) provider.Provider {
 	psidCache, _ := lru.New[string, string](1000)
 	return &facebookProvider{
-		api:         newAPIClient(l),
-		logger:      l.With("provider", "facebook"),
-		messenger:   m,
-		gateCache:   gc,
-		userCache:   uc,
-		repo:        repo,
-		metaAppRepo: metaAppRepo,
-		gatewayer:   gatewayer,
-		media:       media,
-		psidCache:   psidCache,
-		httpClient:  &http.Client{Timeout: 30 * time.Second},
+		api:           newAPIClient(l),
+		logger:        l.With("provider", "facebook"),
+		messenger:     m,
+		gateCache:     gc,
+		userCache:     uc,
+		repo:          repo,
+		metaAppRepo:   metaAppRepo,
+		gatewayer:     gatewayer,
+		media:         media,
+		contactClient: contactClient,
+		psidCache:     psidCache,
+		httpClient:    &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
