@@ -3,8 +3,6 @@ package standard
 import (
 	"context"
 	"log/slog"
-	"strconv"
-	"strings"
 
 	"go.uber.org/fx"
 	"google.golang.org/grpc/credentials"
@@ -14,10 +12,8 @@ import (
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 
 	authv1pb "github.com/webitel/im-providers-service/gen/go/auth/v1"
-	contactv1pb "github.com/webitel/im-providers-service/gen/go/contact/v1"
 	interfaces "github.com/webitel/im-providers-service/infra/auth"
 	authclient "github.com/webitel/im-providers-service/infra/client/grpc/im-auth"
-	contactclient "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 )
 
 var Module = fx.Module(
@@ -53,22 +49,17 @@ func (i *Identity) GetName() string {
 }
 
 type Authorizer struct {
-	logger    *slog.Logger
-	auther    *authclient.Client
-	contacter *contactclient.Client
+	logger *slog.Logger
+	auther *authclient.Client
 }
 
-func New(logger *slog.Logger, auther *authclient.Client, contacter *contactclient.Client) (*Authorizer, error) {
+func New(logger *slog.Logger, auther *authclient.Client) (*Authorizer, error) {
 	if auther == nil {
 		return nil, errors.New("no auth client provided")
 	}
-	if contacter == nil {
-		return nil, errors.New("no contact client provided")
-	}
 	return &Authorizer{
-		logger:    logger,
-		auther:    auther,
-		contacter: contacter,
+		logger: logger,
+		auther: auther,
 	}, nil
 }
 
@@ -95,52 +86,8 @@ func (da *Authorizer) resolveIdentity(ctx context.Context) (*Identity, error) {
 	return da.resolveUserIdentity(ctx)
 }
 
-func (da *Authorizer) resolveServiceIdentity(ctx context.Context) (*Identity, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, errors.Forbidden("metadata required for internal identity resolve")
-	}
-	authType := getHeader(md, interfaces.XWebitelTypeHeader)
-	switch authType {
-	case string(interfaces.XWebitelTypeSchema):
-		return da.resolveSchemaIdentity(ctx, md)
-	case string(interfaces.XWebitelTypeEngine):
-		return da.resolveUserIdentity(ctx)
-	default:
-		return nil, errors.Forbidden("unsupported auth type")
-	}
-}
-
-func (da *Authorizer) resolveSchemaIdentity(ctx context.Context, md metadata.MD) (*Identity, error) {
-	rawSchema := getHeader(md, interfaces.SchemaIdentificationHeader)
-	if rawSchema == "" {
-		return nil, errors.Forbidden("special header required")
-	}
-
-	domainID, sub, err := splitDomainAndSub(rawSchema)
-	if err != nil {
-		return nil, err
-	}
-
-	if domainID == 0 || sub == "" {
-		return nil, errors.Forbidden("special header format: {domain_id}.{flow_id} required")
-	}
-
-	res, err := da.contacter.SearchContact(ctx, &contactv1pb.SearchContactRequest{
-		Subjects: []string{sub},
-		DomainId: int32(domainID),
-		Size:     1,
-	})
-
-	if err != nil || len(res.GetContacts()) == 0 {
-		return nil, errors.NotFound("bot contact not found")
-	}
-
-	return &Identity{
-		ContactID: res.GetContacts()[0].GetId(),
-		DomainID:  domainID,
-		Name:      coalesce(res.GetContacts()[0].GetName(), res.GetContacts()[0].GetUsername()),
-	}, nil
+func (da *Authorizer) resolveServiceIdentity(_ context.Context) (*Identity, error) {
+	return &Identity{}, nil
 }
 
 func (da *Authorizer) resolveUserIdentity(ctx context.Context) (*Identity, error) {
@@ -172,31 +119,4 @@ func coalesce(str ...string) string {
 		}
 	}
 	return "Unknown"
-}
-
-// --- Internal Helpers ---
-
-func splitDomainAndSub(raw string) (int64, string, error) {
-	if raw == "" {
-		return 0, "", errors.New("empty domain")
-	}
-
-	parts := strings.SplitN(raw, ".", 2)
-	domainID, err := strconv.ParseInt(parts[0], 10, 64)
-	if err != nil {
-		return 0, "", err
-	}
-
-	if len(parts) < 2 {
-		return domainID, "", nil
-	}
-	return domainID, parts[1], nil
-}
-
-func getHeader(md metadata.MD, key string) string {
-	if vals := md.Get(key); len(vals) > 0 {
-		return vals[0]
-	}
-
-	return ""
 }

@@ -13,16 +13,6 @@ type contextKey string
 const (
 	// AuthContextKey is used to store/retrieve Identity from context
 	AuthContextKey contextKey = "auth_identity"
-
-	SchemaIdentificationHeader = "x-webitel-schema"
-	XWebitelTypeHeader         = "x-webitel-type"
-)
-
-type XWebitelType string
-
-const (
-	XWebitelTypeSchema XWebitelType = "schema"
-	XWebitelTypeEngine XWebitelType = "engine"
 )
 
 type Authorizer interface {
