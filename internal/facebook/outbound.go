@@ -2,7 +2,11 @@ package facebook
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
+	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 )
 
@@ -11,7 +15,11 @@ func (p *facebookProvider) SendText(ctx context.Context, req *sharedmodel.Messag
 	if err != nil {
 		return nil, err
 	}
-	return p.api.SendText(ctx, g.PageToken, req.To.Sub, req.Text)
+	psid, err := p.resolvePSID(ctx, g, req.To.Sub)
+	if err != nil {
+		return nil, err
+	}
+	return p.api.SendText(ctx, g.PageToken, psid, req.Text)
 }
 
 func (p *facebookProvider) SendImage(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
@@ -19,7 +27,11 @@ func (p *facebookProvider) SendImage(ctx context.Context, req *sharedmodel.Messa
 	if err != nil {
 		return nil, err
 	}
-	return p.api.SendMedia(ctx, g.PageToken, req.To.Sub, MediaImage, firstURL(req.Images))
+	psid, err := p.resolvePSID(ctx, g, req.To.Sub)
+	if err != nil {
+		return nil, err
+	}
+	return p.api.SendMedia(ctx, g.PageToken, psid, MediaImage, firstURL(req.Images))
 }
 
 func (p *facebookProvider) SendDocument(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
@@ -27,7 +39,37 @@ func (p *facebookProvider) SendDocument(ctx context.Context, req *sharedmodel.Me
 	if err != nil {
 		return nil, err
 	}
-	return p.api.SendMedia(ctx, g.PageToken, req.To.Sub, MediaFile, firstURL(req.Documents))
+	psid, err := p.resolvePSID(ctx, g, req.To.Sub)
+	if err != nil {
+		return nil, err
+	}
+	return p.api.SendMedia(ctx, g.PageToken, psid, MediaFile, firstURL(req.Documents))
+}
+
+// resolvePSID returns the Facebook PSID for the given sub.
+// If sub is already a numeric PSID it is returned as-is; otherwise it is
+// treated as an internal contact UUID and resolved via the gateway Locate RPC.
+func (p *facebookProvider) resolvePSID(ctx context.Context, gate *fbmodel.FacebookGate, sub string) (string, error) {
+	if !strings.Contains(sub, "-") {
+		return sub, nil
+	}
+	if psid, ok := p.psidCache.Get(sub); ok {
+		return psid, nil
+	}
+	authCtx := withGatewayIdentity(ctx, gate)
+	resp, err := p.gatewayer.Locate(authCtx, &gatewayv1.LocateConatctRequest{
+		Id:       sub,
+		DomainId: gate.DomainID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("resolve psid for %s: %w", sub, err)
+	}
+	psid := resp.GetItem().GetSub()
+	if psid == "" {
+		return "", fmt.Errorf("resolve psid for %s: contact has no sub", sub)
+	}
+	p.psidCache.Add(sub, psid)
+	return psid, nil
 }
 
 type urlGetter interface {
