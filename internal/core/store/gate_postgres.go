@@ -2,9 +2,11 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/webitel/im-providers-service/config"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -52,6 +54,19 @@ func (s *gateStore) List(ctx context.Context, f sharedmodel.ListFilter) ([]*shar
 
 	// WebhookURL generation is removed as it's now handled by the gateway layer or dynamically.
 	return list, next, nil
+}
+
+// GetTypeByID returns the provider type for a gate by its UUID.
+func (s *gateStore) GetTypeByID(ctx context.Context, id string) (sharedmodel.GateType, error) {
+	var typeStr string
+	err := s.pool.QueryRow(ctx, `SELECT type FROM im_provider.gate_summary WHERE id = $1`, id).Scan(&typeStr)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return sharedmodel.TypeUnknown, ErrNotFound
+	}
+	if err != nil {
+		return sharedmodel.TypeUnknown, fmt.Errorf("postgres: get gate type: %w", err)
+	}
+	return sharedmodel.ParseGateType(typeStr), nil
 }
 
 // Delete removes a specific gate. Cascading constraints in DB handle bots and configs.

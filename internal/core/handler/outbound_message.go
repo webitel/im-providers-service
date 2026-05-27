@@ -6,11 +6,13 @@ import (
 	"log/slog"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru/v2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	corestore "github.com/webitel/im-providers-service/internal/core/store"
 	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
 )
@@ -20,48 +22,48 @@ var _ impb.ProviderMessageServiceServer = (*OutboundMessageHandler)(nil)
 
 // OutboundMessageHandler handles incoming gRPC requests for sending messages.
 type OutboundMessageHandler struct {
-	logger   *slog.Logger
-	registry *provider.Registry
+	logger    *slog.Logger
+	registry  *provider.Registry
+	store     corestore.GateStore
+	typeCache *lru.Cache[string, sharedmodel.GateType]
 	impb.UnimplementedProviderMessageServiceServer
 }
 
 // NewOutboundMessageHandler creates a new instance of the message handler.
-func NewOutboundMessageHandler(logger *slog.Logger, registry *provider.Registry) *OutboundMessageHandler {
+func NewOutboundMessageHandler(logger *slog.Logger, registry *provider.Registry, store corestore.GateStore) *OutboundMessageHandler {
+	cache, _ := lru.New[string, sharedmodel.GateType](1000)
 	return &OutboundMessageHandler{
-		logger:   logger,
-		registry: registry,
+		logger:    logger,
+		registry:  registry,
+		store:     store,
+		typeCache: cache,
 	}
 }
 
-func (p *OutboundMessageHandler) resolveSender(t impb.ProviderType) (provider.Sender, error) {
-	var key string
-	switch t {
-	case impb.ProviderType_PROVIDER_TYPE_FACEBOOK:
-		key = "facebook"
-		p.logger.Debug("routing to facebook sender")
-	case impb.ProviderType_PROVIDER_TYPE_WHATSAPP:
-		key = "whatsapp"
-		p.logger.Debug("routing to whatsapp sender")
-	case impb.ProviderType_PROVIDER_TYPE_INSTAGRAM:
-		p.logger.Warn("provider not implemented", slog.String("provider", "instagram"))
-		return nil, status.Errorf(codes.Unimplemented, "instagram provider not implemented yet")
-	case impb.ProviderType_PROVIDER_TYPE_TELEGRAM_APP:
-		p.logger.Warn("provider not implemented", slog.String("provider", "telegram_app"))
-		return nil, status.Errorf(codes.Unimplemented, "telegram app provider not implemented yet")
-	case impb.ProviderType_PROVIDER_TYPE_TELEGRAM_BOT:
-		p.logger.Warn("provider not implemented", slog.String("provider", "telegram_bot"))
-		return nil, status.Errorf(codes.Unimplemented, "telegram bot provider not implemented yet")
-	case impb.ProviderType_PROVIDER_TYPE_VIBER:
-		p.logger.Warn("provider not implemented", slog.String("provider", "viber"))
-		return nil, status.Errorf(codes.Unimplemented, "viber provider not implemented yet")
-	default:
-		p.logger.Warn("unsupported provider type", slog.String("provider", t.String()))
-		return nil, status.Errorf(codes.InvalidArgument, "unsupported provider type: %s", t)
+func (p *OutboundMessageHandler) resolveSender(ctx context.Context, gateID string) (provider.Sender, error) {
+	var gateType sharedmodel.GateType
+
+	if v, ok := p.typeCache.Get(gateID); ok {
+		gateType = v
+	} else {
+		t, err := p.store.GetTypeByID(ctx, gateID)
+		if err != nil {
+			if errors.Is(err, corestore.ErrNotFound) {
+				return nil, status.Errorf(codes.NotFound, "gate not found: %s", gateID)
+			}
+			return nil, status.Errorf(codes.Internal, "failed to resolve gate type for: %s", gateID)
+		}
+		p.typeCache.Add(gateID, t)
+		gateType = t
 	}
-	p.logger.Debug("resolved sender", slog.String("provider", key))
+
+	if gateType == sharedmodel.TypeUnknown {
+		return nil, status.Errorf(codes.InvalidArgument, "unknown gate type for gate: %s", gateID)
+	}
+
+	key := gateType.String()
 	prov, err := p.registry.Get(key)
 	if err != nil {
-		p.logger.Error("provider not registered in registry", slog.String("provider", key))
 		return nil, status.Errorf(codes.Unimplemented, "provider not registered: %s", key)
 	}
 	return prov, nil
@@ -71,13 +73,12 @@ func (p *OutboundMessageHandler) resolveSender(t impb.ProviderType) (provider.Se
 func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.ProviderSendTextRequest) (*impb.ProviderSendMessageResponse, error) {
 	log := p.logger.With(
 		slog.String("method", "SendText"),
-		slog.String("provider", req.GetType().String()),
 		slog.String("gate_id", req.GetGateId()),
 		slog.String("external_user_id", req.GetExternalUserId()),
 	)
 	log.InfoContext(ctx, "outbound text message request received")
 
-	sender, err := p.resolveSender(req.GetType())
+	sender, err := p.resolveSender(ctx, req.GetGateId())
 	if err != nil {
 		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
 		return nil, err
@@ -106,14 +107,13 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.ProviderSendImageRequest) (*impb.ProviderSendMessageResponse, error) {
 	log := p.logger.With(
 		slog.String("method", "SendImage"),
-		slog.String("provider", req.GetType().String()),
 		slog.String("gate_id", req.GetGateId()),
 		slog.String("external_user_id", req.GetExternalUserId()),
 		slog.Int("images_count", len(req.GetImages())),
 	)
 	log.InfoContext(ctx, "outbound image message request received")
 
-	sender, err := p.resolveSender(req.GetType())
+	sender, err := p.resolveSender(ctx, req.GetGateId())
 	if err != nil {
 		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
 		return nil, err
@@ -150,14 +150,13 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.ProviderSendDocumentRequest) (*impb.ProviderSendMessageResponse, error) {
 	log := p.logger.With(
 		slog.String("method", "SendDocument"),
-		slog.String("provider", req.GetType().String()),
 		slog.String("gate_id", req.GetGateId()),
 		slog.String("external_user_id", req.GetExternalUserId()),
 		slog.Int("documents_count", len(req.GetDocuments())),
 	)
 	log.InfoContext(ctx, "outbound document message request received")
 
-	sender, err := p.resolveSender(req.GetType())
+	sender, err := p.resolveSender(ctx, req.GetGateId())
 	if err != nil {
 		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
 		return nil, err

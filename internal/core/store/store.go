@@ -18,6 +18,8 @@ type GateStore interface {
 	List(ctx context.Context, f sharedmodel.ListFilter) ([]*sharedmodel.GateSummary, bool, error)
 	// Delete removes the base gate and its specific configuration (via cascade).
 	Delete(ctx context.Context, id string) error
+	// GetTypeByID returns the provider type for a gate by its UUID.
+	GetTypeByID(ctx context.Context, id string) (sharedmodel.GateType, error)
 }
 
 // GateState holds minimal data for fast webhook routing and filtering.
