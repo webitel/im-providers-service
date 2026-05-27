@@ -58,8 +58,7 @@ func (p *facebookProvider) resolvePSID(ctx context.Context, gate *fbmodel.Facebo
 	}
 	authCtx := withGatewayIdentity(ctx, gate)
 	resp, err := p.contactClient.SearchContact(authCtx, &contactv1.SearchContactRequest{
-		Fields: []string{"id", "subject"},
-		Ids:    []string{contactID},
+		Ids: []string{contactID},
 	})
 	if err != nil {
 		return "", fmt.Errorf("resolve psid for %s: %w", contactID, err)
