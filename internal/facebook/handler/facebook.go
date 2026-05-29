@@ -81,6 +81,7 @@ func (f *FacebookHandler) DeleteFacebookGate(ctx context.Context, req *impb.Prov
 	if err != nil {
 		return nil, toStatus(err, "delete gate")
 	}
+
 	return &impb.ProviderDeleteFacebookGateResponse{
 		Item: f.gateToProto(gate),
 	}, nil

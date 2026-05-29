@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/webitel/im-providers-service/infra/db/postgresx"
+	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
 
 type Config struct {
@@ -48,7 +51,59 @@ type LogConfig struct {
 }
 
 type PostgresConfig struct {
-	DSN string `mapstructure:"dsn"`
+	DSN          string        `mapstructure:"dsn"`
+	Replicas     []string      `mapstructure:"replicas"`
+	QueryTimeout time.Duration `mapstructure:"query_timeout"`
+	TxTimeout    time.Duration `mapstructure:"tx_timeout"`
+
+	MaxConns          int32         `mapstructure:"max_conns"`
+	MinConns          int32         `mapstructure:"min_conns"`
+	MaxConnLifetime   time.Duration `mapstructure:"max_conn_lifetime"`
+	MaxConnIdleTime   time.Duration `mapstructure:"max_conn_idle_time"`
+	HealthCheckPeriod time.Duration `mapstructure:"health_check_period"`
+	ConnectTimeout    time.Duration `mapstructure:"connect_timeout"`
+
+	ApplicationName     string `mapstructure:"application_name"`
+	LoadBalancingPolicy string `mapstructure:"lb_policy"`
+}
+
+func (postgresConfig *PostgresConfig) ToOpenOptions() []postgresx.OpenOption {
+	var opts []postgresx.OpenOption
+	if len(postgresConfig.Replicas) > 0 {
+		opts = append(opts, postgresx.WithReplicas(postgresConfig.Replicas...))
+	}
+	if postgresConfig.QueryTimeout > 0 {
+		opts = append(opts, postgresx.WithQueryTimeout(postgresConfig.QueryTimeout))
+	}
+	if postgresConfig.TxTimeout > 0 {
+		opts = append(opts, postgresx.WithTxTimeout(postgresConfig.TxTimeout))
+	}
+
+	var poolOpts []postgresx.PoolOption
+	if postgresConfig.MaxConns > 0 {
+		poolOpts = append(poolOpts, postgresx.WithMaxConns(postgresConfig.MaxConns))
+	}
+	if postgresConfig.MinConns > 0 {
+		poolOpts = append(poolOpts, postgresx.WithMinConns(postgresConfig.MinConns))
+	}
+	if postgresConfig.MaxConnLifetime > 0 {
+		poolOpts = append(poolOpts, postgresx.WithMaxConnLifetime(postgresConfig.MaxConnLifetime))
+	}
+	if postgresConfig.MaxConnIdleTime > 0 {
+		poolOpts = append(poolOpts, postgresx.WithMaxConnIdleTime(postgresConfig.MaxConnIdleTime))
+	}
+	if postgresConfig.ConnectTimeout > 0 {
+		poolOpts = append(poolOpts, postgresx.WithConnectTimeout(postgresConfig.ConnectTimeout))
+	}
+	if postgresConfig.ApplicationName != "" {
+		poolOpts = append(poolOpts, postgresx.WithApplicationName(postgresConfig.ApplicationName))
+	}
+
+	if len(poolOpts) > 0 {
+		opts = append(opts, postgresx.WithPoolOptions(poolOpts...))
+	}
+
+	return opts
 }
 
 type RedisConfig struct {
@@ -119,7 +174,7 @@ func defineFlags() {
 
 	pflag.String("service.id", "", "Service ID")
 	pflag.String("service.addr", "localhost:8080", "gRPC service address")
-	pflag.String("service.http_addr", ":8082", "HTTP service address")
+	pflag.String("service.http_addr", ":8085", "HTTP service address")
 	pflag.String("service.webhook_path", "/wh", "Base path for incoming webhooks")
 
 	pflag.Bool("service.conn.verify_certs", false, "Determine whether to verify certificates")
@@ -136,7 +191,20 @@ func defineFlags() {
 	pflag.Bool("log.console", true, "Enable console logging")
 	pflag.Bool("log.otel", false, "Enable OTEL logging")
 
+	//POSTGRES
 	pflag.String("postgres.dsn", "", "Postgres DSN")
+	pflag.StringSlice("postgres.replicas", []string{}, "Postgres replica DSNs (comma separated)")
+	pflag.Duration("postgres.query_timeout", 0, "Default timeout for queries")
+	pflag.Duration("postgres.tx_timeout", 0, "Default timeout for transactions")
+	pflag.Int32("postgres.max_conns", 0, "Maximum number of connections in the pool")
+	pflag.Int32("postgres.min_conns", 0, "Minimum number of connections in the pool")
+	pflag.Duration("postgres.max_conn_lifetime", 0, "Maximum amount of time a connection may exist")
+	pflag.Duration("postgres.max_conn_idle_time", 0, "Maximum amount of time a connection may be idle")
+	pflag.Duration("postgres.health_check_period", 0, "Period between health checks")
+	pflag.Duration("postgres.connect_timeout", 0, "Timeout for establishing a new connection")
+	pflag.String("postgres.application_name", "webitel-im-provider", "Application name sent to postgres")
+	//POSTGRES
+
 	pflag.String("redis.addr", "localhost:6379", "Redis address")
 	pflag.String("redis.password", "", "Redis password")
 	pflag.Int("redis.db", 0, "Redis database number")
@@ -167,11 +235,7 @@ func (c *Config) validate() error {
 	}
 
 	if c.Postgres.DSN == "" {
-		return fmt.Errorf("config: postgres.dsn is required")
-	}
-
-	if len(c.Service.SecretKey) != 32 {
-		return fmt.Errorf("config: service.secret_key must be exactly 32 bytes, got %d", len(c.Service.SecretKey))
+		return errors.InvalidArgument("postgres.dsn is required", errors.WithID("config.config.validate"))
 	}
 
 	return nil

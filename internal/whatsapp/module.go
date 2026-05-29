@@ -1,43 +1,85 @@
 package whatsapp
 
 import (
-	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
-	grpcsrv "github.com/webitel/im-providers-service/infra/srv/grpc"
+	"context"
+	"log/slog"
+
+	"github.com/webitel/im-providers-service/config"
+	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
+	"github.com/webitel/im-providers-service/infra/db/postgresx"
+	"github.com/webitel/im-providers-service/internal/core/service"
 	"github.com/webitel/im-providers-service/internal/provider"
-	wahandler "github.com/webitel/im-providers-service/internal/whatsapp/handler"
-	wasvc "github.com/webitel/im-providers-service/internal/whatsapp/service"
-	wastore "github.com/webitel/im-providers-service/internal/whatsapp/store"
+	"github.com/webitel/im-providers-service/internal/whatsapp/gate"
+	"github.com/webitel/im-providers-service/internal/whatsapp/messaging"
+	"github.com/webitel/im-providers-service/internal/whatsapp/resolver"
+	"github.com/webitel/im-providers-service/internal/whatsapp/webhook"
+	"github.com/webitel/im-providers-service/pkg/crypto"
 	"go.uber.org/fx"
 )
 
-// Module provides the WhatsApp adapter, store, service, and handler to the application.
-var Module = fx.Module("whatsapp",
+var Module = fx.Module(
+	"whatsapp",
+	fx.Provide(ProvideNewPostgresxConnection),
 	fx.Provide(
-		// Provider adapter
+		func(logger *slog.Logger, db postgresx.DB, internalContactResolver *imgateway.Client, encryptor crypto.Encryptor) WhatsAppGateServer {
+			gateWire := gate.NewGateModule(logger, db, internalContactResolver, encryptor)
+			return gateWire.GateServer
+		},
+	),
+
+	fx.Provide(
 		fx.Annotate(
-			New,
-			fx.As(new(provider.Sender)),
-			fx.As(new(provider.Receiver)),
+			func(
+				logger *slog.Logger,
+				db postgresx.DB,
+				encryptor crypto.Encryptor,
+				coreMessanger service.Messenger,
+				client *imgateway.Client,
+				media *service.MediaService,
+			) *WhatsApp {
+				webhookResolver := resolver.NewResolverModule[*webhook.WhatsAppBusinessAccountResolveQuery](logger, db)
+
+				webhookConfig := webhook.WebhookManagerConfig{
+					Logger: logger,
+				}
+
+				webhhokModule, err := webhook.NewWebhookModule(webhookConfig, encryptor, coreMessanger, webhookResolver.Resolver, client, media)
+				if err != nil {
+					logger.Error("whatsapp:wire:constructing new webhook module", "error", err)
+					return nil
+				}
+
+				whatsAppMessagingClient := messaging.NewMessagingWire(
+					logger,
+					encryptor,
+					client,
+					db,
+				)
+
+				return &WhatsApp{
+					WebhookManager: webhhokModule.WebhookManager,
+					Messaging:      whatsAppMessagingClient.Messaging,
+				}
+			},
 			fx.As(new(provider.Provider)),
 			fx.ResultTags(`group:"providers"`),
 		),
-
-		// Store implementation
-		fx.Annotate(wastore.NewWhatsAppStore, fx.As(new(wastore.WhatsAppStore))),
-
-		// Service
-		fx.Annotate(wasvc.NewWhatsAppService, fx.As(new(wasvc.WhatsAppManager))),
-
-		// gRPC handler
-		wahandler.NewWhatsAppHandler,
 	),
-	fx.Invoke(RegisterWhatsAppServices),
 )
 
-// RegisterWhatsAppServices connects the WhatsApp gRPC handler to the gRPC server.
-func RegisterWhatsAppServices(
-	server *grpcsrv.Server,
-	whatsapp *wahandler.WhatsappHandler,
-) {
-	impb.RegisterWhatsAppServiceServer(server.Server, whatsapp)
+func ProvideNewPostgresxConnection(cfg *config.Config, l *slog.Logger, lc fx.Lifecycle) (postgresx.DB, error) {
+	ctx := context.Background()
+	db, err := postgresx.New(ctx, cfg.Postgres.DSN, cfg.Postgres.ToOpenOptions()...)
+	if err != nil {
+		return nil, err
+	}
+
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			db.Close()
+			return nil
+		},
+	})
+
+	return db, err
 }

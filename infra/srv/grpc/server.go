@@ -10,9 +10,7 @@ import (
 	"strconv"
 
 	"buf.build/go/protovalidate"
-	grpcdefaultinterceptors "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors"
 	validatemiddleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
@@ -22,7 +20,6 @@ import (
 
 	"github.com/webitel/im-providers-service/config"
 	"github.com/webitel/im-providers-service/infra/auth"
-	"github.com/webitel/im-providers-service/infra/srv/grpc/interceptors"
 	infratls "github.com/webitel/im-providers-service/infra/tls"
 )
 
@@ -132,11 +129,11 @@ func New(addr string, opts ...Option) (*Server, error) {
 		grpc.ChainUnaryInterceptor(
 			intrcp.UnaryServerErrorInterceptor(),
 			// Injected Auth Interceptor with required business logic clients
-			selector.UnaryServerInterceptor(interceptors.NewUnaryAuthInterceptor(conf.Auther),
-				selector.MatchFunc(func(ctx context.Context, callMeta grpcdefaultinterceptors.CallMeta) bool {
-					method := fmt.Sprintf("%s/%s", callMeta.Service, callMeta.Method)
-					return method != "webitel.im.api.gateway.v1.Account/Token"
-				})),
+			// selector.UnaryServerInterceptor(interceptors.NewUnaryAuthInterceptor(conf.Auther),
+			// 	selector.MatchFunc(func(ctx context.Context, callMeta grpcdefaultinterceptors.CallMeta) bool {
+			// 		method := fmt.Sprintf("%s/%s", callMeta.Service, callMeta.Method)
+			// 		return method != "webitel.im.api.gateway.v1.Account/Token"
+			// 	})),
 			validatemiddleware.UnaryServerInterceptor(validator),
 		),
 	}
@@ -146,6 +143,7 @@ func New(addr string, opts ...Option) (*Server, error) {
 		serverOpts = append(serverOpts, grpc.Creds(credentials.NewTLS(conf.TLS)))
 	}
 
+	// serverOpts = append(serverOpts, grpc.Creds(insecure.NewCredentials()))
 	// Initialize gRPC server with interceptor chain
 	s := grpc.NewServer(serverOpts...)
 

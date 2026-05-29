@@ -1,0 +1,176 @@
+package gate
+
+import (
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/webitel/im-providers-service/internal/whatsapp/client"
+	"github.com/webitel/im-providers-service/internal/whatsapp/common"
+	"github.com/webitel/webitel-go-kit/pkg/errors"
+)
+
+const WhatsAppGateType string = "whatsapp"
+
+type Peer interface {
+	GetID() uuid.UUID
+	GetSub() string
+	GetIss() string
+}
+
+type Gate struct {
+	ID        uuid.UUID       `json:"id" db:"id"`
+	Name      string          `json:"name" db:"name"`
+	Type      string          `json:"type" db:"type"`
+	Enabled   bool            `json:"enabled" db:"enabled"`
+	CreatedAt time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at" db:"updated_at"`
+	CreatedBy int64           `json:"created_by" db:"created_by"`
+	UpdatedBy int64           `json:"updated_by" db:"updated_by"`
+	Contact   *common.Contact `json:"contact" db:"contact"`
+	DC        int64           `json:"dc" db:"dc"`
+
+	WhatsAppBusinessAccountGate WhatsAppBusinessAccountGate `json:"whats_app_business_account_gate" db:"whats_app_business_account_gate"`
+}
+
+func (gate *Gate) CreatedAtUnixUTCMilli() int64 { return gate.CreatedAt.UTC().UnixMilli() }
+func (gate *Gate) UpdatedAtUnixUTCMilli() int64 { return gate.UpdatedAt.UTC().UnixMilli() }
+
+func (gate *Gate) Validate() error {
+	if gate == nil {
+		return errors.InvalidArgument("gate is required", errors.WithID("gate.model.validate"))
+	}
+
+	if gate.Name == "" || strings.Trim(gate.Name, " ") == "" {
+		return errors.InvalidArgument("gate name is required", errors.WithID("gate.model.validate"))
+	}
+
+	if gate.Type != WhatsAppGateType {
+		return errors.InvalidArgument("invalid gate type, expecting 'whatsapp'", errors.WithID("gate.model.validate"), errors.WithID("gate.model.validate"))
+	}
+
+	if gate.Contact == nil {
+		return errors.InvalidArgument("binded gate contact is required", errors.WithID("gate.model.validate"))
+	}
+
+	if gate.Contact.Iss == "" || strings.Trim(gate.Contact.Iss, " ") == "" {
+		return errors.InvalidArgument("binded gate contact issuer is required", errors.WithID("gate.model.validate"))
+	}
+
+	if gate.Contact.Sub == "" || strings.Trim(gate.Contact.Sub, " ") == "" {
+		return errors.InvalidArgument("binded gate contact sub is required", errors.WithID("gate.model.validate"))
+	}
+
+	if gate.DC <= 0 {
+		return errors.InvalidArgument("DC is required and must be greater then zero", errors.WithID("gate.model.validate"))
+	}
+
+	if err := gate.WhatsAppBusinessAccountGate.Validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type WhatsAppBusinessAccountGate struct {
+	ID                   uuid.UUID  `json:"id" db:"id"`
+	MetaAppID            uuid.UUID  `json:"meta_app_id" db:"meta_app_id"`
+	PhoneNumber          string     `json:"phone_number" db:"phone_number"`
+	PhoneNumberID        string     `json:"phone_number_id" db:"phone_number_id"`
+	AccessToken          string     `json:"access_token" db:"-"`
+	AccessTokenEncrypted []byte     `json:"-" db:"access_token"`
+	AccessTokenExpiresAt *time.Time `json:"access_token_expires_at" db:"access_token_expires_at"`
+	BusinessID           string     `json:"business_id" db:"business_id"`
+
+	ClientMu *sync.RWMutex
+	Client   *client.RequestClient `json:"-" db:"-"`
+}
+
+func (whatsAppBusinessGate *WhatsAppBusinessAccountGate) SetUpClient() error {
+	whatsAppBusinessGate.ClientMu.Lock()
+	defer whatsAppBusinessGate.ClientMu.Unlock()
+
+	requestClient, err := client.NewRequesClient(
+		client.WithAccessTokenConfig(whatsAppBusinessGate.AccessToken),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	whatsAppBusinessGate.Client = requestClient
+
+	return nil
+}
+
+func (whatsAppBusinessAccountGate *WhatsAppBusinessAccountGate) GetClient() client.RequestClient {
+	whatsAppBusinessAccountGate.ClientMu.RLock()
+	defer whatsAppBusinessAccountGate.ClientMu.RUnlock()
+
+	return *whatsAppBusinessAccountGate.Client
+}
+
+func (gate *WhatsAppBusinessAccountGate) Validate() error {
+	if gate == nil {
+		return errors.InvalidArgument("gate can`t be null", errors.WithID("gate.model.validate"))
+	}
+
+	if gate.PhoneNumberID == "" || strings.Trim(gate.PhoneNumber, " ") == "" {
+		return errors.InvalidArgument("WhatsApp phone number is required", errors.WithID("gate.model.validate"))
+	}
+
+	if gate.PhoneNumberID == "" || strings.Trim(gate.PhoneNumberID, " ") == "" {
+		return errors.InvalidArgument("WhatsApp phone number id is required", errors.WithID("gate.model.validate"))
+	}
+
+	if gate.BusinessID == "" || strings.Trim(gate.BusinessID, " ") == "" {
+		return errors.InvalidArgument("WhatsApp business id is required", errors.WithID("gate.model.validate"))
+	}
+
+	if gate.AccessToken == "" || strings.Trim(gate.AccessToken, " ") == "" {
+		return errors.InvalidArgument("WhatsApp access token is required", errors.WithID("gate.model.validate"))
+	}
+
+	return nil
+}
+
+func (gate *WhatsAppBusinessAccountGate) PreSave(encryptor common.Encryptor) (WhatsAppBusinessAccountGate, error) {
+	encryptedToken, err := encryptor.Encrypt(gate.AccessToken)
+	if err != nil {
+		return WhatsAppBusinessAccountGate{}, errors.Internal("encrypting WABA access token", errors.WithID("gate.model.pre_save"), errors.WithCause(err))
+	}
+
+	prepared := WhatsAppBusinessAccountGate{
+		MetaAppID:            gate.MetaAppID,
+		PhoneNumber:          gate.PhoneNumber,
+		PhoneNumberID:        gate.PhoneNumberID,
+		AccessToken:          gate.AccessToken,
+		AccessTokenEncrypted: []byte(encryptedToken),
+		AccessTokenExpiresAt: gate.AccessTokenExpiresAt,
+		BusinessID:           gate.BusinessID,
+		ClientMu:             &sync.RWMutex{},
+	}
+
+	return prepared, nil
+}
+
+func (gate *WhatsAppBusinessAccountGate) PostFetch(encryptor common.Encryptor) (WhatsAppBusinessAccountGate, error) {
+	decryptedToken, err := encryptor.Decrypt(string(gate.AccessTokenEncrypted))
+	if err != nil {
+		return WhatsAppBusinessAccountGate{}, errors.Internal("decrypting WABA access token", errors.WithCause(err), errors.WithID("gate.model.post_fetch"))
+	}
+
+	prepared := WhatsAppBusinessAccountGate{
+		ID:                   gate.ID,
+		MetaAppID:            gate.MetaAppID,
+		PhoneNumber:          gate.PhoneNumber,
+		PhoneNumberID:        gate.PhoneNumberID,
+		AccessToken:          decryptedToken,
+		AccessTokenExpiresAt: gate.AccessTokenExpiresAt,
+		BusinessID:           gate.BusinessID,
+		ClientMu:             &sync.RWMutex{},
+	}
+
+	return prepared, nil
+}

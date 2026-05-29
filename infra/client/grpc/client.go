@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	infratls "github.com/webitel/im-providers-service/infra/tls"
 	ds "github.com/webitel/webitel-go-kit/infra/discovery"
@@ -13,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -54,11 +56,9 @@ func New[T any](
 		grpc.WithChainUnaryInterceptor(authInterceptor),
 	}
 
-	// FIX: Safety check for TLS configuration to avoid nil pointer dereference
 	if tlsConfig != nil && tlsConfig.Client != nil {
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig.Client)))
 	} else {
-		// Fallback to insecure if no TLS config is provided
 		options = append(options, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
@@ -68,6 +68,13 @@ func New[T any](
 		rpc.WithTarget(fmt.Sprintf("discovery:///%s", target)),
 		rpc.WithDialOptions(options...),
 		rpc.WithRetry(rpc.DefaultRetryConfig()),
+		rpc.WithKeepalive(
+			keepalive.ClientParameters{
+				Time:                10 * time.Minute,
+				Timeout:             20 * time.Second,
+				PermitWithoutStream: false,
+			},
+		),
 	)
 	if err != nil {
 		return nil, err

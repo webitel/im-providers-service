@@ -1,0 +1,58 @@
+package postgres
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/webitel/im-providers-service/config"
+	"github.com/webitel/im-providers-service/infra/db/pg"
+	"github.com/webitel/im-providers-service/infra/db/postgresx"
+	"go.uber.org/fx"
+)
+
+var Module = fx.Module("store",
+	fx.Provide(
+		ProvideNewDBConnection,
+		ProvideNewPostgresxConnection,
+		pg.ProvidePgxPool,
+
+		NewMetaAppStore,
+		NewFacebookStore,
+
+		// 2. Provide the Root Store aggregator as the main interface
+		// This will satisfy dependencies on store.Store
+	),
+)
+
+func ProvideNewDBConnection(cfg *config.Config, l *slog.Logger, lc fx.Lifecycle) (*pg.PgxDB, error) {
+	db, err := pg.New(context.Background(), l, cfg.Postgres.DSN)
+	if err != nil {
+		return nil, err
+	}
+
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			db.Master().Close()
+			return nil
+		},
+	})
+
+	return db, err
+}
+
+func ProvideNewPostgresxConnection(cfg *config.Config, l *slog.Logger, lc fx.Lifecycle) (postgresx.DB, error) {
+	ctx := context.Background()
+	db, err := postgresx.New(ctx, cfg.Postgres.DSN, cfg.Postgres.ToOpenOptions()...)
+	if err != nil {
+		return nil, err
+	}
+
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			db.Close()
+			return nil
+		},
+	})
+
+	return db, err
+}

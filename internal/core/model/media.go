@@ -1,9 +1,11 @@
 package model
 
 type UploadRequest struct {
-	DomainID int64
-	Name     string
-	MimeType string
+	DomainID   int64
+	Name       string
+	MimeType   string
+	URL        string
+	ExternalID string
 }
 
 type UploadResponse struct {

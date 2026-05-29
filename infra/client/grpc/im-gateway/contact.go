@@ -7,7 +7,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Search finds contacts within the gateway registry.
 func (c *Client) Search(
 	ctx context.Context,
 	in *gatewayv1.SearchContactRequest,
@@ -41,4 +40,5 @@ func (c *Client) Locate(ctx context.Context, in *gatewayv1.LocateConatctRequest,
 		return err
 	})
 	return resp, err
+
 }

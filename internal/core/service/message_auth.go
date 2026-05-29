@@ -9,11 +9,11 @@ import (
 )
 
 type messengerAuthMiddleware struct {
-	next Messenger
+	Messenger
 }
 
 func NewMessengerAuthMiddleware(next Messenger) Messenger {
-	return &messengerAuthMiddleware{next: next}
+	return &messengerAuthMiddleware{Messenger: next}
 }
 
 func (m *messengerAuthMiddleware) withIdentity(ctx context.Context, dc int64, sub string) context.Context {
@@ -21,13 +21,13 @@ func (m *messengerAuthMiddleware) withIdentity(ctx context.Context, dc int64, su
 }
 
 func (m *messengerAuthMiddleware) SendText(ctx context.Context, in *sharedmodel.SendTextRequest) (*sharedmodel.SendTextResponse, error) {
-	return m.next.SendText(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
+	return m.Messenger.SendText(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
 }
 
 func (m *messengerAuthMiddleware) SendImage(ctx context.Context, in *sharedmodel.SendImageRequest) (*sharedmodel.SendImageResponse, error) {
-	return m.next.SendImage(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
+	return m.Messenger.SendImage(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
 }
 
 func (m *messengerAuthMiddleware) SendDocument(ctx context.Context, in *sharedmodel.SendDocumentRequest) (*sharedmodel.SendDocumentResponse, error) {
-	return m.next.SendDocument(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
+	return m.Messenger.SendDocument(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
 }

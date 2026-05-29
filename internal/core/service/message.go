@@ -8,6 +8,8 @@ import (
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	"github.com/webitel/webitel-go-kit/pkg/errors"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var _ Messenger = (*messageService)(nil)
@@ -16,6 +18,8 @@ type Messenger interface {
 	SendText(ctx context.Context, in *sharedmodel.SendTextRequest) (*sharedmodel.SendTextResponse, error)
 	SendImage(ctx context.Context, in *sharedmodel.SendImageRequest) (*sharedmodel.SendImageResponse, error)
 	SendDocument(ctx context.Context, in *sharedmodel.SendDocumentRequest) (*sharedmodel.SendDocumentResponse, error)
+	SendLocation(ctx context.Context, in *sharedmodel.SendLocationRequest) (*sharedmodel.SendResponse, error)
+	SendContact(ctx context.Context, in *sharedmodel.SendContactRequest) (*sharedmodel.SendResponse, error)
 }
 
 type messageService struct {
@@ -52,7 +56,69 @@ func (m *messageService) SendText(ctx context.Context, in *sharedmodel.SendTextR
 	return &sharedmodel.SendTextResponse{To: in.To, ID: m.parseUUID(resp.GetId())}, nil
 }
 
+func transformDomainPeerIntoPB(peer sharedmodel.Peer) *gatewayv1.Peer {
+	return &gatewayv1.Peer{
+		Kind: &gatewayv1.Peer_Contact{
+			Contact: &gatewayv1.PeerIdentity{
+				Sub: peer.Sub,
+				Iss: peer.Iss,
+			},
+		},
+	}
+}
+
+func (m *messageService) SendLocation(ctx context.Context, in *sharedmodel.SendLocationRequest) (*sharedmodel.SendResponse, error) {
+	resp, err := m.gatewayer.SendLocation(ctx, &gatewayv1.SendLocationRequest{
+		To:        transformDomainPeerIntoPB(in.To),
+		Latitude:  in.Latitude,
+		Longitude: in.Longitude,
+		Name:      in.Name,
+		Address:   in.Address,
+		SendId:    in.ExternalID,
+	})
+
+	if err != nil {
+		return nil, errors.Wrap(err, errors.WithID("service.message.send_location"))
+	}
+
+	return &sharedmodel.SendResponse{
+		ID: m.parseUUID(resp.GetId()),
+		To: in.To,
+	}, nil
+}
+
+func (m *messageService) SendContact(ctx context.Context, in *sharedmodel.SendContactRequest) (*sharedmodel.SendResponse, error) {
+	contactMatadata, err := structpb.NewStruct(in.Metadata)
+	if err != nil {
+		return nil, errors.InvalidArgument("converting model metadata to structb", errors.WithCause(err), errors.WithID("service.message.send_contact"))
+	}
+
+	resp, err := m.gatewayer.SendContact(ctx, &gatewayv1.SendContactRequest{
+		To:          transformDomainPeerIntoPB(in.To),
+		Name:        in.Name,
+		Email:       in.Email,
+		PhoneNumber: in.PhoneNumber,
+		Metadata:    contactMatadata,
+		SendId:      "",
+	})
+
+	if err != nil {
+		return nil, errors.Wrap(err, errors.WithID("service.message.send_contact"))
+	}
+
+	return &sharedmodel.SendResponse{
+		ID: m.parseUUID(resp.GetId()),
+		To: in.To,
+	}, nil
+}
+
+// SendImage handles image gallery delivery.
 func (m *messageService) SendImage(ctx context.Context, in *sharedmodel.SendImageRequest) (*sharedmodel.SendImageResponse, error) {
+	m.logger.Info("dispatching image message to gateway",
+		"from_sub", in.From.Sub,
+		"images_count", len(in.Image.Images),
+	)
+
 	resp, err := m.gatewayer.SendImage(ctx, &gatewayv1.SendImageRequest{
 		To: &gatewayv1.Peer{
 			Kind: &gatewayv1.Peer_Contact{
