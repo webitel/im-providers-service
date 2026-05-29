@@ -85,9 +85,10 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 	}
 
 	msg := &sharedmodel.Message{
-		GateID: req.GetGateId(),
-		To:     sharedmodel.Peer{Sub: req.GetExternalUserId()},
-		Text:   req.GetText(),
+		GateID:   req.GetGateId(),
+		To:       sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		Text:     req.GetText(),
+		DomainID: int64(req.DomainId),
 	}
 
 	resp, err := sender.SendText(ctx, msg)
@@ -120,8 +121,10 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 	}
 
 	msg := &sharedmodel.Message{
-		GateID: req.GetGateId(),
-		To:     sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		GateID:   req.GetGateId(),
+		To:       sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		DomainID: int64(req.DomainId),
+		Text:     req.GetCaption(),
 	}
 	for _, f := range req.GetImages() {
 		msg.Images = append(msg.Images, &sharedmodel.Image{
@@ -163,8 +166,10 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 	}
 
 	msg := &sharedmodel.Message{
-		GateID: req.GetGateId(),
-		To:     sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		GateID:   req.GetGateId(),
+		To:       sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		DomainID: int64(req.DomainId),
+		Text:     req.GetCaption(),
 	}
 	for _, f := range req.GetDocuments() {
 		msg.Documents = append(msg.Documents, &sharedmodel.Document{

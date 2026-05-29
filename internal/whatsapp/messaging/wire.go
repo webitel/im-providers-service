@@ -21,6 +21,6 @@ func NewMessagingWire(
 	messagingRepo := newMessagingRepository(db)
 
 	return &messagingWire{
-		Messaging: newMessaging(logger, encryptor, messagingRepo),
+		Messaging: newMessaging(logger, encryptor, messagingRepo, gatewayClient),
 	}
 }

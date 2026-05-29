@@ -13,7 +13,7 @@ type WhatsAppBusinessAccount struct {
 	PhoneNumberID string `json:"phone_number_id" db:"phone_number_id"`
 	BusinessID    string `json:"business_id" db:"business_id"`
 
-	AccessTokenEncrypted string     `json:"access_token" db:"access_token"`
+	AccessTokenEncrypted []byte     `json:"access_token_encrypted" db:"access_token_encrypted"`
 	AccessTokenDecrypted string     `json:"-" db:"-"`
 	AccessTokenExpiresAt *time.Time `json:"access_token_expires_at" db:"access_token_expires_at"`
 
@@ -71,7 +71,7 @@ func (whatsAppBusinessAccount *WhatsAppBusinessAccount) PostFetch(encyptor commo
 		return whatsAppBusinessAccount.DeepClone(), nil
 	}
 
-	decryptedAccessToken, err := encyptor.Decrypt(whatsAppBusinessAccount.AccessTokenEncrypted)
+	decryptedAccessToken, err := encyptor.Decrypt(string(whatsAppBusinessAccount.AccessTokenEncrypted))
 	if err != nil {
 		return WhatsAppBusinessAccount{}, errors.Internal("decypting access token", errors.WithCause(err), errors.WithID("messaging.model.post_fetch"), errors.WithValue("phone_number_id", whatsAppBusinessAccount.PhoneNumberID))
 	}

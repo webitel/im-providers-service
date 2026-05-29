@@ -54,26 +54,15 @@ func (repository *messagingRepository) prepareResolveWhatsAppBusinessAccountQuer
 			"gw"."phone_number" as "phone_number",
 			"gw"."phone_number_id" as "phone_number_id",
 			"gw"."business_id" as "business_id",
-			"gw"."access_token" as "access_token",
+			"gw"."access_token" as "access_token_encrypted",
 			"gw"."access_token_expires_at" as "access_token_expires_at",
 			to_jsonb("bc".*) as "contact"
-		from "im_provider"."binded_contact" "bc"
-		inner join "im_provider"."gates" "g" using("id")
-		inner join "im_provider"."gate_waba" "gw" using("id")
-		where
-		(
-			("bc"."iss", "bc"."sub")=(@Iss,@Sub)
-			and (
-				@GateID is null or "g"."id" = @GateID
-			)
-		)
-			and "g"."enabled"
-		limit 1;
+		from im_provider.gate_waba gw
+		inner join im_provider.bots bc on bc.gate_id = gw.id
+		where gw.id = @GateID;
 	`
 
 	args := postgresx.NamedArgs{
-		"Iss":    query.BotIss,
-		"Sub":    query.BotSub,
 		"GateID": query.GateID,
 	}
 

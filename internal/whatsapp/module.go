@@ -1,8 +1,10 @@
 package whatsapp
 
 import (
+	"context"
 	"log/slog"
 
+	"github.com/webitel/im-providers-service/config"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	"github.com/webitel/im-providers-service/infra/db/postgresx"
 	"github.com/webitel/im-providers-service/internal/core/service"
@@ -17,6 +19,7 @@ import (
 
 var Module = fx.Module(
 	"whatsapp",
+	fx.Provide(ProvideNewPostgresxConnection),
 	fx.Provide(
 		func(logger *slog.Logger, db postgresx.DB, internalContactResolver *imgateway.Client, encryptor crypto.Encryptor) WhatsAppGateServer {
 			gateWire := gate.NewGateModule(logger, db, internalContactResolver, encryptor)
@@ -63,3 +66,20 @@ var Module = fx.Module(
 		),
 	),
 )
+
+func ProvideNewPostgresxConnection(cfg *config.Config, l *slog.Logger, lc fx.Lifecycle) (postgresx.DB, error) {
+	ctx := context.Background()
+	db, err := postgresx.New(ctx, cfg.Postgres.DSN, cfg.Postgres.ToOpenOptions()...)
+	if err != nil {
+		return nil, err
+	}
+
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			db.Close()
+			return nil
+		},
+	})
+
+	return db, err
+}

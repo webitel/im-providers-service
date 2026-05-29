@@ -18,6 +18,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/core"
 	sharedhandler "github.com/webitel/im-providers-service/internal/core/handler"
 	"github.com/webitel/im-providers-service/internal/core/webhook"
+	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/whatsapp"
 	"github.com/webitel/im-providers-service/pkg/crypto"
 	"go.uber.org/fx"
@@ -33,7 +34,7 @@ func NewApp(cfg *config.Config) *fx.App {
 			ProvideRouter,
 			ProvideRedis,
 		),
-
+		provider.Module,
 		standard.Module,
 		tls.Module,
 		crypto.Module,
