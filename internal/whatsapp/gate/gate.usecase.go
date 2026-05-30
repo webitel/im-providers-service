@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/webitel/im-providers-service/infra/auth"
 	"github.com/webitel/im-providers-service/internal/whatsapp/client"
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/im-providers-service/internal/whatsapp/messaging"
@@ -43,8 +44,12 @@ func newGate(logger *slog.Logger, wabaGateRepository WABAGateRepository, interna
 func (gate *gate) Save(ctx context.Context, wabaGate *Gate) (*Gate, error) {
 	log := gate.logger.With("operation", "whatsapp.gate.save")
 
-	//TODO: add DC fetch from user session
-	wabaGate.DC = 1
+	session, ok := auth.GetIdentityFromContext(ctx)
+	if !ok {
+		return nil, errors.Unauthenticated("not found session in context", errors.WithID("whatsapp.gate.save.session"))
+	}
+
+	wabaGate.DC = session.GetDomainID()
 
 	if err := wabaGate.Validate(); err != nil {
 		log.Warn("validating WhatsApp Business Account creating request", "error", err)
