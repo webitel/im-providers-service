@@ -81,7 +81,7 @@ func ProvideLogger(cfg *config.Config, lc fx.Lifecycle) (*slog.Logger, error) {
 		service := resource.NewSchemaless(
 			semconv.ServiceName(model.ServiceName),
 			semconv.ServiceVersion(model.Version),
-			semconv.ServiceInstanceID(cfg.Service.ID),
+			semconv.ServiceInstanceID(discovery.GenerateInstanceID(model.ServiceName)),
 			semconv.ServiceNamespace(model.ServiceNamespace),
 		)
 		otelHandler := otelslog.NewHandler("slog")
@@ -190,7 +190,7 @@ func ProvideSD(cfg *config.Config, log *slog.Logger, lc fx.Lifecycle) (discovery
 
 	si := new(discovery.ServiceInstance)
 	{
-		si.Id = cfg.Service.ID
+		si.Id = discovery.GenerateInstanceID(model.ServiceName)
 		si.Name = model.ServiceName
 		si.Version = model.Version
 		si.Metadata = map[string]string{

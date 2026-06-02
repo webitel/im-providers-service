@@ -22,7 +22,7 @@ require (
 	github.com/spf13/viper v1.21.0 // indirect
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/webitel/storage v0.0.0-20260519164113-3976e11bfdc3
-	github.com/webitel/webitel-go-kit/infra/discovery v0.0.0-20260520154553-61b75ea56e1e
+	github.com/webitel/webitel-go-kit/infra/discovery v0.0.0-20260602143553-df89d5e34680
 	github.com/webitel/webitel-go-kit/infra/otel v0.1.0
 	github.com/webitel/webitel-go-kit/infra/transport v0.0.0-20260520154553-61b75ea56e1e
 	github.com/webitel/webitel-go-kit/pkg/errors v0.1.0
@@ -106,4 +106,4 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
-require github.com/webitel/webitel-go-kit/appconfig v0.0.0-20260602123706-4e69c07a5ba7
+require github.com/webitel/webitel-go-kit/appconfig v0.0.0-20260602143553-df89d5e34680

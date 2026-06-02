@@ -22,7 +22,6 @@ type Config struct {
 }
 
 type ServiceConfig struct {
-	ID          string             `mapstructure:"id"`
 	GRPCAddr    string             `mapstructure:"addr"`
 	HTTPAddr    string             `mapstructure:"http_addr"`
 	WebhookPath string             `mapstructure:"webhook_path"`
@@ -134,19 +133,12 @@ func LoadConfig() (*Config, error) {
 }
 
 func registerServiceFlags() {
-	pflag.String("service.id", "", "Service instance ID (required)")
 	pflag.String("service.addr", "localhost:8080", "gRPC listen address")
 	pflag.String("service.http_addr", ":8085", "HTTP listen address")
 	pflag.String("service.webhook_path", "/wh", "Base path for incoming webhooks")
 	pflag.String("service.secret_key", "", "32-byte AES key for token encryption (required)")
 
-	pflag.Bool("service.conn.verify_certs", false, "Verify TLS certificates on outbound gRPC connections")
-	pflag.String("service.conn.ca", "", "CA certificate path")
-	pflag.String("service.conn.cert", "", "Server certificate path")
-	pflag.String("service.conn.key", "", "Server certificate key path")
-	pflag.String("service.conn.client.ca", "", "Client CA certificate path")
-	pflag.String("service.conn.client.cert", "", "Client certificate path")
-	pflag.String("service.conn.client.key", "", "Client certificate key path")
+	appconfig.RegisterGRPCConnFlags(pflag.CommandLine, "service.conn", false)
 }
 
 func registerPostgresFlags() {
@@ -164,9 +156,6 @@ func registerPostgresFlags() {
 }
 
 func (c *Config) validate() error {
-	if c.Service.ID == "" {
-		return fmt.Errorf("config: service.id is required")
-	}
 	if c.Service.GRPCAddr == "" {
 		return fmt.Errorf("config: service.addr is required")
 	}
