@@ -19,7 +19,7 @@ require (
 	github.com/rabbitmq/amqp091-go v1.11.0
 	github.com/redis/go-redis/v9 v9.19.0
 	github.com/spf13/pflag v1.0.10
-	github.com/spf13/viper v1.21.0
+	github.com/spf13/viper v1.21.0 // indirect
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/webitel/storage v0.0.0-20260519164113-3976e11bfdc3
 	github.com/webitel/webitel-go-kit/infra/discovery v0.0.0-20260520154553-61b75ea56e1e
@@ -105,3 +105,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260523011958-0a33c5d7ca68 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
+
+require github.com/webitel/webitel-go-kit/appconfig v0.0.0-20260602123706-4e69c07a5ba7

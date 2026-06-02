@@ -2,57 +2,39 @@ package config
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	"github.com/webitel/im-providers-service/infra/db/postgresx"
+	"github.com/webitel/webitel-go-kit/appconfig"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
 
 type Config struct {
-	Service  ServiceConfig  `mapstructure:"service"`
-	Log      LogConfig      `mapstructure:"log"`
-	Postgres PostgresConfig `mapstructure:"postgres"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	Consul   ConsulConfig   `mapstructure:"consul"`
+	Service  ServiceConfig    `mapstructure:"service"`
+	Log      appconfig.Log    `mapstructure:"log"`
+	Postgres PostgresConfig   `mapstructure:"postgres"`
+	Redis    appconfig.Redis  `mapstructure:"redis"`
+	Consul   appconfig.Consul `mapstructure:"consul"`
 }
 
 type ServiceConfig struct {
-	ID          string           `mapstructure:"id"`
-	GRPCAddr    string           `mapstructure:"addr"`         // gRPC server address
-	HTTPAddr    string           `mapstructure:"http_addr"`    // HTTP server address
-	WebhookPath string           `mapstructure:"webhook_path"` // Base path for webhooks (e.g., /wh)
-	Connection  ConnectionConfig `mapstructure:"conn"`
-	SecretKey   string           `mapstructure:"secret_key"`
+	ID          string             `mapstructure:"id"`
+	GRPCAddr    string             `mapstructure:"addr"`
+	HTTPAddr    string             `mapstructure:"http_addr"`
+	WebhookPath string             `mapstructure:"webhook_path"`
+	Connection  appconfig.GRPCConn `mapstructure:"conn"`
+	SecretKey   string             `mapstructure:"secret_key"`
 }
 
-type ConnectionConfig struct {
-	TLS         TLSConfig `mapstructure:",squash"`
-	VerifyCerts bool      `mapstructure:"verify_certs"`
-	Client      TLSConfig `mapstructure:"client"`
-}
-
-type TLSConfig struct {
-	CA   string `mapstructure:"ca"`
-	Cert string `mapstructure:"cert"`
-	Key  string `mapstructure:"key"`
-}
-
-type LogConfig struct {
-	Level   string `mapstructure:"level"`
-	JSON    bool   `mapstructure:"json"`
-	Otel    bool   `mapstructure:"otel"`
-	File    string `mapstructure:"file"`
-	Console bool   `mapstructure:"console"`
-}
-
+// PostgresConfig extends the basic DSN with connection-pool options specific to this service.
 type PostgresConfig struct {
-	DSN          string        `mapstructure:"dsn"`
-	Replicas     []string      `mapstructure:"replicas"`
+	DSN      string   `mapstructure:"dsn"`
+	Replicas []string `mapstructure:"replicas"`
+
 	QueryTimeout time.Duration `mapstructure:"query_timeout"`
 	TxTimeout    time.Duration `mapstructure:"tx_timeout"`
 
@@ -67,36 +49,36 @@ type PostgresConfig struct {
 	LoadBalancingPolicy string `mapstructure:"lb_policy"`
 }
 
-func (postgresConfig *PostgresConfig) ToOpenOptions() []postgresx.OpenOption {
+func (p *PostgresConfig) ToOpenOptions() []postgresx.OpenOption {
 	var opts []postgresx.OpenOption
-	if len(postgresConfig.Replicas) > 0 {
-		opts = append(opts, postgresx.WithReplicas(postgresConfig.Replicas...))
+	if len(p.Replicas) > 0 {
+		opts = append(opts, postgresx.WithReplicas(p.Replicas...))
 	}
-	if postgresConfig.QueryTimeout > 0 {
-		opts = append(opts, postgresx.WithQueryTimeout(postgresConfig.QueryTimeout))
+	if p.QueryTimeout > 0 {
+		opts = append(opts, postgresx.WithQueryTimeout(p.QueryTimeout))
 	}
-	if postgresConfig.TxTimeout > 0 {
-		opts = append(opts, postgresx.WithTxTimeout(postgresConfig.TxTimeout))
+	if p.TxTimeout > 0 {
+		opts = append(opts, postgresx.WithTxTimeout(p.TxTimeout))
 	}
 
 	var poolOpts []postgresx.PoolOption
-	if postgresConfig.MaxConns > 0 {
-		poolOpts = append(poolOpts, postgresx.WithMaxConns(postgresConfig.MaxConns))
+	if p.MaxConns > 0 {
+		poolOpts = append(poolOpts, postgresx.WithMaxConns(p.MaxConns))
 	}
-	if postgresConfig.MinConns > 0 {
-		poolOpts = append(poolOpts, postgresx.WithMinConns(postgresConfig.MinConns))
+	if p.MinConns > 0 {
+		poolOpts = append(poolOpts, postgresx.WithMinConns(p.MinConns))
 	}
-	if postgresConfig.MaxConnLifetime > 0 {
-		poolOpts = append(poolOpts, postgresx.WithMaxConnLifetime(postgresConfig.MaxConnLifetime))
+	if p.MaxConnLifetime > 0 {
+		poolOpts = append(poolOpts, postgresx.WithMaxConnLifetime(p.MaxConnLifetime))
 	}
-	if postgresConfig.MaxConnIdleTime > 0 {
-		poolOpts = append(poolOpts, postgresx.WithMaxConnIdleTime(postgresConfig.MaxConnIdleTime))
+	if p.MaxConnIdleTime > 0 {
+		poolOpts = append(poolOpts, postgresx.WithMaxConnIdleTime(p.MaxConnIdleTime))
 	}
-	if postgresConfig.ConnectTimeout > 0 {
-		poolOpts = append(poolOpts, postgresx.WithConnectTimeout(postgresConfig.ConnectTimeout))
+	if p.ConnectTimeout > 0 {
+		poolOpts = append(poolOpts, postgresx.WithConnectTimeout(p.ConnectTimeout))
 	}
-	if postgresConfig.ApplicationName != "" {
-		poolOpts = append(poolOpts, postgresx.WithApplicationName(postgresConfig.ApplicationName))
+	if p.ApplicationName != "" {
+		poolOpts = append(poolOpts, postgresx.WithApplicationName(p.ApplicationName))
 	}
 
 	if len(poolOpts) > 0 {
@@ -106,61 +88,43 @@ func (postgresConfig *PostgresConfig) ToOpenOptions() []postgresx.OpenOption {
 	return opts
 }
 
-type RedisConfig struct {
-	Addr     string `mapstructure:"addr"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db"`
-}
+// loader is the single server command's config loader.
+// Postgres flags are registered manually below because this service extends
+// the base DSN with pool options not covered by appconfig.Sections.Postgres.
+var loader = appconfig.NewLoader(appconfig.Sections{
+	Log:    true,
+	Redis:  true,
+	Consul: true,
+})
 
-type ConsulConfig struct {
-	Address string `mapstructure:"addr"`
-}
-
-// LoadConfig initializes configuration from flags, environment variables, and files.
+// LoadConfig reads configuration from flags, environment variables, and an
+// optional YAML/JSON file. It also sets up hot-reload if a config file is used.
 func LoadConfig() (*Config, error) {
-	defineFlags()
+	loader.RegisterFlags(pflag.CommandLine)
+	registerServiceFlags()
+	registerPostgresFlags()
 	pflag.Parse()
 
-	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
-
-	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
+	cfg := &Config{}
+	if err := loader.Load(pflag.CommandLine, cfg); err != nil {
 		return nil, err
 	}
 
-	cfg := &Config{}
+	loader.Watch(func(e fsnotify.Event) {
+		slog.Info("config file changed", "name", e.Name)
 
-	configFile := viper.GetString("config_file")
-	if configFile != "" {
-		viper.SetConfigFile(configFile)
-		if err := viper.ReadInConfig(); err != nil {
-			return nil, fmt.Errorf("failed to read config file: %w", err)
+		newCfg := &Config{}
+		if err := loader.Viper().Unmarshal(newCfg); err != nil {
+			slog.Error("config reload: unmarshal failed", "error", err)
+			return
 		}
-
-		viper.OnConfigChange(func(e fsnotify.Event) {
-			log.Printf("Config file changed: %s", e.Name)
-
-			newCfg := &Config{}
-			if err := viper.Unmarshal(newCfg); err != nil {
-				log.Printf("Reload error: unable to decode: %v", err)
-				return
-			}
-
-			if err := newCfg.validate(); err != nil {
-				log.Printf("Reload error: invalid config: %v", err)
-				return
-			}
-
-			*cfg = *newCfg
-			log.Println("Config reloaded successfully")
-		})
-
-		viper.WatchConfig()
-	}
-
-	if err := viper.Unmarshal(cfg); err != nil {
-		return nil, fmt.Errorf("unable to decode into struct: %v", err)
-	}
+		if err := newCfg.validate(); err != nil {
+			slog.Error("config reload: validation failed", "error", err)
+			return
+		}
+		*cfg = *newCfg
+		slog.Info("config reloaded")
+	})
 
 	if err := cfg.validate(); err != nil {
 		return nil, err
@@ -169,59 +133,44 @@ func LoadConfig() (*Config, error) {
 	return cfg, nil
 }
 
-func defineFlags() {
-	pflag.String("config_file", "", "Configuration file (YAML, JSON, etc.)")
-
-	pflag.String("service.id", "", "Service ID")
-	pflag.String("service.addr", "localhost:8080", "gRPC service address")
-	pflag.String("service.http_addr", ":8085", "HTTP service address")
+func registerServiceFlags() {
+	pflag.String("service.id", "", "Service instance ID (required)")
+	pflag.String("service.addr", "localhost:8080", "gRPC listen address")
+	pflag.String("service.http_addr", ":8085", "HTTP listen address")
 	pflag.String("service.webhook_path", "/wh", "Base path for incoming webhooks")
+	pflag.String("service.secret_key", "", "32-byte AES key for token encryption (required)")
 
-	pflag.Bool("service.conn.verify_certs", false, "Determine whether to verify certificates")
-	pflag.String("service.conn.ca", "", "Server CA certificate path")
-	pflag.String("service.conn.key", "", "Server certificate key path")
+	pflag.Bool("service.conn.verify_certs", false, "Verify TLS certificates on outbound gRPC connections")
+	pflag.String("service.conn.ca", "", "CA certificate path")
 	pflag.String("service.conn.cert", "", "Server certificate path")
+	pflag.String("service.conn.key", "", "Server certificate key path")
 	pflag.String("service.conn.client.ca", "", "Client CA certificate path")
-	pflag.String("service.conn.client.key", "", "Client certificate key path")
 	pflag.String("service.conn.client.cert", "", "Client certificate path")
+	pflag.String("service.conn.client.key", "", "Client certificate key path")
+}
 
-	pflag.String("log.level", "info", "Log level")
-	pflag.Bool("log.json", false, "Log in JSON format")
-	pflag.String("log.file", "", "Log file path")
-	pflag.Bool("log.console", true, "Enable console logging")
-	pflag.Bool("log.otel", false, "Enable OTEL logging")
-
-	//POSTGRES
-	pflag.String("postgres.dsn", "", "Postgres DSN")
-	pflag.StringSlice("postgres.replicas", []string{}, "Postgres replica DSNs (comma separated)")
-	pflag.Duration("postgres.query_timeout", 0, "Default timeout for queries")
-	pflag.Duration("postgres.tx_timeout", 0, "Default timeout for transactions")
-	pflag.Int32("postgres.max_conns", 0, "Maximum number of connections in the pool")
-	pflag.Int32("postgres.min_conns", 0, "Minimum number of connections in the pool")
-	pflag.Duration("postgres.max_conn_lifetime", 0, "Maximum amount of time a connection may exist")
-	pflag.Duration("postgres.max_conn_idle_time", 0, "Maximum amount of time a connection may be idle")
-	pflag.Duration("postgres.health_check_period", 0, "Period between health checks")
-	pflag.Duration("postgres.connect_timeout", 0, "Timeout for establishing a new connection")
-	pflag.String("postgres.application_name", "webitel-im-provider", "Application name sent to postgres")
-	//POSTGRES
-
-	pflag.String("redis.addr", "localhost:6379", "Redis address")
-	pflag.String("redis.password", "", "Redis password")
-	pflag.Int("redis.db", 0, "Redis database number")
-	pflag.String("consul.addr", "localhost:8500", "Consul address")
-	pflag.String("service.secret_key", "", "32-byte secret key for sensitive data encryption")
+func registerPostgresFlags() {
+	pflag.String("postgres.dsn", "", "PostgreSQL primary DSN (required)")
+	pflag.StringSlice("postgres.replicas", []string{}, "Replica DSNs (comma-separated)")
+	pflag.Duration("postgres.query_timeout", 0, "Default query timeout (0 = no timeout)")
+	pflag.Duration("postgres.tx_timeout", 0, "Default transaction timeout (0 = no timeout)")
+	pflag.Int32("postgres.max_conns", 0, "Max pool connections (0 = default)")
+	pflag.Int32("postgres.min_conns", 0, "Min pool connections (0 = default)")
+	pflag.Duration("postgres.max_conn_lifetime", 0, "Max connection lifetime (0 = no limit)")
+	pflag.Duration("postgres.max_conn_idle_time", 0, "Max idle connection time (0 = no limit)")
+	pflag.Duration("postgres.health_check_period", 0, "Pool health-check period (0 = default)")
+	pflag.Duration("postgres.connect_timeout", 0, "Connection establishment timeout (0 = no timeout)")
+	pflag.String("postgres.application_name", "webitel-im-provider", "application_name sent to PostgreSQL")
 }
 
 func (c *Config) validate() error {
 	if c.Service.ID == "" {
 		return fmt.Errorf("config: service.id is required")
 	}
-
 	if c.Service.GRPCAddr == "" {
 		return fmt.Errorf("config: service.addr is required")
 	}
 
-	// Sanitize WebhookPath
 	if c.Service.WebhookPath == "" {
 		c.Service.WebhookPath = "/wh"
 	}
@@ -229,8 +178,7 @@ func (c *Config) validate() error {
 		c.Service.WebhookPath = "/" + c.Service.WebhookPath
 	}
 
-	err := validateConnectionConfig(c.Service.Connection)
-	if err != nil {
+	if err := appconfig.ValidateGRPCConn("service.conn", c.Service.Connection); err != nil {
 		return err
 	}
 
@@ -238,14 +186,5 @@ func (c *Config) validate() error {
 		return errors.InvalidArgument("postgres.dsn is required", errors.WithID("config.config.validate"))
 	}
 
-	return nil
-}
-
-func validateConnectionConfig(conn ConnectionConfig) error {
-	if conn.VerifyCerts {
-		if conn.TLS.CA == "" || conn.TLS.Cert == "" || conn.TLS.Key == "" {
-			return fmt.Errorf("config: service.conn TLS certificates are required when verify_certs is true")
-		}
-	}
 	return nil
 }

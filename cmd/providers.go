@@ -180,7 +180,7 @@ func ProvideSD(cfg *config.Config, log *slog.Logger, lc fx.Lifecycle) (discovery
 	provider, err := discovery.DefaultFactory.CreateProvider(
 		discovery.ProviderConsul,
 		log,
-		cfg.Consul.Address,
+		cfg.Consul.Addr,
 		discovery.WithHeartbeat[discovery.DiscoveryProvider](true),
 		discovery.WithTimeout[discovery.DiscoveryProvider](time.Second*30),
 	)
