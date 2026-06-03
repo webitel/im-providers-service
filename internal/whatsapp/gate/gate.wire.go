@@ -7,7 +7,6 @@ import (
 	"github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	"github.com/webitel/im-providers-service/infra/db/postgresx"
-	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/im-providers-service/pkg/crypto"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
@@ -21,8 +20,6 @@ func newContactClientAdapter(client *imgateway.Client) *contactClientAdapter {
 }
 
 func (contactClient *contactClientAdapter) Search(ctx context.Context, peer Peer) (Peer, error) {
-	return &common.Contact{}, nil
-
 	onlyBots := true
 	response, err := contactClient.client.Search(ctx, &gateway.SearchContactRequest{
 		Size:     1,
