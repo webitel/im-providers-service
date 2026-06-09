@@ -61,14 +61,14 @@ jobs:
       package-name: webitel-im-providers
       package-description: ${{ github.event.repository.description }}
       package-contents: |
-        src=deploy/systemd/${{ vars.SERVICE_NAME }}.service dst=/etc/systemd/system/${{ vars.SERVICE_NAME }}.service type=config
+        src=deploy/systemd/webitel-im-providers.service dst=/etc/systemd/system/webitel-im-providers.service type=config
         
 
       package-depends: 
       scripts: |
-        preinstall: deploy/debian/preinst.sh
         postinstall: deploy/debian/postinst.sh
         preremove: deploy/debian/prerm.sh
+        postremove: deploy/debian/postrm.sh
         
 
   deploy:
