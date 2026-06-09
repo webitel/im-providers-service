@@ -72,6 +72,9 @@ work/
 out/
 
 # Core / memory dumps (may contain secrets from process memory)
+core
+core.*
+*.core
 *.dmp
 *.stackdump
 hs_err_pid*.log
