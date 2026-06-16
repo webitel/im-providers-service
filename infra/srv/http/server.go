@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/webitel/im-providers-service/config"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 	"go.uber.org/fx"
 )
 
@@ -26,7 +27,7 @@ func Start(lc fx.Lifecycle, handler http.Handler, log *slog.Logger, cfg *config.
 			log.Info("HTTP_SERVER_STARTED", slog.String("addr", srv.Addr))
 			go func() {
 				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					log.Error("HTTP_SERVER_CRASHED", slog.Any("err", err))
+					log.Error("HTTP_SERVER_CRASHED", slog.Any(semconv.ErrorKey, err))
 				}
 			}()
 			return nil

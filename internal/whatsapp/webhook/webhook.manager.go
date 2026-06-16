@@ -11,6 +11,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/whatsapp/messaging/components"
 	"github.com/webitel/im-providers-service/internal/whatsapp/webhook/events"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 )
 
 type NoopWebhookSender struct{}
@@ -88,11 +89,11 @@ func unmarshallWebhookValue[T any](payload any) (T, error) {
 func (webhookManager *WebhookManager) Type() string { return "whatsapp" }
 
 func (webhookManager *WebhookManager) HandleWebhook(ctx context.Context, payload []byte) error {
-	log := webhookManager.logger.With("component", "whatsapp_webhook_manager", "operation", "handle_webhook")
+	log := webhookManager.logger.With(semconv.ComponentKey, "whatsapp_webhook_manager", "operation", "handle_webhook")
 
 	var webhookPayload WhatsappApiNotificationPayloadSchemaType
 	if err := json.Unmarshal(payload, &webhookPayload); err != nil {
-		log.Error("unmarshaling payload data", "error", err, "payload", string(payload))
+		log.Error("unmarshaling payload data", semconv.ErrorKey, err, "payload", string(payload))
 		return errors.InvalidArgument("unmarshaling paylaod data", errors.WithCause(err), errors.WithID("webhook.manager.handle_webhook"))
 	}
 
@@ -102,7 +103,7 @@ func (webhookManager *WebhookManager) HandleWebhook(ctx context.Context, payload
 			case WebhookFieldEnumMessages:
 				messageValue, err := unmarshallWebhookValue[MessagesValue](change.Value)
 				if err != nil {
-					log.Error("unmarshaling webhook value for messages", "error", err)
+					log.Error("unmarshaling webhook value for messages", semconv.ErrorKey, err)
 					return err
 				}
 
@@ -123,7 +124,7 @@ func (webhookManager *WebhookManager) HandleWebhook(ctx context.Context, payload
 				})
 
 				if err != nil {
-					log.Error("handling messages subscription events", "error", err)
+					log.Error("handling messages subscription events", semconv.ErrorKey, err)
 					return errors.Internal("handling messages subscription events", errors.WithCause(err), errors.WithID("webhook.manager.handle_webhook"))
 				}
 			}

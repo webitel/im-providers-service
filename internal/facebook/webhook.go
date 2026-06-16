@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 )
 
 func (p *facebookProvider) HandleWebhook(ctx context.Context, data []byte) error {
@@ -21,7 +22,7 @@ func (p *facebookProvider) HandleWebhook(ctx context.Context, data []byte) error
 
 	for _, msg := range evt.AllMessages() {
 		if err := p.processMessage(ctx, gate, msg); err != nil {
-			p.logger.Error("message dropped", "sender", msg.Sender.ID, "err", err)
+			p.logger.Error("message dropped", "sender", msg.Sender.ID, semconv.ErrorKey, err)
 		}
 	}
 	return nil
@@ -64,7 +65,7 @@ func (p *facebookProvider) routeMessage(ctx context.Context, gate *fbmodel.Faceb
 			To:       peers.to,
 			Body:     msg.Text,
 		}); err != nil {
-			p.logger.Error("send text failed", "err", err)
+			p.logger.Error("send text failed", semconv.ErrorKey, err)
 		}
 	}
 

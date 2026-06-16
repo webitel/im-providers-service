@@ -14,6 +14,7 @@ import (
 	"github.com/webitel/webitel-go-kit/infra/discovery"
 	_ "github.com/webitel/webitel-go-kit/infra/discovery/consul"
 	otelsdk "github.com/webitel/webitel-go-kit/infra/otel/sdk"
+	wsemconv "github.com/webitel/webitel-go-kit/pkg/semconv"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
@@ -232,7 +233,7 @@ func ProvideRedis(cfg *config.Config, lc fx.Lifecycle, l *slog.Logger) (*redis.C
 			err := rdb.Ping(ctx).Err()
 			err = nil
 			if err != nil {
-				l.Error("redis connection failed", slog.Any("error", err))
+				l.Error("redis connection failed", slog.Any(wsemconv.ErrorKey, err))
 				return err
 			}
 			l.Info("redis connected", slog.String("addr", cfg.Redis.Addr))

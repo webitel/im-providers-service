@@ -11,6 +11,7 @@ import (
 	"github.com/webitel/im-providers-service/infra/db/postgresx"
 	"github.com/webitel/webitel-go-kit/appconfig"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 )
 
 type Config struct {
@@ -114,11 +115,11 @@ func LoadConfig() (*Config, error) {
 
 		newCfg := &Config{}
 		if err := loader.Viper().Unmarshal(newCfg); err != nil {
-			slog.Error("config reload: unmarshal failed", "error", err)
+			slog.Error("config reload: unmarshal failed", semconv.ErrorKey, err)
 			return
 		}
 		if err := newCfg.validate(); err != nil {
-			slog.Error("config reload: validation failed", "error", err)
+			slog.Error("config reload: validation failed", semconv.ErrorKey, err)
 			return
 		}
 		*cfg = *newCfg

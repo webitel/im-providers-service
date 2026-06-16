@@ -6,6 +6,7 @@ import (
 
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 )
 
 var ErrNoCorespondingWhatsAppBusinessAccount = errors.NotFound("zero enabled gates found for coresponding whatsapp business account phone id")
@@ -24,7 +25,7 @@ type resolver[T ResolveWhatsAppBusinessAccountQuery] struct {
 }
 
 func newResolver[T ResolveWhatsAppBusinessAccountQuery](logger *slog.Logger, repository ResolverRepository) *resolver[T] {
-	log := logger.With("component", "whatsapp.resolver")
+	log := logger.With(semconv.ComponentKey, "whatsapp.resolver")
 	return &resolver[T]{
 		logger:     log,
 		repository: repository,
@@ -41,7 +42,7 @@ func (resolver *resolver[T]) Resolve(ctx context.Context, query T) (*common.What
 			return nil, nil
 		}
 
-		log.Error("resolving whatsapp business account", "error", err)
+		log.Error("resolving whatsapp business account", semconv.ErrorKey, err)
 		return nil, errors.Wrap(err, errors.WithID("whatsapp.resolver.usecase.resolve"))
 	}
 

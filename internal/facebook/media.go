@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 )
 
 type syncedMedia struct {
@@ -25,7 +26,7 @@ func (p *facebookProvider) handleAttachments(ctx context.Context, gate *fbmodel.
 		name := attachmentFileName(attach)
 		media, err := p.downloadAndUpload(ctx, gate, attach.Payload.URL, name)
 		if err != nil {
-			p.logger.Error("failed to sync media", "url", attach.Payload.URL, "err", err)
+			p.logger.Error("failed to sync media", "url", attach.Payload.URL, semconv.ErrorKey, err)
 			continue
 		}
 
@@ -47,7 +48,7 @@ func (p *facebookProvider) handleAttachments(ctx context.Context, gate *fbmodel.
 					}},
 				},
 			}); err != nil {
-				p.logger.Error("failed to send image", "fileName", name, "err", err)
+				p.logger.Error("failed to send image", "fileName", name, semconv.ErrorKey, err)
 			}
 		case "video", "audio", "file":
 			if _, err := p.messenger.SendDocument(ctx, &sharedmodel.SendDocumentRequest{
@@ -63,7 +64,7 @@ func (p *facebookProvider) handleAttachments(ctx context.Context, gate *fbmodel.
 					}},
 				},
 			}); err != nil {
-				p.logger.Error("failed to send document", "fileName", name, "err", err)
+				p.logger.Error("failed to send document", "fileName", name, semconv.ErrorKey, err)
 			}
 		default:
 			p.logger.Warn("unsupported attachment type, skipping", "type", attach.Type, "fileName", name)

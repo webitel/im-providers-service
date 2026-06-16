@@ -274,8 +274,6 @@ github.com/webitel/storage v0.0.0-20260519164113-3976e11bfdc3 h1:Ad+z7oXSCfjkMha
 github.com/webitel/storage v0.0.0-20260519164113-3976e11bfdc3/go.mod h1:YunGFFpZ7oVj/+M3CLmR3XMx3ENJE+MI9vZvi9JPyic=
 github.com/webitel/webitel-go-kit/appconfig v0.0.0-20260602143553-df89d5e34680 h1:gEDI7cQJKnncpniuQZSmyYrjEQ2YK0Pu3SOd8MQu7Ww=
 github.com/webitel/webitel-go-kit/appconfig v0.0.0-20260602143553-df89d5e34680/go.mod h1:NUsijzMO1zB681559ejZHIcnAkeG7suicCgOiukaNMg=
-github.com/webitel/webitel-go-kit/infra/discovery v0.0.0-20260602143553-df89d5e34680 h1:JVG8Ds7JEf+9vvR1RfAH1LmQdE+5pcoXo4X9rNj6+KU=
-github.com/webitel/webitel-go-kit/infra/discovery v0.0.0-20260602143553-df89d5e34680/go.mod h1:IhUZHd7EYD1pCoX9dNNlkpF+/c3Q6ODgBcluGDMbJrU=
 github.com/webitel/webitel-go-kit/infra/discovery v0.0.0-20260602143614-737c44733d72 h1:ZgDEYptpWvHLPi35+8A3bDIPrU1UwtEpaTaCCJnBMU8=
 github.com/webitel/webitel-go-kit/infra/discovery v0.0.0-20260602143614-737c44733d72/go.mod h1:IhUZHd7EYD1pCoX9dNNlkpF+/c3Q6ODgBcluGDMbJrU=
 github.com/webitel/webitel-go-kit/infra/otel v0.1.0 h1:WVTQThn/PeOlP59809udJzRJfRjYXwrraye7BWPX01g=
@@ -286,6 +284,8 @@ github.com/webitel/webitel-go-kit/pkg/errors v0.1.0 h1:0fQuPpEHO/Xll7R7CzarjkRbL
 github.com/webitel/webitel-go-kit/pkg/errors v0.1.0/go.mod h1:v6cQFLuiwx6vHJuRo+TNi7qMEg3iymI1isoG0eKLW1E=
 github.com/webitel/webitel-go-kit/pkg/interceptors v0.1.1 h1:as1D+Wqe+8GTP5JK4jWVDtHwwMwH891sw2RSYq8sac4=
 github.com/webitel/webitel-go-kit/pkg/interceptors v0.1.1/go.mod h1:J4A9OUbmO5Lsjdt0aNhNgek0Xy4x0NGJLo+OJz16ikE=
+github.com/webitel/webitel-go-kit/pkg/semconv v0.0.0-20260610102417-dce63a79d06a h1:KZxzYlL8JhUYMzEC/y/ZlBzbze3jQKroQRlGYBGwn34=
+github.com/webitel/webitel-go-kit/pkg/semconv v0.0.0-20260610102417-dce63a79d06a/go.mod h1:SFYqvsDf/dQWKiv2+ilgMYrfyGNXe2ABaKAEx52Hbfo=
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 h1:gEOO8jv9F4OT7lGCjxCBTO/36wtF6j2nSip77qHd4x4=
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
 github.com/zeebo/xxh3 v1.1.0 h1:s7DLGDK45Dyfg7++yxI0khrfwq9661w9EN78eP/UZVs=

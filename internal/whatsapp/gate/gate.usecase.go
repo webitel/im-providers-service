@@ -10,6 +10,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/im-providers-service/internal/whatsapp/messaging"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -52,23 +53,23 @@ func (gate *gate) Save(ctx context.Context, wabaGate *Gate) (*Gate, error) {
 	wabaGate.DC = session.GetDomainID()
 
 	if err := wabaGate.Validate(); err != nil {
-		log.Warn("validating WhatsApp Business Account creating request", "error", err)
+		log.Warn("validating WhatsApp Business Account creating request", semconv.ErrorKey, err)
 		return nil, err
 	}
 
 	if err := wabaGate.WhatsAppBusinessAccountGate.SetUpClient(); err != nil {
-		log.Error("setupping WhatsApp request client", "error", err)
+		log.Error("setupping WhatsApp request client", semconv.ErrorKey, err)
 		return nil, err
 	}
 
 	if err := gate.performExternalWhatsAppAccountValidation(ctx, &wabaGate.WhatsAppBusinessAccountGate, wabaGate.Contact); err != nil {
-		log.Error("performing external WhatsApp Business Account validation", "error", err, "phone_number_id", wabaGate.WhatsAppBusinessAccountGate.PhoneNumberID)
+		log.Error("performing external WhatsApp Business Account validation", semconv.ErrorKey, err, "phone_number_id", wabaGate.WhatsAppBusinessAccountGate.PhoneNumberID)
 		return nil, err
 	}
 
 	encryptedAccessGate, err := wabaGate.WhatsAppBusinessAccountGate.PreSave(gate.encryptor)
 	if err != nil {
-		log.Error("performing pre-save access encrypting", "error", err, "phone_number_id", wabaGate.WhatsAppBusinessAccountGate.PhoneNumberID)
+		log.Error("performing pre-save access encrypting", semconv.ErrorKey, err, "phone_number_id", wabaGate.WhatsAppBusinessAccountGate.PhoneNumberID)
 		return nil, err
 	}
 	wabaGate.WhatsAppBusinessAccountGate = encryptedAccessGate
@@ -77,7 +78,7 @@ func (gate *gate) Save(ctx context.Context, wabaGate *Gate) (*Gate, error) {
 	if err != nil {
 		log.Error(
 			"saving WhatsApp Business Account into database",
-			"error", err,
+			semconv.ErrorKey, err,
 			"meta_app_id", wabaGate.WhatsAppBusinessAccountGate.MetaAppID.String(),
 			"phone_id", wabaGate.WhatsAppBusinessAccountGate.PhoneNumberID,
 			"phone", wabaGate.WhatsAppBusinessAccountGate.PhoneNumber,

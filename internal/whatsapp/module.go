@@ -14,6 +14,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/whatsapp/resolver"
 	"github.com/webitel/im-providers-service/internal/whatsapp/webhook"
 	"github.com/webitel/im-providers-service/pkg/crypto"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 	"go.uber.org/fx"
 )
 
@@ -45,7 +46,7 @@ var Module = fx.Module(
 
 				webhhokModule, err := webhook.NewWebhookModule(webhookConfig, encryptor, coreMessanger, webhookResolver.Resolver, client, media)
 				if err != nil {
-					logger.Error("whatsapp:wire:constructing new webhook module", "error", err)
+					logger.Error("whatsapp:wire:constructing new webhook module", semconv.ErrorKey, err)
 					return nil
 				}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/im-providers-service/internal/whatsapp/webhook/events"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 )
 
 type MediaUploader interface {
@@ -52,7 +53,7 @@ func newWebhook(
 	encryptor common.Encryptor,
 	mediaUploader MediaUploader,
 ) *webhook {
-	log := logger.With("component", "whatsapp_webhook_usecase")
+	log := logger.With(semconv.ComponentKey, "whatsapp_webhook_usecase")
 	return &webhook{
 		logger:                          log,
 		coreMessanger:                   coreMessanger,
@@ -118,7 +119,7 @@ func (webhook *webhook) HandleTextMessage(ctx context.Context, textEvent *events
 
 	whatsAppBusinessAccount, err := webhook.resolveWhatsappBusinessAccount(ctx, textEvent.BaseMessageEvent.PhoneNumber.ID)
 	if err != nil {
-		log.Error("resolving whatsapp business account binded to gate", "error", err)
+		log.Error("resolving whatsapp business account binded to gate", semconv.ErrorKey, err)
 		return errors.Wrap(err, errors.WithID("webhook.usecase.handle_text_message"))
 	}
 
@@ -181,7 +182,7 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 
 	whatsAppBusinessAccount, err := webhook.resolveWhatsappBusinessAccount(ctx, documentEvent.PhoneNumber.ID)
 	if err != nil {
-		log.Error("resolving whatsapp business account", "error", err, "phone_number_id", documentEvent.PhoneNumber.ID)
+		log.Error("resolving whatsapp business account", semconv.ErrorKey, err, "phone_number_id", documentEvent.PhoneNumber.ID)
 		return err
 	}
 
@@ -202,7 +203,7 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 	)
 
 	if err != nil {
-		log.Error("uploading received document to internal storage", "error", err)
+		log.Error("uploading received document to internal storage", semconv.ErrorKey, err)
 		return err
 	}
 
@@ -224,7 +225,7 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 	}
 
 	if _, err = webhook.coreMessanger.SendDocument(ctx, &coreDocumentMessage); err != nil {
-		log.Error("sending document request to IM core", "error", err)
+		log.Error("sending document request to IM core", semconv.ErrorKey, err)
 		return errors.Internal("sending document request to IM core", errors.WithCause(err), errors.WithID("whatsapp.webhook.usecase.handle_document_message"))
 	}
 
@@ -241,7 +242,7 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 
 	whatsAppBusinessAccount, err := webhook.resolveWhatsappBusinessAccount(ctx, imageEvent.PhoneNumber.ID)
 	if err != nil {
-		log.Error("resolving whatsapp business account", "error", err)
+		log.Error("resolving whatsapp business account", semconv.ErrorKey, err)
 		return err
 	}
 
@@ -262,7 +263,7 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 	)
 
 	if err != nil {
-		log.Error("uploading received document to internal storage", "error", err)
+		log.Error("uploading received document to internal storage", semconv.ErrorKey, err)
 		return err
 	}
 
@@ -282,7 +283,7 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 	}
 
 	if _, err := webhook.coreMessanger.SendImage(ctx, &coreImageMessage); err != nil {
-		log.Error("sending image request to IM core", "error", err, "from", imageEvent.From, "to", whatsAppBusinessAccount.Bot.Sub)
+		log.Error("sending image request to IM core", semconv.ErrorKey, err, "from", imageEvent.From, "to", whatsAppBusinessAccount.Bot.Sub)
 		return err
 	}
 
@@ -299,7 +300,7 @@ func (webhook *webhook) HandleLocationMessage(ctx context.Context, locationEvent
 
 	whatsappBusinessAccount, err := webhook.resolveWhatsappBusinessAccount(ctx, locationEvent.PhoneNumber.ID)
 	if err != nil {
-		log.Error("resolving whatsapp business account", "error", err)
+		log.Error("resolving whatsapp business account", semconv.ErrorKey, err)
 		return errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.handle_location_message"))
 	}
 
@@ -327,7 +328,7 @@ func (webhook *webhook) HandleLocationMessage(ctx context.Context, locationEvent
 	}
 
 	if _, err = webhook.coreMessanger.SendLocation(ctx, &locationMessage); err != nil {
-		log.Error("sending location message to IM core", "error", err)
+		log.Error("sending location message to IM core", semconv.ErrorKey, err)
 		return errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.handle_location_message"))
 	}
 
@@ -380,7 +381,7 @@ func (webhook *webhook) HandleContactsMessage(ctx context.Context, contacts *eve
 		}
 
 		if _, err := webhook.coreMessanger.SendContact(ctx, &contactMessage); err != nil {
-			log.Error("sending contact message to IM core", "error", err, "from", contacts.From, "phone_number_id", whatsappBusinessAccount.PhoneNumberID)
+			log.Error("sending contact message to IM core", semconv.ErrorKey, err, "from", contacts.From, "phone_number_id", whatsappBusinessAccount.PhoneNumberID)
 			return err
 		}
 	}

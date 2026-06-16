@@ -14,6 +14,7 @@ import (
 	"time"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 )
 
 // GraphBaseURL is the versioned Graph API endpoint.
@@ -53,7 +54,7 @@ var _ graphAPI = (*apiClient)(nil)
 func newAPIClient(l *slog.Logger) *apiClient {
 	return &apiClient{
 		client: &http.Client{Timeout: 15 * time.Second},
-		logger: l.With("component", "fb.api"),
+		logger: l.With(semconv.ComponentKey, "fb.api"),
 		apiURL: GraphBaseURL,
 	}
 }
@@ -193,7 +194,7 @@ func (c *apiClient) send(ctx context.Context, token string, body outboundPayload
 		ID string `json:"message_id"`
 	}
 	if err := json.Unmarshal(respBody, &res); err != nil {
-		c.logger.Warn("failed to decode send response", "err", err)
+		c.logger.Warn("failed to decode send response", semconv.ErrorKey, err)
 	}
 	return &sharedmodel.MessageResponse{ID: res.ID}, nil
 }
