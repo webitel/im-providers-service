@@ -18,6 +18,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/core"
 	sharedhandler "github.com/webitel/im-providers-service/internal/core/handler"
 	"github.com/webitel/im-providers-service/internal/core/webhook"
+	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/whatsapp"
 	"github.com/webitel/im-providers-service/pkg/crypto"
@@ -43,6 +44,7 @@ func NewApp(cfg *config.Config) *fx.App {
 		imauth.Module,
 		imcontact.Module,
 		core.Module,
+		facebook.Module,
 		whatsapp.Module,
 		webhook.Module,
 		grpcsrv.Module,
