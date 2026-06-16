@@ -50,8 +50,14 @@ type PostgresConfig struct {
 
 func (p *PostgresConfig) ToOpenOptions() []postgresx.OpenOption {
 	var opts []postgresx.OpenOption
-	if len(p.Replicas) > 0 {
-		opts = append(opts, postgresx.WithReplicas(p.Replicas...))
+	var replicas []string
+	for _, r := range p.Replicas {
+		if r != "" && r != "[]" {
+			replicas = append(replicas, r)
+		}
+	}
+	if len(replicas) > 0 {
+		opts = append(opts, postgresx.WithReplicas(replicas...))
 	}
 	if p.QueryTimeout > 0 {
 		opts = append(opts, postgresx.WithQueryTimeout(p.QueryTimeout))
