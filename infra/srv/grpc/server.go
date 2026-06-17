@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	intrcp "github.com/webitel/webitel-go-kit/pkg/interceptors"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 
 	"github.com/webitel/im-providers-service/config"
 	"github.com/webitel/im-providers-service/infra/auth"
@@ -56,7 +57,7 @@ func ProvideServer(
 			go func() {
 				logger.Info(fmt.Sprintf("listen grpc %s:%d", srv.Host(), srv.Port()))
 				if err := srv.Listen(); err != nil {
-					logger.Error("grpc server error", "err", err)
+					logger.Error("grpc server error", semconv.ErrorKey, err)
 				}
 			}()
 
@@ -64,7 +65,7 @@ func ProvideServer(
 		},
 		OnStop: func(ctx context.Context) error {
 			if err := srv.Shutdown(); err != nil {
-				logger.Error("error stopping grpc server", "err", err.Error())
+				logger.Error("error stopping grpc server", semconv.ErrorKey, err.Error())
 
 				return err
 			}

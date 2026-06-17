@@ -6,6 +6,7 @@ import (
 
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 )
 
 var _ MetaAppManager = (*MetaAppService)(nil)
@@ -45,7 +46,7 @@ func (s *MetaAppService) CreateMetaApp(ctx context.Context, req fbmodel.CreateMe
 	}
 
 	if err := s.repo.Insert(ctx, app); err != nil {
-		s.log.Error("failed to create meta app", "app_id", req.AppID, "err", err)
+		s.log.Error("failed to create meta app", "app_id", req.AppID, semconv.ErrorKey, err)
 		return nil, err
 	}
 
@@ -66,7 +67,7 @@ func (s *MetaAppService) UpdateMetaApp(ctx context.Context, req fbmodel.UpdateMe
 	req.ApplyTo(app)
 
 	if err := s.repo.Update(ctx, app); err != nil {
-		s.log.Error("failed to update meta app", "id", req.ID, "err", err)
+		s.log.Error("failed to update meta app", "id", req.ID, semconv.ErrorKey, err)
 		return nil, err
 	}
 
@@ -81,11 +82,10 @@ func (s *MetaAppService) DeleteMetaApp(ctx context.Context, id string) (*fbmodel
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {
-		s.log.Error("failed to delete meta app", "id", id, "err", err)
+		s.log.Error("failed to delete meta app", "id", id, semconv.ErrorKey, err)
 		return nil, err
 	}
 
 	s.log.Warn("meta app deleted", "id", id)
 	return app, nil
 }
-

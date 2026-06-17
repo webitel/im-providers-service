@@ -47,6 +47,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/fatih/color v1.16.0 // indirect
+	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
@@ -76,8 +77,10 @@ require (
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/webitel/wlog v0.0.0-20250325101442-de4f125c1ec7 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/contrib/bridges/otelzap v0.11.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.19.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.19.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.43.0 // indirect
@@ -106,4 +109,14 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
-require github.com/webitel/webitel-go-kit/appconfig v0.0.0-20260602143553-df89d5e34680
+require (
+	github.com/webitel/webitel-go-kit/appconfig v0.0.0-20260602143553-df89d5e34680
+	github.com/webitel/webitel-go-kit/pkg/depenlog v0.0.0-20260616092333-51ced8c22b68
+	github.com/webitel/webitel-go-kit/pkg/logger v0.1.2-0.20260616092333-51ced8c22b68
+	github.com/webitel/webitel-go-kit/pkg/semconv v0.0.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
+)
+
+replace github.com/webitel/webitel-go-kit/pkg/semconv => github.com/webitel/webitel-go-kit/pkg/semconv v0.0.0-20260616092333-51ced8c22b68
+
+replace github.com/webitel/webitel-go-kit/pkg/logger => github.com/webitel/webitel-go-kit/pkg/logger v0.1.2-0.20260616092333-51ced8c22b68

@@ -6,6 +6,7 @@ import (
 
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 )
 
 var _ FacebookManager = (*FacebookService)(nil)
@@ -44,7 +45,7 @@ func (f *FacebookService) CreateGate(ctx context.Context, req fbmodel.CreateFace
 	}
 
 	if err := f.repo.Insert(ctx, req.Dc, gate); err != nil {
-		f.log.Error("failed to create facebook gate", "page_id", req.PageID, "err", err)
+		f.log.Error("failed to create facebook gate", "page_id", req.PageID, semconv.ErrorKey, err)
 		return nil, err
 	}
 
@@ -65,7 +66,7 @@ func (f *FacebookService) UpdateGate(ctx context.Context, req fbmodel.UpdateFace
 	req.ApplyTo(gate)
 
 	if err := f.repo.Update(ctx, gate); err != nil {
-		f.log.Error("failed to update facebook gate", "id", req.ID, "err", err)
+		f.log.Error("failed to update facebook gate", "id", req.ID, semconv.ErrorKey, err)
 		return nil, err
 	}
 
@@ -81,7 +82,7 @@ func (f *FacebookService) DeleteGate(ctx context.Context, id string) (*fbmodel.F
 
 	// Unbind only removes the Facebook-specific configuration (the "tab")
 	if err := f.repo.Unbind(ctx, id); err != nil {
-		f.log.Error("failed to unbind facebook gate", "id", id, "err", err)
+		f.log.Error("failed to unbind facebook gate", "id", id, semconv.ErrorKey, err)
 		return nil, err
 	}
 

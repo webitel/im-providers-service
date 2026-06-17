@@ -8,6 +8,7 @@ import (
 	grpcclient "github.com/webitel/im-providers-service/infra/client/grpc"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
+	"github.com/webitel/webitel-go-kit/pkg/semconv"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -70,7 +71,7 @@ func (p *facebookProvider) ensureVia(ctx context.Context, contactSub, contactIss
 	p.logger.Debug("create via: done", "contact", contactSub, "gate_id", gateID, "via", via)
 
 	if err != nil && !isAlreadyExists(err) {
-		p.logger.Warn("create via: skipped", "contact", contactSub, "gate_id", gateID, "err", err)
+		p.logger.Warn("create via: skipped", "contact", contactSub, "gate_id", gateID, semconv.ErrorKey, err)
 	}
 }
 

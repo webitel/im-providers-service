@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -22,12 +21,19 @@ import (
 	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/whatsapp"
 	"github.com/webitel/im-providers-service/pkg/crypto"
+	"github.com/webitel/webitel-go-kit/pkg/depenlog"
+	"github.com/webitel/webitel-go-kit/pkg/logger"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 )
 
 func NewApp(cfg *config.Config) *fx.App {
 	return fx.New(
 		fx.Supply(cfg),
+		fx.WithLogger(func(l logger.Logger) fxevent.Logger {
+			return depenlog.FxLogger(l)
+		}),
 		fx.Provide(
 			ProvideLogger,
 			ProvideWatermillLogger,
@@ -54,8 +60,12 @@ func NewApp(cfg *config.Config) *fx.App {
 }
 
 // ProvideRouter sets up the Chi router with dynamic path parameters.
-func ProvideRouter(wh *webhook.Handler, cfg *config.Config, logger *slog.Logger) http.Handler {
+// depenlog.Middleware logs every request through the unified logger using the
+// request context, and otelhttp wraps the router so each request carries an
+// active span — so those request logs include trace_id/span_id.
+func ProvideRouter(wh *webhook.Handler, cfg *config.Config, log logger.Logger) http.Handler {
 	r := chi.NewRouter()
+	r.Use(depenlog.Middleware(log))
 
 	// Sanitize base path (e.g., "/wh")
 	path := "/" + strings.Trim(cfg.Service.WebhookPath, "/")
@@ -67,12 +77,12 @@ func ProvideRouter(wh *webhook.Handler, cfg *config.Config, logger *slog.Logger)
 	// This will match: /wh/facebook/app-one, /wh/facebook/marketing-bot, etc.
 	fullPath := path + "/{provider}/{uri}"
 
-	logger.Info("registering dynamic webhook route",
+	log.Info("registering dynamic webhook route",
 		"pattern", fullPath,
 	)
 
 	// Handle both GET (verify) and POST (events)
 	r.HandleFunc(fullPath, wh.ServeHTTP)
 
-	return r
+	return otelhttp.NewHandler(r, "webhook")
 }
