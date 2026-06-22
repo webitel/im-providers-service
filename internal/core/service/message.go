@@ -20,6 +20,7 @@ type Messenger interface {
 	SendDocument(ctx context.Context, in *sharedmodel.SendDocumentRequest) (*sharedmodel.SendDocumentResponse, error)
 	SendLocation(ctx context.Context, in *sharedmodel.SendLocationRequest) (*sharedmodel.SendResponse, error)
 	SendContact(ctx context.Context, in *sharedmodel.SendContactRequest) (*sharedmodel.SendResponse, error)
+	SendInteractiveCallback(ctx context.Context, in *sharedmodel.SendInteractiveCallbackRequest) error
 }
 
 type messageService struct {
@@ -187,6 +188,19 @@ func (m *messageService) mapDocuments(src []*sharedmodel.Document) []*gatewayv1.
 		})
 	}
 	return res
+}
+
+func (m *messageService) SendInteractiveCallback(ctx context.Context, in *sharedmodel.SendInteractiveCallbackRequest) error {
+	_, err := m.gatewayer.SendInteractiveCallback(ctx, &gatewayv1.InteractiveCallbackRequest{
+		InReplyTo:    in.InReplyTo,
+		ButtonCode:   in.ButtonCode,
+		CallbackData: in.CallbackData,
+	})
+	if err != nil {
+		m.logger.Error("failed to send interactive callback", "error", err)
+		return err
+	}
+	return nil
 }
 
 func (m *messageService) parseUUID(id string) uuid.UUID {

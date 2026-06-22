@@ -71,12 +71,24 @@ func (c *Client) SendContact(ctx context.Context, in *gatewayv1.SendContactReque
 
 // SendInteractive implements [gateway.MessageClient].
 func (c *Client) SendInteractive(ctx context.Context, in *gatewayv1.SendInteractiveMessageRequest, opts ...grpc.CallOption) (*gatewayv1.SendMessageResponse, error) {
-	panic("unimplemented")
+	var resp *gatewayv1.SendMessageResponse
+	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
+		var err error
+		resp, err = api.SendInteractive(ctx, in, opts...)
+		return err
+	})
+	return resp, err
 }
 
 // SendInteractiveCallback implements [gateway.MessageClient].
 func (c *Client) SendInteractiveCallback(ctx context.Context, in *gatewayv1.InteractiveCallbackRequest, opts ...grpc.CallOption) (*gatewayv1.InteractiveCallbackResponse, error) {
-	panic("unimplemented")
+	var resp *gatewayv1.InteractiveCallbackResponse
+	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
+		var err error
+		resp, err = api.SendInteractiveCallback(ctx, in, opts...)
+		return err
+	})
+	return resp, err
 }
 
 // SendLocation implements [gateway.MessageClient].

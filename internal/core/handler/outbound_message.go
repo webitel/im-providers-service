@@ -194,6 +194,99 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 	}, nil
 }
 
+// SendInteractive handles outgoing interactive messages (buttons, menus).
+func (p *OutboundMessageHandler) SendInteractive(ctx context.Context, req *impb.ProviderSendInteractiveRequest) (*impb.ProviderSendMessageResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendInteractive"),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+	)
+	log.InfoContext(ctx, "outbound interactive message request received")
+
+	sender, err := p.resolveSender(ctx, req.GetGateId())
+	if err != nil {
+		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	is, ok := sender.(provider.InteractiveSender)
+	if !ok {
+		return nil, status.Errorf(codes.Unimplemented, "provider %s does not support interactive messages", sender.Type())
+	}
+
+	msg := &sharedmodel.Message{
+		GateID:      req.GetGateId(),
+		To:          sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		Text:        req.GetBody(),
+		DomainID:    int64(req.GetDomainId()),
+		Interactive: mapInteractive(req.GetInteractive()),
+	}
+
+	resp, err := is.SendInteractive(ctx, msg)
+	if err != nil {
+		log.ErrorContext(ctx, "failed to send interactive message", slog.String("error", err.Error()))
+		return nil, toGRPCError(err)
+	}
+
+	log.InfoContext(ctx, "interactive message sent", slog.String("external_id", resp.ID))
+	return &impb.ProviderSendMessageResponse{
+		ExternalId: resp.ID,
+		CreatedAt:  time.Now().Unix(),
+	}, nil
+}
+
+func mapInteractive(pb *impb.ProviderInteractive) *sharedmodel.Interactive {
+	if pb == nil {
+		return nil
+	}
+	out := &sharedmodel.Interactive{SingleUse: pb.GetSingleUse()}
+	if m := pb.GetMarkup(); m != nil {
+		out.Markup = mapMarkup(m)
+	} else if l := pb.GetListReply(); l != nil {
+		out.ListReply = mapListReply(l)
+	}
+	return out
+}
+
+func mapMarkup(pb *impb.ProviderKeyboardMarkup) *sharedmodel.KeyboardMarkup {
+	rows := make([]sharedmodel.KeyboardRow, 0, len(pb.GetRows()))
+	for _, r := range pb.GetRows() {
+		rows = append(rows, sharedmodel.KeyboardRow{Buttons: mapButtons(r.GetButtons())})
+	}
+	return &sharedmodel.KeyboardMarkup{Rows: rows}
+}
+
+func mapListReply(pb *impb.ProviderKeyboardListReply) *sharedmodel.KeyboardListReply {
+	sections := make([]sharedmodel.KeyboardRowWithSection, 0, len(pb.GetSections()))
+	for _, s := range pb.GetSections() {
+		sections = append(sections, sharedmodel.KeyboardRowWithSection{
+			Section: s.GetSection(),
+			Buttons: mapButtons(s.GetButtons()),
+		})
+	}
+	return &sharedmodel.KeyboardListReply{
+		MainButtonTitle: pb.GetMainButtonTitle(),
+		Sections:        sections,
+	}
+}
+
+func mapButtons(pbs []*impb.ProviderKeyboardButton) []sharedmodel.KeyboardButton {
+	out := make([]sharedmodel.KeyboardButton, 0, len(pbs))
+	for _, b := range pbs {
+		btn := sharedmodel.KeyboardButton{ID: b.GetId(), Label: b.GetLabel()}
+		switch {
+		case b.GetUrl() != nil:
+			btn.URL = &sharedmodel.KeyboardButtonURL{URL: b.GetUrl().GetUrl()}
+		case b.GetCallback() != nil:
+			btn.Callback = &sharedmodel.KeyboardButtonCallback{Data: b.GetCallback().GetData()}
+		case b.GetRequest() != nil:
+			btn.Request = &sharedmodel.KeyboardButtonRequest{Action: b.GetRequest().GetAction()}
+		}
+		out = append(out, btn)
+	}
+	return out
+}
+
 func toGRPCError(err error) error {
 	if errors.Is(err, facebook.ErrTokenInvalid) {
 		return status.Errorf(codes.Unauthenticated, "page token invalid or revoked: re-authorize via StartMetaOAuth")

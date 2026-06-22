@@ -13,6 +13,11 @@ import (
 
 var Module = fx.Module("facebook",
 	fx.Provide(
+		// Graph API client — provided as *apiClient for the provider adapter
+		// and as MessengerProfileAPI for the Facebook service.
+		newAPIClient,
+		func(c *apiClient) fbservice.MessengerProfileAPI { return c },
+
 		// Provider adapter
 		fx.Annotate(
 			New,

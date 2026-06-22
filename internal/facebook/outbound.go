@@ -46,6 +46,18 @@ func (p *facebookProvider) SendDocument(ctx context.Context, req *sharedmodel.Me
 	return p.api.SendMedia(ctx, g.PageToken, psid, MediaFile, firstURL(req.Documents))
 }
 
+func (p *facebookProvider) SendInteractive(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
+	g, err := p.fetchGate(ctx, req.GateID)
+	if err != nil {
+		return nil, err
+	}
+	psid, err := p.resolvePSID(ctx, g, req.To.Sub)
+	if err != nil {
+		return nil, err
+	}
+	return p.api.SendInteractive(ctx, g.PageToken, psid, req.Text, req.Interactive)
+}
+
 // resolvePSID returns the Facebook PSID for the given sub.
 // If sub is already a numeric PSID it is returned as-is; otherwise it is
 // treated as an internal contact UUID and resolved via the gateway Search RPC.

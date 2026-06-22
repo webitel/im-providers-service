@@ -55,3 +55,12 @@ func (r UpdateFacebook) ApplyTo(gate *FacebookGate) {
 		gate.Peer = *r.Peer
 	}
 }
+
+// MenuItem represents a single entry in the Messenger Persistent Menu.
+// Exactly one of Payload, URL, or Nested should be set.
+type MenuItem struct {
+	Title   string
+	Payload string     // postback button
+	URL     string     // web_url button
+	Nested  []MenuItem // nested submenu (one level deep)
+}

@@ -32,7 +32,10 @@ func (p *facebookProvider) HandleWebhook(ctx context.Context, data []byte) error
 //	fetch profile → sync contact → route content
 func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.FacebookGate, msg Messaging) error {
 	psid := msg.Sender.ID
-	if psid == "" || msg.Message == nil {
+	if psid == "" {
+		return nil
+	}
+	if msg.Message == nil && msg.Postback == nil {
 		return nil
 	}
 
@@ -45,12 +48,27 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 		return fmt.Errorf("sync contact [psid=%s]: %w", psid, err)
 	}
 
+	if msg.Message != nil {
+		profile, err := p.api.GetUserProfile(ctx, psid, gate.PageToken)
+		if err != nil {
+			return fmt.Errorf("fetch profile [psid=%s]: %w", psid, err)
+		}
+		if _, err := p.syncContact(ctx, gate, psid, profile); err != nil {
+			return fmt.Errorf("sync contact [psid=%s]: %w", psid, err)
+		}
+	}
+
 	peers := peerPair{
 		from: sharedmodel.Peer{Sub: psid, Iss: gate.Peer.Iss},
 		to:   sharedmodel.Peer{Sub: gate.Peer.Sub, Iss: gate.Peer.Iss},
 	}
 
-	p.routeMessage(ctx, gate, peers, msg.Message)
+	if msg.Message != nil {
+		p.routeMessage(ctx, gate, peers, msg.Message)
+	}
+	if msg.Postback != nil {
+		p.routePostback(ctx, gate, peers, msg.Postback)
+	}
 	return nil
 }
 
@@ -70,5 +88,20 @@ func (p *facebookProvider) routeMessage(ctx context.Context, gate *fbmodel.Faceb
 
 	if len(msg.Attachments) > 0 {
 		p.handleAttachments(ctx, gate, peers, msg.Attachments)
+	}
+}
+
+// routePostback forwards a Facebook button-click (persistent menu or template button) to the messenger.
+// FB postbacks carry a payload string, not a UUID, so they are routed as plain text messages
+// rather than interactive callbacks which require an existing message UUID as in_reply_to.
+// https://developers.facebook.com/docs/messenger-platform/reference/webhook-events/messaging-postbacks
+func (p *facebookProvider) routePostback(ctx context.Context, gate *fbmodel.FacebookGate, peers peerPair, pb *Postback) {
+	if _, err := p.messenger.SendText(ctx, &sharedmodel.SendTextRequest{
+		DomainID: gate.DomainID,
+		From:     peers.from,
+		To:       peers.to,
+		Body:     pb.Payload,
+	}); err != nil {
+		p.logger.Error("send postback as text failed", "payload", pb.Payload, "err", err)
 	}
 }

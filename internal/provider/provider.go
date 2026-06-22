@@ -23,6 +23,12 @@ type Sender interface {
 	SendDocument(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error)
 }
 
+// InteractiveSender is an optional interface for providers that support interactive
+// messages (buttons, menus). Implement alongside Sender when the platform allows it.
+type InteractiveSender interface {
+	SendInteractive(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error)
+}
+
 // Receiver is the inbound side — it handles raw webhook bytes from the platform.
 type Receiver interface {
 	Type() string
