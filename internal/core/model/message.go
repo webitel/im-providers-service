@@ -4,6 +4,68 @@ import (
 	"github.com/google/uuid"
 )
 
+// Interactive represents a rich message with interactive UI elements.
+type Interactive struct {
+	Body      string
+	SingleUse bool
+	Markup    *KeyboardMarkup
+	ListReply *KeyboardListReply
+}
+
+// KeyboardMarkup is a grid of button rows.
+type KeyboardMarkup struct {
+	Rows []KeyboardRow
+}
+
+// KeyboardListReply is a list-style menu with titled sections.
+type KeyboardListReply struct {
+	MainButtonTitle string
+	Sections        []KeyboardRowWithSection
+}
+
+// KeyboardRow is a horizontal row of buttons.
+type KeyboardRow struct {
+	Buttons []KeyboardButton
+}
+
+// KeyboardRowWithSection is a labeled group of buttons.
+type KeyboardRowWithSection struct {
+	Section string
+	Buttons []KeyboardButton
+}
+
+// KeyboardButton is a single interactive element.
+type KeyboardButton struct {
+	ID       string
+	Label    string
+	URL      *KeyboardButtonURL
+	Callback *KeyboardButtonCallback
+	Request  *KeyboardButtonRequest
+}
+
+type KeyboardButtonURL struct {
+	URL string
+}
+
+type KeyboardButtonCallback struct {
+	Data string
+}
+
+// KeyboardButtonRequest prompts the user for device data (e.g. location, phone, email).
+type KeyboardButtonRequest struct {
+	Action string
+}
+
+// SendInteractiveCallbackRequest is forwarded when a user clicks an interactive button.
+type SendInteractiveCallbackRequest struct {
+	From         Peer
+	To           Peer
+	DomainID     int64
+	InReplyTo    string
+	ButtonCode   string
+	CallbackData string
+}
+
 // MessageResponse represents the common return value for provider send operations.
 type MessageResponse struct {
 	ID string         `json:"id"`
@@ -12,18 +74,19 @@ type MessageResponse struct {
 
 // Message is the core domain entity representing a message in the system.
 type Message struct {
-	ID        uuid.UUID      `json:"id"`
-	GateID    string         `json:"gate_id"`
-	ThreadID  uuid.UUID      `json:"thread_id"`
-	DomainID  int64          `json:"domain_id"`
-	From      Peer           `json:"from"`
-	To        Peer           `json:"to"`
-	Text      string         `json:"text"`
-	CreatedAt int64          `json:"created_at"`
-	EditedAt  int64          `json:"updated_at,omitempty"`
-	Metadata  map[string]any `json:"metadata,omitempty"`
-	Documents []*Document    `json:"documents,omitempty"`
-	Images    []*Image       `json:"images,omitempty"`
+	ID          uuid.UUID    `json:"id"`
+	GateID      string       `json:"gate_id"`
+	ThreadID    uuid.UUID    `json:"thread_id"`
+	DomainID    int64        `json:"domain_id"`
+	From        Peer         `json:"from"`
+	To          Peer         `json:"to"`
+	Text        string       `json:"text"`
+	CreatedAt   int64        `json:"created_at"`
+	EditedAt    int64        `json:"updated_at,omitempty"`
+	Metadata    map[string]any `json:"metadata,omitempty"`
+	Documents   []*Document  `json:"documents,omitempty"`
+	Images      []*Image     `json:"images,omitempty"`
+	Interactive *Interactive `json:"interactive,omitempty"`
 }
 
 // SendTextRequest defines the payload for sending a plain text message.

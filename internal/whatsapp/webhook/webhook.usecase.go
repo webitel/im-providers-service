@@ -136,12 +136,10 @@ func (webhook *webhook) HandleTextMessage(ctx context.Context, textEvent *events
 
 	_, err = webhook.coreMessanger.SendText(ctx, &coreTextMessage)
 	if err != nil {
-		log.Error(
-			"sending text message request to IM core",
-			errors.WithCause(err),
-			errors.WithID("webhook.usecase.handle_text_message"),
-			errors.WithValue("from", textEvent.From),
-			errors.WithValue("to", textEvent.PhoneNumber.ID),
+		log.Error("sending text message request to IM core",
+			"error", err,
+			"from", textEvent.From,
+			"to", textEvent.PhoneNumber.ID,
 		)
 		return err
 	}

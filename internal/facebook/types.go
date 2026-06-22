@@ -49,6 +49,7 @@ type AttachmentPayload struct {
 // Postback is sent when a user taps a persistent-menu or template button.
 // https://developers.facebook.com/docs/messenger-platform/reference/webhook-events/messaging-postbacks
 type Postback struct {
+	Mid     string `json:"mid"`
 	Title   string `json:"title"`
 	Payload string `json:"payload"`
 }

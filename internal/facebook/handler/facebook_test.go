@@ -50,6 +50,15 @@ func (m *mockFacebookService) DeleteGate(ctx context.Context, id string) (*fbmod
 	return m.deleteFn(ctx, id)
 }
 
+func (m *mockFacebookService) SetPersistentMenu(_ context.Context, _ string, _ []fbmodel.MenuItem, _ bool) error {
+	return nil
+}
+func (m *mockFacebookService) DeletePersistentMenu(_ context.Context, _ string) error { return nil }
+func (m *mockFacebookService) SetGetStarted(_ context.Context, _ string, _ string) error {
+	return nil
+}
+func (m *mockFacebookService) DeleteGetStarted(_ context.Context, _ string) error { return nil }
+
 // -- helpers --
 
 func stubGate() *fbmodel.FacebookGate {

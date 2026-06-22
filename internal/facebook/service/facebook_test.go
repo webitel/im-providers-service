@@ -58,8 +58,17 @@ func stubFBGate() *fbmodel.FacebookGate {
 	}
 }
 
+type noopMessengerProfileAPI struct{}
+
+func (noopMessengerProfileAPI) SetMessengerProfile(_ context.Context, _ string, _ any) error {
+	return nil
+}
+func (noopMessengerProfileAPI) DeleteMessengerProfile(_ context.Context, _ string, _ []string) error {
+	return nil
+}
+
 func newFBService(repo fbstore.FacebookStore) *FacebookService {
-	return NewFacebookService(repo, noopLogger)
+	return NewFacebookService(repo, noopMessengerProfileAPI{}, noopLogger)
 }
 
 // -- tests --

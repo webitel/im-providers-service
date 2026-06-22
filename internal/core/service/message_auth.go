@@ -31,3 +31,7 @@ func (m *messengerAuthMiddleware) SendImage(ctx context.Context, in *sharedmodel
 func (m *messengerAuthMiddleware) SendDocument(ctx context.Context, in *sharedmodel.SendDocumentRequest) (*sharedmodel.SendDocumentResponse, error) {
 	return m.Messenger.SendDocument(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
 }
+
+func (m *messengerAuthMiddleware) SendInteractiveCallback(ctx context.Context, in *sharedmodel.SendInteractiveCallbackRequest) error {
+	return m.Messenger.SendInteractiveCallback(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
+}

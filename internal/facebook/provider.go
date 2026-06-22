@@ -51,10 +51,11 @@ func New(
 	gatewayer *imgateway.Client,
 	media sharedsvc.MediaManager,
 	contactClient *imcontact.Client,
+	api *apiClient,
 ) provider.Provider {
 	psidCache, _ := lru.New[string, string](1000)
 	return &facebookProvider{
-		api:           newAPIClient(l),
+		api:           api,
 		logger:        l.With("provider", "facebook"),
 		messenger:     m,
 		gateCache:     gc,
@@ -68,6 +69,8 @@ func New(
 		httpClient:    &http.Client{Timeout: 30 * time.Second},
 	}
 }
+
+var _ provider.InteractiveSender = (*facebookProvider)(nil)
 
 func (p *facebookProvider) Type() string { return "facebook" }
 
