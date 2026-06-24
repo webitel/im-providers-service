@@ -113,14 +113,16 @@ func (m *messageService) SendContact(ctx context.Context, in *sharedmodel.SendCo
 	}, nil
 }
 
-// SendImage handles image gallery delivery.
+// SendImage forwards received images to the core gateway.
+// The gateway SendImage rpc was removed in favor of consolidating on SendDocument,
+// so inbound images are delivered to the core as document attachments.
 func (m *messageService) SendImage(ctx context.Context, in *sharedmodel.SendImageRequest) (*sharedmodel.SendImageResponse, error) {
-	m.logger.Info("dispatching image message to gateway",
+	m.logger.Info("dispatching image message to gateway as document",
 		"from_sub", in.From.Sub,
 		"images_count", len(in.Image.Images),
 	)
 
-	resp, err := m.gatewayer.SendImage(ctx, &gatewayv1.SendImageRequest{
+	resp, err := m.gatewayer.SendDocument(ctx, &gatewayv1.SendDocumentRequest{
 		To: &gatewayv1.Peer{
 			Kind: &gatewayv1.Peer_Contact{
 				Contact: &gatewayv1.PeerIdentity{
@@ -129,8 +131,8 @@ func (m *messageService) SendImage(ctx context.Context, in *sharedmodel.SendImag
 				},
 			},
 		},
-		Body:   in.Image.Body,
-		Images: m.mapImages(in.Image.Images),
+		Body:      in.Image.Body,
+		Documents: m.mapImagesAsDocuments(in.Image.Images),
 	})
 	if err != nil {
 		m.logger.Error("failed to send image message", "error", err)
@@ -163,14 +165,16 @@ func (m *messageService) SendDocument(ctx context.Context, in *sharedmodel.SendD
 
 // --- Helpers ---
 
-func (m *messageService) mapImages(src []*sharedmodel.Image) []*gatewayv1.ImageInput {
-	res := make([]*gatewayv1.ImageInput, 0, len(src))
+// mapImagesAsDocuments converts inbound image attachments into gateway document inputs,
+// since received images are forwarded to the core via the SendDocument rpc.
+func (m *messageService) mapImagesAsDocuments(src []*sharedmodel.Image) []*gatewayv1.DocumentInput {
+	res := make([]*gatewayv1.DocumentInput, 0, len(src))
 	for _, img := range src {
 		if img == nil {
 			continue
 		}
-		res = append(res, &gatewayv1.ImageInput{
-			Id: img.ID, Name: img.FileName, Link: img.URL, MimeType: img.MimeType,
+		res = append(res, &gatewayv1.DocumentInput{
+			Id: img.ID, Url: img.URL, FileName: img.FileName, MimeType: img.MimeType,
 		})
 	}
 	return res
