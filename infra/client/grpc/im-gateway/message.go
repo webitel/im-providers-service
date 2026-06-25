@@ -37,21 +37,6 @@ func (c *Client) SendDocument(
 	return resp, err
 }
 
-// SendImage delivers image-specific messages to the core gateway.
-func (c *Client) SendImage(
-	ctx context.Context,
-	in *gatewayv1.SendImageRequest,
-	opts ...grpc.CallOption,
-) (*gatewayv1.SendImageResponse, error) {
-	var resp *gatewayv1.SendImageResponse
-	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
-		var err error
-		resp, err = api.SendImage(ctx, in, opts...)
-		return err
-	})
-	return resp, err
-}
-
 // Read implements [gateway.MessageClient].
 func (c *Client) Read(ctx context.Context, in *gatewayv1.ReadMessageRequest, opts ...grpc.CallOption) (*gatewayv1.ReadMessageResponse, error) {
 	panic("unimplemented")
