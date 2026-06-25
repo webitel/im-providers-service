@@ -36,17 +36,19 @@ func NewMessageService(logger *slog.Logger, threadClient *imgateway.Client) Mess
 }
 
 func (m *messageService) SendText(ctx context.Context, in *sharedmodel.SendTextRequest) (*sharedmodel.SendTextResponse, error) {
-	m.logger.Info("dispatching text message to gateway", "from_sub", in.From.Sub)
+	toVia := "<nil>"
+	if in.To.Via != nil {
+		toVia = *in.To.Via
+	}
+	m.logger.Info("dispatching text message to gateway",
+		"from_sub", in.From.Sub,
+		"to_sub", in.To.Sub,
+		"to_iss", in.To.Iss,
+		"to_via", toVia,
+	)
 
 	resp, err := m.gatewayer.SendText(ctx, &gatewayv1.SendTextRequest{
-		To: &gatewayv1.Peer{
-			Kind: &gatewayv1.Peer_Contact{
-				Contact: &gatewayv1.PeerIdentity{
-					Sub: in.To.Sub,
-					Iss: in.To.Iss,
-				},
-			},
-		},
+		To:   transformDomainPeerIntoPB(in.To),
 		Body: in.Body,
 	})
 	if err != nil {
@@ -63,6 +65,7 @@ func transformDomainPeerIntoPB(peer sharedmodel.Peer) *gatewayv1.Peer {
 			Contact: &gatewayv1.PeerIdentity{
 				Sub: peer.Sub,
 				Iss: peer.Iss,
+				Via: peer.Via,
 			},
 		},
 	}
@@ -77,7 +80,6 @@ func (m *messageService) SendLocation(ctx context.Context, in *sharedmodel.SendL
 		Address:   in.Address,
 		SendId:    in.ExternalID,
 	})
-
 	if err != nil {
 		return nil, errors.Wrap(err, errors.WithID("service.message.send_location"))
 	}
@@ -102,7 +104,6 @@ func (m *messageService) SendContact(ctx context.Context, in *sharedmodel.SendCo
 		Metadata:    contactMatadata,
 		SendId:      "",
 	})
-
 	if err != nil {
 		return nil, errors.Wrap(err, errors.WithID("service.message.send_contact"))
 	}
@@ -123,14 +124,7 @@ func (m *messageService) SendImage(ctx context.Context, in *sharedmodel.SendImag
 	)
 
 	resp, err := m.gatewayer.SendDocument(ctx, &gatewayv1.SendDocumentRequest{
-		To: &gatewayv1.Peer{
-			Kind: &gatewayv1.Peer_Contact{
-				Contact: &gatewayv1.PeerIdentity{
-					Sub: in.To.Sub,
-					Iss: in.To.Iss,
-				},
-			},
-		},
+		To:        transformDomainPeerIntoPB(in.To),
 		Body:      in.Image.Body,
 		Documents: m.mapImagesAsDocuments(in.Image.Images),
 	})
@@ -144,14 +138,7 @@ func (m *messageService) SendImage(ctx context.Context, in *sharedmodel.SendImag
 
 func (m *messageService) SendDocument(ctx context.Context, in *sharedmodel.SendDocumentRequest) (*sharedmodel.SendDocumentResponse, error) {
 	resp, err := m.gatewayer.SendDocument(ctx, &gatewayv1.SendDocumentRequest{
-		To: &gatewayv1.Peer{
-			Kind: &gatewayv1.Peer_Contact{
-				Contact: &gatewayv1.PeerIdentity{
-					Sub: in.To.Sub,
-					Iss: in.To.Iss,
-				},
-			},
-		},
+		To:        transformDomainPeerIntoPB(in.To),
 		Body:      in.Document.Body,
 		Documents: m.mapDocuments(in.Document.Documents),
 	})

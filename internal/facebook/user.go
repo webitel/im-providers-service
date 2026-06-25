@@ -52,7 +52,7 @@ func (p *facebookProvider) ensureContact(ctx context.Context, user *sharedmodel.
 	})
 	if err != nil {
 		if isAlreadyExists(err) {
-			return &gatewayv1.Contact{Sub: user.ID}, nil
+			return &gatewayv1.Contact{Sub: user.ID, Iss: p.Type()}, nil
 		}
 		return nil, fmt.Errorf("create contact: %w", err)
 	}

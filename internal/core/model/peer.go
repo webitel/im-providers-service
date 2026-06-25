@@ -20,6 +20,7 @@ type Peer struct {
 	Type PeerType  `json:"type"`
 	Sub  string    `json:"sub,omitempty"`
 	Iss  string    `json:"issuer,omitempty"`
+	Via  *string   `json:"via,omitempty"`
 	Name string    `json:"name,omitempty"`
 }
 

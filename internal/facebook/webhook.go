@@ -60,8 +60,16 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 
 	peers := peerPair{
 		from: sharedmodel.Peer{Sub: psid, Iss: gate.Peer.Iss},
-		to:   sharedmodel.Peer{Sub: gate.Peer.Sub, Iss: gate.Peer.Iss},
+		to:   sharedmodel.Peer{Sub: gate.Peer.Sub, Iss: gate.Peer.Iss, Via: &gate.ID},
 	}
+
+	p.logger.DebugContext(ctx, "facebook inbound peers built",
+		"from_sub", peers.from.Sub,
+		"from_iss", peers.from.Iss,
+		"to_sub", peers.to.Sub,
+		"to_iss", peers.to.Iss,
+		"to_via", gate.ID,
+	)
 
 	if msg.Message != nil {
 		p.routeMessage(ctx, gate, peers, msg.Message)
