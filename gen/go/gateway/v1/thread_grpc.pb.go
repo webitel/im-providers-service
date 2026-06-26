@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ThreadManagement_Search_FullMethodName          = "/webitel.im.api.gateway.v1.ThreadManagement/Search"
 	ThreadManagement_SearchLeft_FullMethodName      = "/webitel.im.api.gateway.v1.ThreadManagement/SearchLeft"
+	ThreadManagement_Create_FullMethodName          = "/webitel.im.api.gateway.v1.ThreadManagement/Create"
 	ThreadManagement_Get_FullMethodName             = "/webitel.im.api.gateway.v1.ThreadManagement/Get"
 	ThreadManagement_AddMember_FullMethodName       = "/webitel.im.api.gateway.v1.ThreadManagement/AddMember"
 	ThreadManagement_RemoveMember_FullMethodName    = "/webitel.im.api.gateway.v1.ThreadManagement/RemoveMember"
@@ -42,6 +43,7 @@ type ThreadManagementClient interface {
 	Search(ctx context.Context, in *ThreadSearchRequest, opts ...grpc.CallOption) (*SearchThreadResponse, error)
 	// Search threads that the caller has left from
 	SearchLeft(ctx context.Context, in *SearchLeftRequest, opts ...grpc.CallOption) (*SearchLeftResponse, error)
+	Create(ctx context.Context, in *ThreadManagementCreateRequest, opts ...grpc.CallOption) (*ThreadManagementCreateResponse, error)
 	// Returns a single thread by its identifier.
 	Get(ctx context.Context, in *GetThreadRequest, opts ...grpc.CallOption) (*Thread, error)
 	// Add member to the thread.
@@ -88,6 +90,16 @@ func (c *threadManagementClient) SearchLeft(ctx context.Context, in *SearchLeftR
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SearchLeftResponse)
 	err := c.cc.Invoke(ctx, ThreadManagement_SearchLeft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *threadManagementClient) Create(ctx context.Context, in *ThreadManagementCreateRequest, opts ...grpc.CallOption) (*ThreadManagementCreateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ThreadManagementCreateResponse)
+	err := c.cc.Invoke(ctx, ThreadManagement_Create_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +197,7 @@ type ThreadManagementServer interface {
 	Search(context.Context, *ThreadSearchRequest) (*SearchThreadResponse, error)
 	// Search threads that the caller has left from
 	SearchLeft(context.Context, *SearchLeftRequest) (*SearchLeftResponse, error)
+	Create(context.Context, *ThreadManagementCreateRequest) (*ThreadManagementCreateResponse, error)
 	// Returns a single thread by its identifier.
 	Get(context.Context, *GetThreadRequest) (*Thread, error)
 	// Add member to the thread.
@@ -222,6 +235,9 @@ func (UnimplementedThreadManagementServer) Search(context.Context, *ThreadSearch
 }
 func (UnimplementedThreadManagementServer) SearchLeft(context.Context, *SearchLeftRequest) (*SearchLeftResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SearchLeft not implemented")
+}
+func (UnimplementedThreadManagementServer) Create(context.Context, *ThreadManagementCreateRequest) (*ThreadManagementCreateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
 func (UnimplementedThreadManagementServer) Get(context.Context, *GetThreadRequest) (*Thread, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
@@ -300,6 +316,24 @@ func _ThreadManagement_SearchLeft_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ThreadManagementServer).SearchLeft(ctx, req.(*SearchLeftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ThreadManagement_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ThreadManagementCreateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ThreadManagementServer).Create(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ThreadManagement_Create_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ThreadManagementServer).Create(ctx, req.(*ThreadManagementCreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -462,6 +496,10 @@ var ThreadManagement_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SearchLeft",
 			Handler:    _ThreadManagement_SearchLeft_Handler,
+		},
+		{
+			MethodName: "Create",
+			Handler:    _ThreadManagement_Create_Handler,
 		},
 		{
 			MethodName: "Get",

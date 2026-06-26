@@ -13,6 +13,7 @@ var Module = fx.Module("provider-grpc",
 	fx.Provide(
 		NewGateHandler,
 		NewOutboundMessageHandler,
+		NewGateTemplateHandler,
 	),
 	fx.Invoke(RegisterSharedServices),
 )
@@ -23,8 +24,10 @@ func RegisterSharedServices(
 	gate *GateHandler,
 	outboundMessage *OutboundMessageHandler,
 	whatsAppServer whatsapp.WhatsAppGateServer,
+	template *GateTemplateHandler,
 ) {
 	impb.RegisterGateServiceServer(server.Server, gate)
 	impb.RegisterProviderMessageServiceServer(server.Server, outboundMessage)
 	impb.RegisterWhatsAppServiceServer(server.Server, whatsAppServer)
+	impb.RegisterGateTemplateServiceServer(server.Server, template)
 }

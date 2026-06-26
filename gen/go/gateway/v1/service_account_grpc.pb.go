@@ -19,11 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Account_Token_FullMethodName            = "/webitel.im.api.gateway.v1.Account/Token"
-	Account_Inspect_FullMethodName          = "/webitel.im.api.gateway.v1.Account/Inspect"
-	Account_Logout_FullMethodName           = "/webitel.im.api.gateway.v1.Account/Logout"
-	Account_RegisterDevice_FullMethodName   = "/webitel.im.api.gateway.v1.Account/RegisterDevice"
-	Account_UnregisterDevice_FullMethodName = "/webitel.im.api.gateway.v1.Account/UnregisterDevice"
+	Account_Token_FullMethodName                    = "/webitel.im.api.gateway.v1.Account/Token"
+	Account_Inspect_FullMethodName                  = "/webitel.im.api.gateway.v1.Account/Inspect"
+	Account_Logout_FullMethodName                   = "/webitel.im.api.gateway.v1.Account/Logout"
+	Account_RegisterDevice_FullMethodName           = "/webitel.im.api.gateway.v1.Account/RegisterDevice"
+	Account_UnregisterDevice_FullMethodName         = "/webitel.im.api.gateway.v1.Account/UnregisterDevice"
+	Account_AccountGetAuthorizations_FullMethodName = "/webitel.im.api.gateway.v1.Account/AccountGetAuthorizations"
 )
 
 // AccountClient is the client API for Account service.
@@ -43,6 +44,9 @@ type AccountClient interface {
 	RegisterDevice(ctx context.Context, in *RegisterDeviceRequest, opts ...grpc.CallOption) (*RegisterDeviceResponse, error)
 	// Deletes a device by its token, stops sending PUSH-notifications to it.
 	UnregisterDevice(ctx context.Context, in *UnregisterDeviceRequest, opts ...grpc.CallOption) (*UnregisterDeviceResponse, error)
+	// Returns a paginated list of active authorizations (sessions) for the speicfied account,
+	// filtered by provided criteria.
+	AccountGetAuthorizations(ctx context.Context, in *AccountGetAuthorizationsRequest, opts ...grpc.CallOption) (*AccountGetAuthorizationsResponse, error)
 }
 
 type accountClient struct {
@@ -103,6 +107,16 @@ func (c *accountClient) UnregisterDevice(ctx context.Context, in *UnregisterDevi
 	return out, nil
 }
 
+func (c *accountClient) AccountGetAuthorizations(ctx context.Context, in *AccountGetAuthorizationsRequest, opts ...grpc.CallOption) (*AccountGetAuthorizationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AccountGetAuthorizationsResponse)
+	err := c.cc.Invoke(ctx, Account_AccountGetAuthorizations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AccountServer is the server API for Account service.
 // All implementations must embed UnimplementedAccountServer
 // for forward compatibility.
@@ -120,6 +134,9 @@ type AccountServer interface {
 	RegisterDevice(context.Context, *RegisterDeviceRequest) (*RegisterDeviceResponse, error)
 	// Deletes a device by its token, stops sending PUSH-notifications to it.
 	UnregisterDevice(context.Context, *UnregisterDeviceRequest) (*UnregisterDeviceResponse, error)
+	// Returns a paginated list of active authorizations (sessions) for the speicfied account,
+	// filtered by provided criteria.
+	AccountGetAuthorizations(context.Context, *AccountGetAuthorizationsRequest) (*AccountGetAuthorizationsResponse, error)
 	mustEmbedUnimplementedAccountServer()
 }
 
@@ -144,6 +161,9 @@ func (UnimplementedAccountServer) RegisterDevice(context.Context, *RegisterDevic
 }
 func (UnimplementedAccountServer) UnregisterDevice(context.Context, *UnregisterDeviceRequest) (*UnregisterDeviceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnregisterDevice not implemented")
+}
+func (UnimplementedAccountServer) AccountGetAuthorizations(context.Context, *AccountGetAuthorizationsRequest) (*AccountGetAuthorizationsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AccountGetAuthorizations not implemented")
 }
 func (UnimplementedAccountServer) mustEmbedUnimplementedAccountServer() {}
 func (UnimplementedAccountServer) testEmbeddedByValue()                 {}
@@ -256,6 +276,24 @@ func _Account_UnregisterDevice_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Account_AccountGetAuthorizations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AccountGetAuthorizationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountServer).AccountGetAuthorizations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Account_AccountGetAuthorizations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountServer).AccountGetAuthorizations(ctx, req.(*AccountGetAuthorizationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Account_ServiceDesc is the grpc.ServiceDesc for Account service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -282,6 +320,10 @@ var Account_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UnregisterDevice",
 			Handler:    _Account_UnregisterDevice_Handler,
+		},
+		{
+			MethodName: "AccountGetAuthorizations",
+			Handler:    _Account_AccountGetAuthorizations_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

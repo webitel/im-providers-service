@@ -12,6 +12,7 @@ import (
 
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	coreservice "github.com/webitel/im-providers-service/internal/core/service"
 	corestore "github.com/webitel/im-providers-service/internal/core/store"
 	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
@@ -26,17 +27,24 @@ type OutboundMessageHandler struct {
 	registry  *provider.Registry
 	store     corestore.GateStore
 	typeCache *lru.Cache[string, sharedmodel.GateType]
+	templates *coreservice.TemplateRenderer
 	impb.UnimplementedProviderMessageServiceServer
 }
 
 // NewOutboundMessageHandler creates a new instance of the message handler.
-func NewOutboundMessageHandler(logger *slog.Logger, registry *provider.Registry, store corestore.GateStore) *OutboundMessageHandler {
+func NewOutboundMessageHandler(
+	logger *slog.Logger,
+	registry *provider.Registry,
+	store corestore.GateStore,
+	templates *coreservice.TemplateRenderer,
+) *OutboundMessageHandler {
 	cache, _ := lru.New[string, sharedmodel.GateType](1000)
 	return &OutboundMessageHandler{
 		logger:    logger,
 		registry:  registry,
 		store:     store,
 		typeCache: cache,
+		templates: templates,
 	}
 }
 
@@ -285,6 +293,50 @@ func mapButtons(pbs []*impb.ProviderKeyboardButton) []sharedmodel.KeyboardButton
 		out = append(out, btn)
 	}
 	return out
+}
+
+// SendSystemMessage renders a system event template and delivers the result as a
+// plain text message to the external chat partner via the appropriate provider.
+// If the rendered text is empty (e.g. the gate has a blank template override),
+// the call is a no-op and returns success so the caller is not penalised.
+func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *impb.ProviderSendSystemMessageRequest) (*impb.ProviderSendMessageResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendSystemMessage"),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+		slog.String("event_type", req.GetEventType()),
+	)
+	log.InfoContext(ctx, "outbound system message request received")
+
+	sender, err := p.resolveSender(ctx, req.GetGateId())
+	if err != nil {
+		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	text := p.templates.Render(ctx, req.GetGateId(), req.GetEventType(), req.GetVars())
+	if text == "" {
+		return &impb.ProviderSendMessageResponse{CreatedAt: time.Now().Unix()}, nil
+	}
+
+	msg := &sharedmodel.Message{
+		GateID:   req.GetGateId(),
+		To:       sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		Text:     text,
+		DomainID: int64(req.GetDomainId()),
+	}
+
+	resp, err := sender.SendText(ctx, msg)
+	if err != nil {
+		log.ErrorContext(ctx, "failed to send system message", slog.String("error", err.Error()))
+		return nil, toGRPCError(err)
+	}
+
+	log.InfoContext(ctx, "system message sent", slog.String("external_id", resp.ID))
+	return &impb.ProviderSendMessageResponse{
+		ExternalId: resp.ID,
+		CreatedAt:  time.Now().Unix(),
+	}, nil
 }
 
 func toGRPCError(err error) error {

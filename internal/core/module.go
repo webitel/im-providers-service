@@ -30,6 +30,9 @@ var Module = fx.Module("shared",
 		},
 
 		fx.Annotate(sharedstore.NewGateStore, fx.As(new(sharedstore.GateStore))),
+		fx.Annotate(sharedstore.NewTemplateStore, fx.As(new(sharedstore.TemplateStore))),
+
+		sharedsvc.NewTemplateRenderer,
 
 		sharedsvc.NewMediaService,
 		fx.Annotate(sharedsvc.NewGateService, fx.As(new(sharedsvc.GateManager))),

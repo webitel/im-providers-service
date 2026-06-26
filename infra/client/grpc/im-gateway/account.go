@@ -81,3 +81,18 @@ func (c *Client) UnregisterDevice(
 	})
 	return resp, err
 }
+
+// AccountGetAuthorizations returns the list of active authorizations for the account.
+func (c *Client) AccountGetAuthorizations(
+	ctx context.Context,
+	in *gatewayv1.AccountGetAuthorizationsRequest,
+	opts ...grpc.CallOption,
+) (*gatewayv1.AccountGetAuthorizationsResponse, error) {
+	var resp *gatewayv1.AccountGetAuthorizationsResponse
+	err := c.accountRPC.Execute(ctx, func(api gatewayv1.AccountClient) error {
+		var err error
+		resp, err = api.AccountGetAuthorizations(ctx, in, opts...)
+		return err
+	})
+	return resp, err
+}

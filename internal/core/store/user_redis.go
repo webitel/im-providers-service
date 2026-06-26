@@ -38,3 +38,20 @@ func (r *redisUserCache) MarkKnown(ctx context.Context, user *sharedmodel.Extern
 	// Set with TTL to allow periodic re-syncing/verification
 	return r.rdb.Set(ctx, key, "1", r.ttl).Err()
 }
+
+func (r *redisUserCache) GetLocale(ctx context.Context, gateID, userID string) (string, error) {
+	key := "usr:locale:" + gateID + ":" + userID
+	val, err := r.rdb.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return "", ErrNotFound
+		}
+		return "", err
+	}
+	return val, nil
+}
+
+func (r *redisUserCache) SetLocale(ctx context.Context, gateID, userID, locale string) error {
+	key := "usr:locale:" + gateID + ":" + userID
+	return r.rdb.Set(ctx, key, locale, r.ttl).Err()
+}

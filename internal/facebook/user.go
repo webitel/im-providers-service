@@ -36,6 +36,9 @@ func (p *facebookProvider) syncContact(
 
 	p.ensureVia(authCtx, &psid, &contact.Iss, gate.ID)
 	_ = p.userCache.MarkKnown(ctx, user)
+	if profile.Locale != "" {
+		_ = p.userCache.SetLocale(ctx, gate.ID, psid, profile.Locale)
+	}
 
 	return contact, nil
 }

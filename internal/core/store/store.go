@@ -53,4 +53,30 @@ type GateCache interface {
 type ExternalUserCache interface {
 	IsKnown(ctx context.Context, user *sharedmodel.ExternalUser) (bool, error)
 	MarkKnown(ctx context.Context, user *sharedmodel.ExternalUser) error
+	// GetLocale returns the BCP-47-style locale string (e.g. "uk_UA") stored for a user.
+	// Returns ErrNotFound when no locale was previously recorded.
+	GetLocale(ctx context.Context, gateID, userID string) (string, error)
+	// SetLocale persists the user locale so it can be used for template selection.
+	SetLocale(ctx context.Context, gateID, userID, locale string) error
+}
+
+// TemplateStore resolves and manages gate-specific system message template overrides.
+// Returning ErrNotFound signals "no override — use built-in default".
+type TemplateStore interface {
+	// GetTemplate returns the template string for the given gate and event type.
+	// Returns ErrNotFound when no gate-specific override is configured.
+	GetTemplate(ctx context.Context, gateID, eventType string) (string, error)
+	// SetTemplate creates or replaces the template override for (gateID, eventType).
+	SetTemplate(ctx context.Context, gateID, eventType, template string, domainID int64) error
+	// DeleteTemplate removes the override. Returns ErrNotFound if none exists.
+	DeleteTemplate(ctx context.Context, gateID, eventType string) error
+	// ListTemplates returns all overrides configured for the given gate.
+	ListTemplates(ctx context.Context, gateID string) ([]TemplateRow, error)
+}
+
+// TemplateRow is a single row from gate_message_templates.
+type TemplateRow struct {
+	GateID    string
+	EventType string
+	Template  string
 }
