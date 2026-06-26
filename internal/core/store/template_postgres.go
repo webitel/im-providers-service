@@ -23,7 +23,7 @@ func NewTemplateStore(pool *pgxpool.Pool) TemplateStore {
 func (s *templateStore) GetTemplate(ctx context.Context, gateID, eventType string) (string, error) {
 	const q = `
 		SELECT template
-		  FROM im_provider.gate_message_templates
+		  FROM im_provider.sys_msg_templates
 		 WHERE gate_id = $1
 		   AND event_type = $2
 		 LIMIT 1`
@@ -42,7 +42,7 @@ func (s *templateStore) GetTemplate(ctx context.Context, gateID, eventType strin
 // SetTemplate creates or replaces the template for (gateID, eventType).
 func (s *templateStore) SetTemplate(ctx context.Context, gateID, eventType, template string, domainID int64) error {
 	const q = `
-		INSERT INTO im_provider.gate_message_templates (gate_id, event_type, template, domain_id)
+		INSERT INTO im_provider.sys_msg_templates (gate_id, event_type, template, domain_id)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (gate_id, event_type)
 		DO UPDATE SET template = EXCLUDED.template, updated_at = NOW()`
@@ -54,7 +54,7 @@ func (s *templateStore) SetTemplate(ctx context.Context, gateID, eventType, temp
 // DeleteTemplate removes the override. Returns ErrNotFound if no row existed.
 func (s *templateStore) DeleteTemplate(ctx context.Context, gateID, eventType string) error {
 	const q = `
-		DELETE FROM im_provider.gate_message_templates
+		DELETE FROM im_provider.sys_msg_templates
 		 WHERE gate_id = $1
 		   AND event_type = $2`
 
@@ -72,7 +72,7 @@ func (s *templateStore) DeleteTemplate(ctx context.Context, gateID, eventType st
 func (s *templateStore) ListTemplates(ctx context.Context, gateID string) ([]TemplateRow, error) {
 	const q = `
 		SELECT gate_id, event_type, template
-		  FROM im_provider.gate_message_templates
+		  FROM im_provider.sys_msg_templates
 		 WHERE gate_id = $1
 		 ORDER BY event_type`
 
