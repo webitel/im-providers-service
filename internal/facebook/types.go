@@ -33,6 +33,9 @@ type InboundMessage struct {
 	Mid         string       `json:"mid"`
 	Text        string       `json:"text,omitempty"`
 	Attachments []Attachment `json:"attachments,omitempty"`
+	// IsEcho is true for messages sent by the page itself via the Send API.
+	// https://developers.facebook.com/documentation/business-messaging/messenger-platform/webhooks/webhook-events/message-echoes
+	IsEcho bool `json:"is_echo,omitempty"`
 }
 
 type Attachment struct {

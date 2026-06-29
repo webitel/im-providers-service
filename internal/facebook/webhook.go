@@ -38,6 +38,9 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 	if msg.Message == nil && msg.Postback == nil {
 		return nil
 	}
+	if msg.Message != nil && msg.Message.IsEcho {
+		return nil
+	}
 
 	profile, err := p.api.GetUserProfile(ctx, psid, gate.PageToken)
 	if err != nil {
