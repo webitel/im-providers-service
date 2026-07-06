@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"text/template"
 
-	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/webitel/webitel-go-kit/pkg/cache"
 
 	contactv1 "github.com/webitel/im-providers-service/gen/go/contact/v1"
 	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
@@ -36,20 +37,25 @@ const contactIDSuffix = "_contact_id"
 type TemplateRenderer struct {
 	store        sharedstore.TemplateStore
 	contacts     *imcontact.Client
-	contactNames *lru.Cache[string, string]
+	contactNames cache.Cache[string, string]
 	logger       *slog.Logger
 }
 
 // NewTemplateRenderer creates a TemplateRenderer.
 // store and contacts may be nil — useful in tests.
-func NewTemplateRenderer(store sharedstore.TemplateStore, contacts *imcontact.Client, logger *slog.Logger) *TemplateRenderer {
-	cache, _ := lru.New[string, string](512)
+func NewTemplateRenderer(store sharedstore.TemplateStore, contacts *imcontact.Client, logger *slog.Logger) (*TemplateRenderer, error) {
+	contactNames, err := cache.New[string, string]().
+		L1(cache.RistrettoConfig{MaxCost: 512, NumCounters: 5120}).
+		Build()
+	if err != nil {
+		return nil, fmt.Errorf("template renderer: init contact names cache: %w", err)
+	}
 	return &TemplateRenderer{
 		store:        store,
 		contacts:     contacts,
-		contactNames: cache,
+		contactNames: contactNames,
 		logger:       logger.With("component", "template_renderer"),
-	}
+	}, nil
 }
 
 // Render resolves the template for (gateID, eventType) and executes it with vars.
@@ -120,9 +126,9 @@ func (r *TemplateRenderer) enrichWithNames(ctx context.Context, vars map[string]
 	return enriched
 }
 
-// resolveName returns the display name for a contact ID, using LRU as a first layer.
+// resolveName returns the display name for a contact ID, using Ristretto as a first layer.
 func (r *TemplateRenderer) resolveName(ctx context.Context, contactID string) string {
-	if name, ok := r.contactNames.Get(contactID); ok {
+	if name, ok, _ := r.contactNames.Get(ctx, contactID); ok {
 		return name
 	}
 
@@ -139,7 +145,7 @@ func (r *TemplateRenderer) resolveName(ctx context.Context, contactID string) st
 	if name == "" {
 		name = resp.GetContacts()[0].GetUsername()
 	}
-	r.contactNames.Add(contactID, name)
+	_ = r.contactNames.Set(ctx, contactID, name)
 	return name
 }
 

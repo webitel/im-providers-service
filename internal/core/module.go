@@ -24,8 +24,7 @@ var Module = fx.Module("shared",
 			return sharedstore.NewLRUCache(1000)
 		},
 
-		func(rdb *redis.Client) sharedstore.ExternalUserCache {
-			// Identity TTL set to 24 hours
+		func(rdb *redis.Client) (sharedstore.ExternalUserCache, error) {
 			return sharedstore.NewRedisUserCache(rdb, 24*time.Hour)
 		},
 

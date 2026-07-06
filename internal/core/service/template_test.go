@@ -31,7 +31,11 @@ func (m *mockTemplateStore) ListTemplates(_ context.Context, _ string) ([]corest
 }
 
 func renderer(store corestore.TemplateStore) *TemplateRenderer {
-	return NewTemplateRenderer(store, nil, noopLogger)
+	r, err := NewTemplateRenderer(store, nil, noopLogger)
+	if err != nil {
+		panic(err)
+	}
+	return r
 }
 
 // -- executeTemplate --

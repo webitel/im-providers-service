@@ -1,39 +1,42 @@
 package store
 
 import (
+	"context"
 	"fmt"
 
-	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/webitel/webitel-go-kit/pkg/cache"
 )
 
-var _ GateCache = (*lruCache)(nil)
+var _ GateCache = (*gateCache)(nil)
 
-type lruCache struct {
-	// gates is a universal storage for all provider types (FB, WA, TG, etc.)
-	gates *lru.Cache[string, GateState]
+type gateCache struct {
+	inner cache.Cache[string, GateState]
 }
 
-// NewLRUCache creates a new universal LRU-based cache with a fixed size.
-// Size determines how many unique gates can be kept in memory.
+// NewLRUCache creates a universal in-memory gate cache backed by Ristretto (W-TinyLFU).
+// Size determines the maximum number of unique gate entries kept in memory.
 func NewLRUCache(size int) (GateCache, error) {
-	c, err := lru.New[string, GateState](size)
+	c, err := cache.New[string, GateState]().
+		L1(cache.RistrettoConfig{
+			MaxCost:     int64(size),
+			NumCounters: int64(size) * 10,
+		}).
+		Build()
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize lru cache: %w", err)
+		return nil, fmt.Errorf("failed to initialize gate cache: %w", err)
 	}
-	return &lruCache{gates: c}, nil
+	return &gateCache{inner: c}, nil
 }
 
-// Set adds or updates a gate in the cache.
-func (c *lruCache) Set(key string, state GateState) {
-	c.gates.Add(key, state)
+func (c *gateCache) Set(key string, state GateState) {
+	_ = c.inner.Set(context.Background(), key, state)
 }
 
-// Get attempts to find a gate by its unique provider key.
-func (c *lruCache) Get(key string) (GateState, bool) {
-	return c.gates.Get(key)
+func (c *gateCache) Get(key string) (GateState, bool) {
+	v, ok, _ := c.inner.Get(context.Background(), key)
+	return v, ok
 }
 
-// Delete invalidates a specific gate's cache entry.
-func (c *lruCache) Delete(key string) {
-	c.gates.Remove(key)
+func (c *gateCache) Delete(key string) {
+	_ = c.inner.Delete(context.Background(), key)
 }

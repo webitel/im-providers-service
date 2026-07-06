@@ -3,10 +3,11 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/webitel/webitel-go-kit/pkg/cache"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -26,7 +27,7 @@ type OutboundMessageHandler struct {
 	logger    *slog.Logger
 	registry  *provider.Registry
 	store     corestore.GateStore
-	typeCache *lru.Cache[string, sharedmodel.GateType]
+	typeCache cache.Cache[string, sharedmodel.GateType]
 	templates *coreservice.TemplateRenderer
 	impb.UnimplementedProviderMessageServiceServer
 }
@@ -37,21 +38,26 @@ func NewOutboundMessageHandler(
 	registry *provider.Registry,
 	store corestore.GateStore,
 	templates *coreservice.TemplateRenderer,
-) *OutboundMessageHandler {
-	cache, _ := lru.New[string, sharedmodel.GateType](1000)
+) (*OutboundMessageHandler, error) {
+	typeCache, err := cache.New[string, sharedmodel.GateType]().
+		L1(cache.RistrettoConfig{MaxCost: 1000, NumCounters: 10000}).
+		Build()
+	if err != nil {
+		return nil, fmt.Errorf("outbound handler: init type cache: %w", err)
+	}
 	return &OutboundMessageHandler{
 		logger:    logger,
 		registry:  registry,
 		store:     store,
-		typeCache: cache,
+		typeCache: typeCache,
 		templates: templates,
-	}
+	}, nil
 }
 
 func (p *OutboundMessageHandler) resolveSender(ctx context.Context, gateID string) (provider.Sender, error) {
 	var gateType sharedmodel.GateType
 
-	if v, ok := p.typeCache.Get(gateID); ok {
+	if v, ok, _ := p.typeCache.Get(ctx, gateID); ok {
 		gateType = v
 	} else {
 		t, err := p.store.GetTypeByID(ctx, gateID)
@@ -61,7 +67,7 @@ func (p *OutboundMessageHandler) resolveSender(ctx context.Context, gateID strin
 			}
 			return nil, status.Errorf(codes.Internal, "failed to resolve gate type for: %s", gateID)
 		}
-		p.typeCache.Add(gateID, t)
+		_ = p.typeCache.Set(ctx, gateID, t)
 		gateType = t
 	}
 

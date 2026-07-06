@@ -11,7 +11,8 @@ import (
 	"strings"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/redis/go-redis/v9"
+	"github.com/webitel/webitel-go-kit/pkg/cache"
 	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
@@ -33,9 +34,10 @@ type facebookProvider struct {
 	gatewayer   *imgateway.Client
 	media       sharedsvc.MediaManager
 	contactClient *imcontact.Client
+	rdb           *redis.Client
 	// psidCache maps internal contact UUID → Facebook PSID to avoid an
 	// im-contact round-trip on every outbound message.
-	psidCache *lru.Cache[string, string]
+	psidCache cache.Cache[string, string]
 	// httpClient is used exclusively for media downloads; kept separate from
 	// api.http so the two timeouts can be tuned independently.
 	httpClient *http.Client
@@ -51,11 +53,17 @@ func New(
 	gatewayer *imgateway.Client,
 	media sharedsvc.MediaManager,
 	contactClient *imcontact.Client,
+	rdb *redis.Client,
 	api *apiClient,
-) provider.Provider {
-	psidCache, _ := lru.New[string, string](1000)
+) (provider.Provider, error) {
+	psidCache, err := cache.New[string, string]().
+		L1(cache.RistrettoConfig{MaxCost: 1000, NumCounters: 10000}).
+		Build()
+	if err != nil {
+		return nil, fmt.Errorf("facebook provider: init psid cache: %w", err)
+	}
 	return &facebookProvider{
-		api:           api,
+		api:           newResilientGraphAPI(api, l),
 		logger:        l.With("provider", "facebook"),
 		messenger:     m,
 		gateCache:     gc,
@@ -65,9 +73,10 @@ func New(
 		gatewayer:     gatewayer,
 		media:         media,
 		contactClient: contactClient,
+		rdb:           rdb,
 		psidCache:     psidCache,
 		httpClient:    &http.Client{Timeout: 30 * time.Second},
-	}
+	}, nil
 }
 
 var _ provider.InteractiveSender = (*facebookProvider)(nil)

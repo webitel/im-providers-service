@@ -53,11 +53,6 @@ type GateCache interface {
 type ExternalUserCache interface {
 	IsKnown(ctx context.Context, user *sharedmodel.ExternalUser) (bool, error)
 	MarkKnown(ctx context.Context, user *sharedmodel.ExternalUser) error
-	// GetLocale returns the BCP-47-style locale string (e.g. "uk_UA") stored for a user.
-	// Returns ErrNotFound when no locale was previously recorded.
-	GetLocale(ctx context.Context, gateID, userID string) (string, error)
-	// SetLocale persists the user locale so it can be used for template selection.
-	SetLocale(ctx context.Context, gateID, userID, locale string) error
 }
 
 // TemplateStore resolves and manages gate-specific system message template overrides.

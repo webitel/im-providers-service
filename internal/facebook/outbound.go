@@ -65,7 +65,7 @@ func (p *facebookProvider) resolvePSID(ctx context.Context, gate *fbmodel.Facebo
 	if !strings.Contains(contactID, "-") {
 		return contactID, nil
 	}
-	if psid, ok := p.psidCache.Get(contactID); ok {
+	if psid, ok, _ := p.psidCache.Get(ctx, contactID); ok {
 		return psid, nil
 	}
 	authCtx := withGatewayIdentity(ctx, gate)
@@ -80,7 +80,7 @@ func (p *facebookProvider) resolvePSID(ctx context.Context, gate *fbmodel.Facebo
 		return "", fmt.Errorf("resolve psid for %s: contact not found or has no subject", contactID)
 	}
 	psid := items[0].GetSubject()
-	p.psidCache.Add(contactID, psid)
+	_ = p.psidCache.Set(ctx, contactID, psid)
 	return psid, nil
 }
 

@@ -2,56 +2,45 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/webitel/webitel-go-kit/pkg/cache"
+
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 )
 
 var _ ExternalUserCache = (*redisUserCache)(nil)
 
 type redisUserCache struct {
-	rdb *redis.Client
-	ttl time.Duration
+	identity cache.Cache[string, string] // usr:hash:{sha256} → "1"
 }
 
-// NewRedisUserCache initializes the Redis-based identity cache
-func NewRedisUserCache(rdb *redis.Client, ttl time.Duration) ExternalUserCache {
-	return &redisUserCache{
-		rdb: rdb,
-		ttl: ttl,
+// NewRedisUserCache initializes the Redis-backed external user identity cache.
+// RawString codec preserves the existing wire format ("1") stored in Redis.
+func NewRedisUserCache(rdb *redis.Client, ttl time.Duration) (ExternalUserCache, error) {
+	identity, err := cache.New[string, string]().
+		L2(cache.RedisConfig[string]{
+			Client: rdb,
+			Prefix: "usr:hash",
+			TTL:    ttl,
+			Codec:  cache.RawString(),
+		}).
+		Build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize user identity cache: %w", err)
 	}
+
+	return &redisUserCache{identity: identity}, nil
 }
 
 func (r *redisUserCache) IsKnown(ctx context.Context, user *sharedmodel.ExternalUser) (bool, error) {
-	// Key format: usr:hash:<sha256_of_id_and_names>
-	key := "usr:hash:" + user.Hash()
-	exists, err := r.rdb.Exists(ctx, key).Result()
-	if err != nil {
-		return false, err
-	}
-	return exists > 0, nil
+	_, ok, err := r.identity.Get(ctx, user.Hash())
+	return ok, err
 }
 
 func (r *redisUserCache) MarkKnown(ctx context.Context, user *sharedmodel.ExternalUser) error {
-	key := "usr:hash:" + user.Hash()
-	// Set with TTL to allow periodic re-syncing/verification
-	return r.rdb.Set(ctx, key, "1", r.ttl).Err()
+	return r.identity.Set(ctx, user.Hash(), "1")
 }
 
-func (r *redisUserCache) GetLocale(ctx context.Context, gateID, userID string) (string, error) {
-	key := "usr:locale:" + gateID + ":" + userID
-	val, err := r.rdb.Get(ctx, key).Result()
-	if err != nil {
-		if err == redis.Nil {
-			return "", ErrNotFound
-		}
-		return "", err
-	}
-	return val, nil
-}
-
-func (r *redisUserCache) SetLocale(ctx context.Context, gateID, userID, locale string) error {
-	key := "usr:locale:" + gateID + ":" + userID
-	return r.rdb.Set(ctx, key, locale, r.ttl).Err()
-}

@@ -29,7 +29,7 @@ func (p *facebookProvider) HandleWebhook(ctx context.Context, data []byte) error
 
 // processMessage is the per-event pipeline:
 //
-//	fetch profile → sync contact → route content
+//	dedup → fetch profile → sync contact → route content
 func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.FacebookGate, msg Messaging) error {
 	psid := msg.Sender.ID
 	if psid == "" {
@@ -42,6 +42,13 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 		return nil
 	}
 
+	// Deduplicate: Facebook may deliver the same event more than once.
+	mid := messageID(msg)
+	if mid != "" && messageSeen(ctx, p.rdb, mid) {
+		p.logger.DebugContext(ctx, "duplicate facebook event skipped", "mid", mid)
+		return nil
+	}
+
 	profile, err := p.api.GetUserProfile(ctx, psid, gate.PageToken)
 	if err != nil {
 		return fmt.Errorf("fetch profile [psid=%s]: %w", psid, err)
@@ -49,16 +56,6 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 
 	if _, err := p.syncContact(ctx, gate, psid, profile); err != nil {
 		return fmt.Errorf("sync contact [psid=%s]: %w", psid, err)
-	}
-
-	if msg.Message != nil {
-		profile, err := p.api.GetUserProfile(ctx, psid, gate.PageToken)
-		if err != nil {
-			return fmt.Errorf("fetch profile [psid=%s]: %w", psid, err)
-		}
-		if _, err := p.syncContact(ctx, gate, psid, profile); err != nil {
-			return fmt.Errorf("sync contact [psid=%s]: %w", psid, err)
-		}
 	}
 
 	peers := peerPair{
@@ -81,6 +78,17 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 		p.routePostback(ctx, gate, peers, msg.Postback)
 	}
 	return nil
+}
+
+// messageID returns the Facebook message or postback mid for deduplication.
+func messageID(msg Messaging) string {
+	if msg.Message != nil {
+		return msg.Message.Mid
+	}
+	if msg.Postback != nil {
+		return msg.Postback.Mid
+	}
+	return ""
 }
 
 // routeMessage dispatches inbound text and attachment content to the messenger.
