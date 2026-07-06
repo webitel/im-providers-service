@@ -111,7 +111,5 @@ require github.com/webitel/webitel-go-kit/appconfig v0.0.0-20260602143553-df89d5
 require (
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/sony/gobreaker v1.0.0
-	github.com/webitel/webitel-go-kit/pkg/cache v0.0.0
+	github.com/webitel/webitel-go-kit/pkg/cache v0.0.0-20260706110827-c434ee012806
 )
-
-replace github.com/webitel/webitel-go-kit/pkg/cache => ../webitel-go-kit/pkg/cache
