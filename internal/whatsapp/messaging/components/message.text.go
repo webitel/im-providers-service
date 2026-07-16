@@ -67,6 +67,10 @@ func (message *textMessage) ToJson(configs ApiCompatibleJsonConverterConfigs) ([
 		},
 	}
 
+	if configs.ReplyToMessageID() != "" {
+		jsonData.MessageContext = &MessageContext{MessageID: configs.ReplyToMessageID()}
+	}
+
 	marshalled, err := json.Marshal(jsonData)
 	if err != nil {
 		return nil, errors.Internal("marshaling text message payload", errors.WithCause(err), errors.WithID("message.text.to_json"), errors.WithValue("to_phone_number", configs.SendingPhoneNumber), errors.WithValue("body", message.Text))

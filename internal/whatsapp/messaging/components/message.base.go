@@ -45,7 +45,7 @@ type MessageContext struct {
 }
 
 type BaseMessagePayload struct {
-	MessageContext   *MessageContext `json:"message_context,omitempty"`
+	MessageContext   *MessageContext `json:"context,omitempty"`
 	To               string          `json:"to"`
 	Type             MessageType     `json:"type"`
 	MessagingProduct string          `json:"messaging_product"`

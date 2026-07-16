@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 )
 
 func (p *facebookProvider) HandleWebhook(ctx context.Context, data []byte) error {
@@ -94,19 +94,26 @@ func messageID(msg Messaging) string {
 // routeMessage dispatches inbound text and attachment content to the messenger.
 // Errors are logged and non-fatal: a single failed delivery must not block others.
 func (p *facebookProvider) routeMessage(ctx context.Context, gate *fbmodel.FacebookGate, peers peerPair, msg *InboundMessage) {
+	replyTo := ""
+	if msg.ReplyTo != nil {
+		replyTo = msg.ReplyTo.Mid
+	}
+
 	if msg.Text != "" {
 		if _, err := p.messenger.SendText(ctx, &sharedmodel.SendTextRequest{
-			DomainID: gate.DomainID,
-			From:     peers.from,
-			To:       peers.to,
-			Body:     msg.Text,
+			DomainID:          gate.DomainID,
+			From:              peers.from,
+			To:                peers.to,
+			Body:              msg.Text,
+			ExternalID:        msg.Mid,
+			ReplyToExternalID: replyTo,
 		}); err != nil {
 			p.logger.Error("send text failed", "err", err)
 		}
 	}
 
 	if len(msg.Attachments) > 0 {
-		p.handleAttachments(ctx, gate, peers, msg.Attachments)
+		p.handleAttachments(ctx, gate, peers, msg.Attachments, msg.Mid, replyTo)
 	}
 }
 
@@ -116,10 +123,11 @@ func (p *facebookProvider) routeMessage(ctx context.Context, gate *fbmodel.Faceb
 // https://developers.facebook.com/docs/messenger-platform/reference/webhook-events/messaging-postbacks
 func (p *facebookProvider) routePostback(ctx context.Context, gate *fbmodel.FacebookGate, peers peerPair, pb *Postback) {
 	if _, err := p.messenger.SendText(ctx, &sharedmodel.SendTextRequest{
-		DomainID: gate.DomainID,
-		From:     peers.from,
-		To:       peers.to,
-		Body:     pb.Payload,
+		DomainID:   gate.DomainID,
+		From:       peers.from,
+		To:         peers.to,
+		Body:       pb.Payload,
+		ExternalID: pb.Mid,
 	}); err != nil {
 		p.logger.Error("send postback as text failed", "payload", pb.Payload, "err", err)
 	}

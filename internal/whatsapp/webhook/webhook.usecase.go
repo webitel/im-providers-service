@@ -126,12 +126,13 @@ func (webhook *webhook) HandleTextMessage(ctx context.Context, textEvent *events
 		return nil
 	}
 
-	//TODO: add external message corelation ID pass
 	coreTextMessage := model.SendTextRequest{
-		To:       extractPeerFromWhatsAppBusinessAccount(whatsAppBusinessAccount),
-		From:     extractPeerFromWebhookInput(textEvent.From, textEvent.SenderName),
-		Body:     textEvent.Text,
-		DomainID: int64(whatsAppBusinessAccount.DC),
+		To:                extractPeerFromWhatsAppBusinessAccount(whatsAppBusinessAccount),
+		From:              extractPeerFromWebhookInput(textEvent.From, textEvent.SenderName),
+		Body:              textEvent.Text,
+		DomainID:          int64(whatsAppBusinessAccount.DC),
+		ExternalID:        textEvent.MessageID,
+		ReplyToExternalID: textEvent.Context.RepliedToMessageID,
 	}
 
 	_, err = webhook.coreMessanger.SendText(ctx, &coreTextMessage)
@@ -218,7 +219,9 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 				},
 			},
 		},
-		DomainID: int64(whatsAppBusinessAccount.DC),
+		DomainID:          int64(whatsAppBusinessAccount.DC),
+		ExternalID:        documentEvent.MessageID,
+		ReplyToExternalID: documentEvent.Context.RepliedToMessageID,
 	}
 
 	if _, err = webhook.coreMessanger.SendDocument(ctx, &coreDocumentMessage); err != nil {
@@ -276,7 +279,9 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 			},
 			Body: *imageEvent.Image.Caption,
 		},
-		DomainID: int64(whatsAppBusinessAccount.DC),
+		DomainID:          int64(whatsAppBusinessAccount.DC),
+		ExternalID:        imageEvent.MessageID,
+		ReplyToExternalID: imageEvent.Context.RepliedToMessageID,
 	}
 
 	if _, err := webhook.coreMessanger.SendImage(ctx, &coreImageMessage); err != nil {
