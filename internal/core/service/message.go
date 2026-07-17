@@ -48,8 +48,11 @@ func (m *messageService) SendText(ctx context.Context, in *sharedmodel.SendTextR
 	)
 
 	resp, err := m.gatewayer.SendText(ctx, &gatewayv1.SendTextRequest{
-		To:   transformDomainPeerIntoPB(in.To),
-		Body: in.Body,
+		To:                transformDomainPeerIntoPB(in.To),
+		Body:              in.Body,
+		SendId:            in.ExternalID,
+		ExternalId:        in.ExternalID,
+		ReplyToExternalId: in.ReplyToExternalID,
 	})
 	if err != nil {
 		m.logger.Error("failed to send text message", "error", err)
@@ -124,9 +127,12 @@ func (m *messageService) SendImage(ctx context.Context, in *sharedmodel.SendImag
 	)
 
 	resp, err := m.gatewayer.SendDocument(ctx, &gatewayv1.SendDocumentRequest{
-		To:        transformDomainPeerIntoPB(in.To),
-		Body:      in.Image.Body,
-		Documents: m.mapImagesAsDocuments(in.Image.Images),
+		To:                transformDomainPeerIntoPB(in.To),
+		Body:              in.Image.Body,
+		Documents:         m.mapImagesAsDocuments(in.Image.Images),
+		SendId:            &in.ExternalID,
+		ExternalId:        in.ExternalID,
+		ReplyToExternalId: in.ReplyToExternalID,
 	})
 	if err != nil {
 		m.logger.Error("failed to send image message", "error", err)
@@ -138,9 +144,12 @@ func (m *messageService) SendImage(ctx context.Context, in *sharedmodel.SendImag
 
 func (m *messageService) SendDocument(ctx context.Context, in *sharedmodel.SendDocumentRequest) (*sharedmodel.SendDocumentResponse, error) {
 	resp, err := m.gatewayer.SendDocument(ctx, &gatewayv1.SendDocumentRequest{
-		To:        transformDomainPeerIntoPB(in.To),
-		Body:      in.Document.Body,
-		Documents: m.mapDocuments(in.Document.Documents),
+		To:                transformDomainPeerIntoPB(in.To),
+		Body:              in.Document.Body,
+		Documents:         m.mapDocuments(in.Document.Documents),
+		SendId:            &in.ExternalID,
+		ExternalId:        in.ExternalID,
+		ReplyToExternalId: in.ReplyToExternalID,
 	})
 	if err != nil {
 		m.logger.Error("failed to send document message", "error", err)

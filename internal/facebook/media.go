@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 )
 
 type syncedMedia struct {
@@ -16,7 +16,7 @@ type syncedMedia struct {
 	size     int64
 }
 
-func (p *facebookProvider) handleAttachments(ctx context.Context, gate *fbmodel.FacebookGate, peers peerPair, attachments []Attachment) {
+func (p *facebookProvider) handleAttachments(ctx context.Context, gate *fbmodel.FacebookGate, peers peerPair, attachments []Attachment, externalID, replyTo string) {
 	for _, attach := range attachments {
 		if attach.Payload.URL == "" {
 			continue
@@ -46,6 +46,8 @@ func (p *facebookProvider) handleAttachments(ctx context.Context, gate *fbmodel.
 						MimeType: media.mimeType,
 					}},
 				},
+				ExternalID:        externalID,
+				ReplyToExternalID: replyTo,
 			}); err != nil {
 				p.logger.Error("failed to send image", "fileName", name, "err", err)
 			}
@@ -62,6 +64,8 @@ func (p *facebookProvider) handleAttachments(ctx context.Context, gate *fbmodel.
 						Size:     media.size,
 					}},
 				},
+				ExternalID:        externalID,
+				ReplyToExternalID: replyTo,
 			}); err != nil {
 				p.logger.Error("failed to send document", "fileName", name, "err", err)
 			}

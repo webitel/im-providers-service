@@ -74,19 +74,21 @@ type MessageResponse struct {
 
 // Message is the core domain entity representing a message in the system.
 type Message struct {
-	ID          uuid.UUID    `json:"id"`
-	GateID      string       `json:"gate_id"`
-	ThreadID    uuid.UUID    `json:"thread_id"`
-	DomainID    int64        `json:"domain_id"`
-	From        Peer         `json:"from"`
-	To          Peer         `json:"to"`
-	Text        string       `json:"text"`
-	CreatedAt   int64        `json:"created_at"`
-	EditedAt    int64        `json:"updated_at,omitempty"`
+	ID          uuid.UUID      `json:"id"`
+	GateID      string         `json:"gate_id"`
+	ThreadID    uuid.UUID      `json:"thread_id"`
+	DomainID    int64          `json:"domain_id"`
+	From        Peer           `json:"from"`
+	To          Peer           `json:"to"`
+	Text        string         `json:"text"`
+	CreatedAt   int64          `json:"created_at"`
+	EditedAt    int64          `json:"updated_at,omitempty"`
 	Metadata    map[string]any `json:"metadata,omitempty"`
-	Documents   []*Document  `json:"documents,omitempty"`
-	Images      []*Image     `json:"images,omitempty"`
-	Interactive *Interactive `json:"interactive,omitempty"`
+	Documents   []*Document    `json:"documents,omitempty"`
+	Images      []*Image       `json:"images,omitempty"`
+	Interactive *Interactive   `json:"interactive,omitempty"`
+
+	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
 }
 
 // SendTextRequest defines the payload for sending a plain text message.
@@ -95,6 +97,9 @@ type SendTextRequest struct {
 	To       Peer   `json:"to"`
 	Body     string `json:"body"`
 	DomainID int64  `json:"domain_id"`
+
+	ExternalID        string `json:"external_id,omitempty"`
+	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
 }
 
 // SendTextResponse confirms the delivery of a text message.
@@ -124,6 +129,9 @@ type SendImageRequest struct {
 	To       Peer         `json:"to"`
 	Image    ImageRequest `json:"image"`
 	DomainID int64        `json:"domain_id"`
+
+	ExternalID        string `json:"external_id,omitempty"`
+	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
 }
 
 // SendImageResponse confirms the image was sent.
@@ -160,6 +168,9 @@ type SendDocumentRequest struct {
 	To       Peer            `json:"to"`
 	Document DocumentRequest `json:"document"`
 	DomainID int64           `json:"domain_id"`
+
+	ExternalID        string `json:"external_id,omitempty"`
+	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
 }
 
 // SendDocumentResponse confirms the document was sent.
