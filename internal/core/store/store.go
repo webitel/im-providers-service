@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"time"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 )
@@ -53,6 +54,20 @@ type GateCache interface {
 type ExternalUserCache interface {
 	IsKnown(ctx context.Context, user *sharedmodel.ExternalUser) (bool, error)
 	MarkKnown(ctx context.Context, user *sharedmodel.ExternalUser) error
+}
+
+// MessageRefStore maps provider-assigned message ids to internal message
+// context (im_provider.message_refs) for delivery-status receipts.
+type MessageRefStore interface {
+	// Save persists the mapping right after a successful provider send.
+	Save(ctx context.Context, ref *sharedmodel.MessageRef) error
+
+	// GetByProviderMessageIDs resolves refs for concrete provider message ids.
+	GetByProviderMessageIDs(ctx context.Context, gateID string, providerMessageIDs []string) ([]*sharedmodel.MessageRef, error)
+
+	// GetByUserUpTo returns refs of messages sent to the platform user before
+	// (or at) the watermark, most recent first, bounded by limit.
+	GetByUserUpTo(ctx context.Context, gateID, providerUserID string, watermark time.Time, limit int) ([]*sharedmodel.MessageRef, error)
 }
 
 // TemplateStore resolves and manages gate-specific system message template overrides.
