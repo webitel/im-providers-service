@@ -11,7 +11,9 @@ import (
 // Module registers shared gRPC handlers and their registration logic.
 var Module = fx.Module("provider-grpc",
 	fx.Provide(
-		NewGateHandler,
+		// The gate handler consumes the provider adapters value group to
+		// expose their delivery-status capabilities.
+		fx.Annotate(NewGateHandler, fx.ParamTags(``, ``, `group:"providers"`)),
 		NewOutboundMessageHandler,
 		NewGateTemplateHandler,
 	),

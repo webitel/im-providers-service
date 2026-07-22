@@ -36,6 +36,7 @@ var Module = fx.Module(
 				coreMessanger service.Messenger,
 				client *imgateway.Client,
 				media *service.MediaService,
+				statusReporter *service.StatusReporter,
 			) *WhatsApp {
 				webhookResolver := resolver.NewResolverModule[*webhook.WhatsAppBusinessAccountResolveQuery](logger, db)
 
@@ -43,7 +44,7 @@ var Module = fx.Module(
 					Logger: logger,
 				}
 
-				webhhokModule, err := webhook.NewWebhookModule(webhookConfig, encryptor, coreMessanger, webhookResolver.Resolver, client, media)
+				webhhokModule, err := webhook.NewWebhookModule(webhookConfig, encryptor, coreMessanger, webhookResolver.Resolver, client, media, statusReporter)
 				if err != nil {
 					logger.Error("whatsapp:wire:constructing new webhook module", "error", err)
 					return nil

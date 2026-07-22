@@ -12,27 +12,27 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/webitel/webitel-go-kit/pkg/cache"
 	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
-	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
-	"github.com/webitel/im-providers-service/internal/provider"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
 	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
+	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
+	"github.com/webitel/im-providers-service/internal/provider"
+	"github.com/webitel/webitel-go-kit/pkg/cache"
 )
 
 type facebookProvider struct {
-	api         graphAPI
-	logger      *slog.Logger
-	messenger   sharedsvc.Messenger
-	gateCache   sharedstore.GateCache
-	userCache   sharedstore.ExternalUserCache
-	repo        fbstore.FacebookStore
-	metaAppRepo fbstore.MetaAppStore
-	gatewayer   *imgateway.Client
-	media       sharedsvc.MediaManager
+	api           graphAPI
+	logger        *slog.Logger
+	messenger     sharedsvc.Messenger
+	gateCache     sharedstore.GateCache
+	userCache     sharedstore.ExternalUserCache
+	repo          fbstore.FacebookStore
+	metaAppRepo   fbstore.MetaAppStore
+	gatewayer     *imgateway.Client
+	media         sharedsvc.MediaManager
 	contactClient *imcontact.Client
 	rdb           *redis.Client
 	// psidCache maps internal contact UUID → Facebook PSID to avoid an
@@ -41,6 +41,17 @@ type facebookProvider struct {
 	// httpClient is used exclusively for media downloads; kept separate from
 	// api.http so the two timeouts can be tuned independently.
 	httpClient *http.Client
+	// status reports delivery/read/failed receipts back to im-thread-service.
+	status statusReporter
+}
+
+// statusReporter is the delivery-status surface the webhook pipeline needs;
+// satisfied by core/service.StatusReporter. Narrowed to an interface so
+// receipt routing is testable without the thread client.
+type statusReporter interface {
+	DeliveredByProviderIDs(ctx context.Context, gateID string, providerMessageIDs []string, at time.Time)
+	DeliveredUpTo(ctx context.Context, gateID, providerUserID string, watermark time.Time)
+	ReadUpTo(ctx context.Context, gateID, providerUserID string, watermark time.Time)
 }
 
 func New(
@@ -55,6 +66,7 @@ func New(
 	contactClient *imcontact.Client,
 	rdb *redis.Client,
 	api *apiClient,
+	status *sharedsvc.StatusReporter,
 ) (provider.Provider, error) {
 	psidCache, err := cache.New[string, string]().
 		L1(cache.RistrettoConfig{MaxCost: 1000, NumCounters: 10000}).
@@ -76,12 +88,26 @@ func New(
 		rdb:           rdb,
 		psidCache:     psidCache,
 		httpClient:    &http.Client{Timeout: 30 * time.Second},
+		status:        status,
 	}, nil
 }
 
-var _ provider.InteractiveSender = (*facebookProvider)(nil)
+var (
+	_ provider.InteractiveSender  = (*facebookProvider)(nil)
+	_ provider.CapabilityReporter = (*facebookProvider)(nil)
+)
 
 func (p *facebookProvider) Type() string { return "facebook" }
+
+// Capabilities: Messenger emits message_deliveries and message_reads
+// webhooks; failures surface as synchronous Send API errors.
+func (p *facebookProvider) Capabilities() sharedmodel.ProviderCapabilities {
+	return sharedmodel.ProviderCapabilities{
+		SupportsDelivered: true,
+		SupportsRead:      true,
+		SupportsFailed:    true,
+	}
+}
 
 func (p *facebookProvider) Verify(ctx context.Context, query url.Values) (string, error) {
 	req := parseVerify(query)

@@ -32,6 +32,7 @@ type CoreIntegrationHandler interface {
 	HandleImageMessage(ctx context.Context, imageEvent *events.ImageMessageEvent) error
 	HandleLocationMessage(ctx context.Context, locationEvent *events.LocationMessageEvent) error
 	HandleContactsMessage(ctx context.Context, contacts *events.ContactMessageEvent) error
+	HandleStatuses(ctx context.Context, statuses []Status, phoneNumberID string) error
 }
 
 type WebhookManager struct {
@@ -146,6 +147,10 @@ type handleMessagesSubscriptionEvents struct {
 }
 
 func (webhookManager *WebhookManager) handleMessagesSubscriptionEvents(ctx context.Context, payload handleMessagesSubscriptionEvents) error {
+	if err := webhookManager.coreIntegrationHandler.HandleStatuses(ctx, payload.Statuses, payload.PhoneNumber.ID); err != nil {
+		webhookManager.logger.Error("handling message statuses", "error", err)
+	}
+
 	for _, message := range payload.Messages {
 		repliedTo := message.Context.Id
 		baseMessageEvent := events.BaseMessageEvent{

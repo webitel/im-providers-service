@@ -41,6 +41,14 @@ type Provider interface {
 	Receiver
 }
 
+// CapabilityReporter is an optional interface for providers that declare
+// which delivery-status receipts (delivered/read/failed) their channel
+// emits. Channels without it are assumed to support none: messages stay in
+// SENT, which is an honest terminal state for such channels.
+type CapabilityReporter interface {
+	Capabilities() sharedmodel.ProviderCapabilities
+}
+
 // Verifier is an optional interface for providers that require a handshake before
 // receiving webhooks (e.g. Meta hub.challenge verification).
 type Verifier interface {
