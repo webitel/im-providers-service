@@ -21,6 +21,7 @@ const (
 	TypeWhatsApp                    // whatsapp
 	TypeTelegramBot                 // telegram_bot
 	TypeTelegramApp                 // telegram_app
+	TypeViber                       // viber
 )
 
 const (
@@ -116,6 +117,7 @@ func ParseGateType(s string) GateType {
 		"whatsapp":     TypeWhatsApp,
 		"telegram_bot": TypeTelegramBot,
 		"telegram_app": TypeTelegramApp,
+		"viber":        TypeViber,
 	}
 	if v, ok := m[val]; ok {
 		return v

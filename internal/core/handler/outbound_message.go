@@ -17,6 +17,7 @@ import (
 	corestore "github.com/webitel/im-providers-service/internal/core/store"
 	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
+	vibmodel "github.com/webitel/im-providers-service/internal/viber/model"
 )
 
 // Ensure OutboundMessageHandler implements the generated gRPC server interface.
@@ -349,9 +350,93 @@ func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *imp
 	}, nil
 }
 
+// SendLocation delivers a geographic location to the external chat partner.
+func (p *OutboundMessageHandler) SendLocation(ctx context.Context, req *impb.ProviderSendLocationRequest) (*impb.ProviderSendMessageResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendLocation"),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+	)
+	log.InfoContext(ctx, "outbound location message request received")
+
+	sender, err := p.resolveSender(ctx, req.GetGateId())
+	if err != nil {
+		return nil, err
+	}
+
+	ls, ok := sender.(provider.LocationSender)
+	if !ok {
+		return nil, status.Errorf(codes.Unimplemented, "provider %s does not support location messages", sender.Type())
+	}
+
+	msg := &sharedmodel.Message{
+		GateID:            req.GetGateId(),
+		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		DomainID:          int64(req.GetDomainId()),
+		ReplyToExternalID: req.GetReplyToExternalId(),
+		Location: &sharedmodel.OutboundLocation{
+			Latitude:  req.GetLatitude(),
+			Longitude: req.GetLongitude(),
+			Name:      req.GetName(),
+			Address:   req.GetAddress(),
+		},
+	}
+
+	resp, err := ls.SendLocation(ctx, msg)
+	if err != nil {
+		log.ErrorContext(ctx, "failed to send location message", slog.String("error", err.Error()))
+		return nil, toGRPCError(err)
+	}
+	return &impb.ProviderSendMessageResponse{ExternalId: resp.ID, CreatedAt: time.Now().Unix()}, nil
+}
+
+// SendContact delivers a contact card to the external chat partner.
+func (p *OutboundMessageHandler) SendContact(ctx context.Context, req *impb.ProviderSendContactRequest) (*impb.ProviderSendMessageResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendContact"),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+	)
+	log.InfoContext(ctx, "outbound contact message request received")
+
+	sender, err := p.resolveSender(ctx, req.GetGateId())
+	if err != nil {
+		return nil, err
+	}
+
+	cs, ok := sender.(provider.ContactSender)
+	if !ok {
+		return nil, status.Errorf(codes.Unimplemented, "provider %s does not support contact messages", sender.Type())
+	}
+
+	msg := &sharedmodel.Message{
+		GateID:            req.GetGateId(),
+		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		DomainID:          int64(req.GetDomainId()),
+		ReplyToExternalID: req.GetReplyToExternalId(),
+		Contact: &sharedmodel.OutboundContact{
+			Name:        req.GetName(),
+			PhoneNumber: req.GetPhoneNumber(),
+			Email:       req.GetEmail(),
+		},
+	}
+
+	resp, err := cs.SendContact(ctx, msg)
+	if err != nil {
+		log.ErrorContext(ctx, "failed to send contact message", slog.String("error", err.Error()))
+		return nil, toGRPCError(err)
+	}
+	return &impb.ProviderSendMessageResponse{ExternalId: resp.ID, CreatedAt: time.Now().Unix()}, nil
+}
+
 func toGRPCError(err error) error {
-	if errors.Is(err, facebook.ErrTokenInvalid) {
+	switch {
+	case errors.Is(err, facebook.ErrTokenInvalid):
 		return status.Errorf(codes.Unauthenticated, "page token invalid or revoked: re-authorize via StartMetaOAuth")
+	case errors.Is(err, vibmodel.ErrTokenInvalid):
+		return status.Errorf(codes.Unauthenticated, "viber auth token invalid or revoked")
+	case errors.Is(err, vibmodel.ErrReceiverNotSubscribed):
+		return status.Errorf(codes.FailedPrecondition, "viber receiver not subscribed or unreachable")
 	}
 	return err
 }

@@ -74,21 +74,38 @@ type MessageResponse struct {
 
 // Message is the core domain entity representing a message in the system.
 type Message struct {
-	ID          uuid.UUID      `json:"id"`
-	GateID      string         `json:"gate_id"`
-	ThreadID    uuid.UUID      `json:"thread_id"`
-	DomainID    int64          `json:"domain_id"`
-	From        Peer           `json:"from"`
-	To          Peer           `json:"to"`
-	Text        string         `json:"text"`
-	CreatedAt   int64          `json:"created_at"`
-	EditedAt    int64          `json:"updated_at,omitempty"`
-	Metadata    map[string]any `json:"metadata,omitempty"`
-	Documents   []*Document    `json:"documents,omitempty"`
-	Images      []*Image       `json:"images,omitempty"`
-	Interactive *Interactive   `json:"interactive,omitempty"`
+	ID          uuid.UUID         `json:"id"`
+	GateID      string            `json:"gate_id"`
+	ThreadID    uuid.UUID         `json:"thread_id"`
+	DomainID    int64             `json:"domain_id"`
+	From        Peer              `json:"from"`
+	To          Peer              `json:"to"`
+	Text        string            `json:"text"`
+	CreatedAt   int64             `json:"created_at"`
+	EditedAt    int64             `json:"updated_at,omitempty"`
+	Metadata    map[string]any    `json:"metadata,omitempty"`
+	Documents   []*Document       `json:"documents,omitempty"`
+	Images      []*Image          `json:"images,omitempty"`
+	Interactive *Interactive      `json:"interactive,omitempty"`
+	Location    *OutboundLocation `json:"location,omitempty"`
+	Contact     *OutboundContact  `json:"contact,omitempty"`
 
 	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
+}
+
+// OutboundLocation is a geographic point attached to an outbound Message.
+type OutboundLocation struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Name      string  `json:"name,omitempty"`
+	Address   string  `json:"address,omitempty"`
+}
+
+// OutboundContact is a contact card attached to an outbound Message.
+type OutboundContact struct {
+	Name        string `json:"name"`
+	PhoneNumber string `json:"phone_number"`
+	Email       string `json:"email,omitempty"`
 }
 
 // SendTextRequest defines the payload for sending a plain text message.
