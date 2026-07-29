@@ -92,3 +92,14 @@ func (c *Client) SendLocation(ctx context.Context, in *gatewayv1.SendLocationReq
 func (c *Client) SendSystemMessage(ctx context.Context, in *gatewayv1.SendSystemMessageRequest, opts ...grpc.CallOption) (*gatewayv1.SendMessageResponse, error) {
 	panic("unimplemented")
 }
+
+// EditMessage implements [gateway.MessageClient].
+func (c *Client) EditMessage(ctx context.Context, in *gatewayv1.EditMessageRequest, opts ...grpc.CallOption) (*gatewayv1.EditMessageResponse, error) {
+	var resp *gatewayv1.EditMessageResponse
+	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
+		var err error
+		resp, err = api.EditMessage(ctx, in, opts...)
+		return err
+	})
+	return resp, err
+}
