@@ -23,6 +23,24 @@ type Messaging struct {
 	Timestamp int64           `json:"timestamp"`
 	Message   *InboundMessage `json:"message,omitempty"`
 	Postback  *Postback       `json:"postback,omitempty"`
+	Delivery  *Delivery       `json:"delivery,omitempty"`
+	Read      *Read           `json:"read,omitempty"`
+}
+
+// Delivery is a message-delivered receipt: every message sent to the user
+// before the watermark has been delivered. Mids, when present, reference
+// the delivered messages explicitly.
+// https://developers.facebook.com/docs/messenger-platform/reference/webhook-events/message-deliveries
+type Delivery struct {
+	Mids      []string `json:"mids,omitempty"`
+	Watermark int64    `json:"watermark"` // Unix time in milliseconds
+}
+
+// Read is a message-read receipt: every message sent to the user before
+// the watermark has been read.
+// https://developers.facebook.com/docs/messenger-platform/reference/webhook-events/message-reads
+type Read struct {
+	Watermark int64 `json:"watermark"` // Unix time in milliseconds
 }
 
 type Actor struct {

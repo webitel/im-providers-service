@@ -41,7 +41,8 @@ type MessageClient interface {
 	SendText(ctx context.Context, in *SendTextRequest, opts ...grpc.CallOption) (*SendTextResponse, error)
 	// SendDocument delivers a document message.
 	SendDocument(ctx context.Context, in *SendDocumentRequest, opts ...grpc.CallOption) (*SendDocumentResponse, error)
-	// Mark message as read by id.
+	// Marks the thread as read up to the given message (inclusive):
+	// every earlier unread message of the caller in the thread is covered.
 	Read(ctx context.Context, in *ReadMessageRequest, opts ...grpc.CallOption) (*ReadMessageResponse, error)
 	// Sends an interactive message (buttons, lists, CTA).
 	// Supports idempotency via send_id.
@@ -168,7 +169,8 @@ type MessageServer interface {
 	SendText(context.Context, *SendTextRequest) (*SendTextResponse, error)
 	// SendDocument delivers a document message.
 	SendDocument(context.Context, *SendDocumentRequest) (*SendDocumentResponse, error)
-	// Mark message as read by id.
+	// Marks the thread as read up to the given message (inclusive):
+	// every earlier unread message of the caller in the thread is covered.
 	Read(context.Context, *ReadMessageRequest) (*ReadMessageResponse, error)
 	// Sends an interactive message (buttons, lists, CTA).
 	// Supports idempotency via send_id.
