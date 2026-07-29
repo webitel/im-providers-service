@@ -5,6 +5,7 @@ type Message struct {
 	MessageID             int64                `json:"message_id"`
 	MessageThreadID       *int64               `json:"message_thread_id,omitempty"`
 	DirectMessagesTopic   *DirectMessagesTopic `json:"direct_messages_topic,omitempty"`
+	Text                  *string              `json:"text,omitempty"`
 	From                  *User                `json:"from,omitempty"`
 	SenderChat            *Chat                `json:"sender_chat,omitempty"`
 	SenderBoostCount      *int64               `json:"sender_boost_count,omitempty"`

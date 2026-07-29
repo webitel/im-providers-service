@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
@@ -21,18 +22,16 @@ type TextRequest struct {
 	ReplyMarkup           OutgoingKeyboarder     `json:"reply_markup,omitempty"`
 }
 
-func (c *Client) SendText(req *TextRequest) (*Response, error) {
-	url := c.registry.sendText
-
+func (c *Client) SendText(ctx context.Context, token string, req *TextRequest) (*model.Message, error) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := c.post(url, reqBody)
-	if err != nil {
+	var message model.Message
+	if err := c.callMethod(ctx, sendTextMethod, token, reqBody, &message); err != nil {
 		return nil, err
 	}
 
-	return resp, nil
+	return &message, nil
 }

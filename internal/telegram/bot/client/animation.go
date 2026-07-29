@@ -10,7 +10,7 @@ type AnimationRequest struct {
 	Height                *int64                 `json:"height"`
 	Thumbnail             *string                `json:"thumbnail"`
 	Caption               *string                `json:"caption"`
-	CaptionEntities       []model.MessageEntity  `json:"entities"`
+	CaptionEntities       []model.MessageEntity  `json:"caption_entities"`
 	ParseMode             *string                `json:"parse_mode"`
 	ShowCaptionAboveMedia bool                   `json:"show_caption_above_media"`
 	HasSpoiler            bool                   `json:"has_spoiler"`
@@ -20,7 +20,7 @@ type AnimationRequest struct {
 	ReplyMarkup           OutgoingKeyboarder
 }
 
-func (c *Client) SendAnimation(req *AnimationRequest) (*Response, error) {
+func (c *Client) SendAnimation(req *AnimationRequest) (*model.Message, error) {
 	// TODO:
 
 	return nil, nil

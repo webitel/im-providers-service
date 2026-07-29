@@ -6,7 +6,7 @@ type VideoRequest struct {
 	ChatID                int64                  `json:"chat_id"`
 	Video                 string                 `json:"video"`
 	Caption               *string                `json:"caption"`
-	CaptionEntities       []model.MessageEntity  `json:"entities"`
+	CaptionEntities       []model.MessageEntity  `json:"caption_entities"`
 	ParseMode             *string                `json:"parse_mode"`
 	Duration              *int64                 `json:"duration"` // In seconds
 	Width                 *int64                 `json:"width"`
@@ -23,7 +23,7 @@ type VideoRequest struct {
 	ReplyMarkup           OutgoingKeyboarder
 }
 
-func (c *Client) SendVideo(req *VideoRequest) (*Response, error) {
+func (c *Client) SendVideo(req *VideoRequest) (*model.Message, error) {
 	// TODO:
 
 	return nil, nil

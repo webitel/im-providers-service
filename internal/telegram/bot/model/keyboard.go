@@ -1,5 +1,7 @@
 package model
 
+import "encoding/json"
+
 type InlineKeyboardMarkup struct {
 	InlineKeyboard [][]InlineKeyboardButton `json:"inline_keyboard"`
 }
@@ -8,9 +10,8 @@ func (i *InlineKeyboardMarkup) OutgoingKeyboard() {
 
 }
 
-func (i *InlineKeyboardMarkup) ToJSON() ([]byte, error) {
-	// TODO
-	return nil, nil
+func (i *InlineKeyboardMarkup) MarshalJSON() ([]byte, error) {
+	return json.Marshal(i)
 }
 
 // https://core.telegram.org/bots/api#replykeyboardmarkup
@@ -27,9 +28,8 @@ func (r *ReplyKeyboardMarkup) OutgoingKeyboard() {
 
 }
 
-func (r *ReplyKeyboardMarkup) ToJSON() ([]byte, error) {
-	// TODO
-	return nil, nil
+func (r *ReplyKeyboardMarkup) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r)
 }
 
 // https://core.telegram.org/bots/api#replykeyboardremove
@@ -42,9 +42,8 @@ func (r *ReplyKeyboardRemove) OutgoingKeyboard() {
 
 }
 
-func (r *ReplyKeyboardRemove) ToJSON() ([]byte, error) {
-	// TODO
-	return nil, nil
+func (r *ReplyKeyboardRemove) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r)
 }
 
 // https://core.telegram.org/bots/api#forcereply
@@ -58,9 +57,8 @@ func (f *ForceReply) OutgoingKeyboard() {
 
 }
 
-func (f *ForceReply) ToJSON() ([]byte, error) {
-	// TODO
-	return nil, nil
+func (f *ForceReply) MarshalJSON() ([]byte, error) {
+	return json.Marshal(f)
 }
 
 // https://core.telegram.org/bots/api#keyboardbutton

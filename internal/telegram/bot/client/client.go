@@ -2,16 +2,19 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 )
 
-type Response struct {
-	Ok               bool                     `json:"ok"`
-	SuccessResult    *string                  `json:"result,omitempty"`
-	ErrorDescription *string                  `json:"description,omitempty"`
-	ErrorParameters  *ErrorResponseParameters `json:"parameters,omitempty"`
+// https://core.telegram.org/bots/api#making-requests
+type apiResponse struct {
+	Ok          bool                     `json:"ok"`
+	Result      json.RawMessage          `json:"result,omitempty"`
+	ErrorCode   int                      `json:"error_code,omitempty"`
+	Description string                   `json:"description,omitempty"`
+	Parameters  *ErrorResponseParameters `json:"parameters,omitempty"`
 }
 
 type ErrorResponseParameters struct {
@@ -19,55 +22,73 @@ type ErrorResponseParameters struct {
 	RetryAfter      int64 `json:"retry_after"`
 }
 
+// APIError is returned when Telegram responds with "ok": false.
+// https://core.telegram.org/bots/api#making-requests
+type APIError struct {
+	Method      string
+	StatusCode  int
+	ErrorCode   int
+	Description string
+	Parameters  *ErrorResponseParameters
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("telegram: %s failed (http %d, code %d): %s", e.Method, e.StatusCode, e.ErrorCode, e.Description)
+}
+
 const (
 	baseTelegramURL = "https://api.telegram.org/bot%s/%s"
 )
 
-func NewClient(token string) *Client {
+func NewClient() *Client {
 	return &Client{
-		token:      token,
 		httpClient: &http.Client{},
-		registry: &methodRegistry{
-			sendText:     ConstructURL(token, sendTextMethod),
-			sendDocument: ConstructURL(token, DocumentMethod),
-		},
 	}
 }
 
 type Client struct {
-	token      string
 	httpClient *http.Client
-
-	registry *methodRegistry
 }
 
-type methodRegistry struct {
-	sendText      string
-	sendPhoto     string
-	sendVideo     string
-	sendDocument  string
-	sendVoice     string
-	sendSticker   string
-	sendAnimation string
-	sendAudio     string
-}
-
-func (c *Client) post(url string, body []byte) (*Response, error) {
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+// callMethod invokes a Telegram Bot API method and, on success, unmarshals the
+// "result" field of the response envelope into out (when non-nil).
+// https://core.telegram.org/bots/api#making-requests
+func (c *Client) callMethod(ctx context.Context, methodName string, token string, body []byte, out any) error {
+	url := ConstructURL(token, methodName)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
 	if err != nil {
-		return nil, err
+		return err
 	}
+	req.Header.Set("Content-Type", "application/json")
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
-	var response Response
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, err
+	var envelope apiResponse
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		return fmt.Errorf("telegram: decode %s response: %w", methodName, err)
 	}
-	return &response, nil
+
+	if !envelope.Ok {
+		return &APIError{
+			Method:      methodName,
+			StatusCode:  resp.StatusCode,
+			ErrorCode:   envelope.ErrorCode,
+			Description: envelope.Description,
+			Parameters:  envelope.Parameters,
+		}
+	}
+
+	if out != nil && len(envelope.Result) > 0 {
+		if err := json.Unmarshal(envelope.Result, out); err != nil {
+			return fmt.Errorf("telegram: unmarshal %s result: %w", methodName, err)
+		}
+	}
+
+	return nil
 }
 
 type OutgoingKeyboarder interface {

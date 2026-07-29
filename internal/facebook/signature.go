@@ -6,12 +6,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 	"strings"
 )
 
 // ValidateSignature implements iface.SignatureValidator.
 // It validates the X-Hub-Signature-256 header sent by Facebook on every webhook POST.
-func (p *facebookProvider) ValidateSignature(ctx context.Context, header string, body []byte) error {
+func (p *facebookProvider) ValidateSignature(ctx context.Context, headers http.Header, body []byte) error {
+	header := headers.Get("X-Hub-Signature-256")
 	if header == "" {
 		return fmt.Errorf("missing X-Hub-Signature-256 header")
 	}

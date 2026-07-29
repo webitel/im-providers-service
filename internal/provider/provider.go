@@ -4,6 +4,7 @@ package provider
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -56,7 +57,8 @@ type Verifier interface {
 }
 
 // SignatureValidator is an optional interface for providers that authenticate
-// webhook requests via a cryptographic signature header (e.g. X-Hub-Signature-256).
+// webhook requests via a header-based signature or secret (e.g. X-Hub-Signature-256,
+// X-Telegram-Bot-Api-Secret-Token). Implementations read whatever header(s) they need.
 type SignatureValidator interface {
-	ValidateSignature(ctx context.Context, header string, body []byte) error
+	ValidateSignature(ctx context.Context, headers http.Header, body []byte) error
 }
