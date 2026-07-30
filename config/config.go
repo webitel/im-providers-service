@@ -25,6 +25,7 @@ type ServiceConfig struct {
 	GRPCAddr    string             `mapstructure:"addr"`
 	HTTPAddr    string             `mapstructure:"http_addr"`
 	WebhookPath string             `mapstructure:"webhook_path"`
+	PublicURL   string             `mapstructure:"public_url"`
 	Connection  appconfig.GRPCConn `mapstructure:"conn"`
 	SecretKey   string             `mapstructure:"secret_key"`
 }
@@ -163,6 +164,7 @@ func registerServiceFlags() {
 	pflag.String("service.addr", "localhost:8080", "gRPC listen address")
 	pflag.String("service.http_addr", ":8085", "HTTP listen address")
 	pflag.String("service.webhook_path", "/wh", "Base path for incoming webhooks")
+	pflag.String("service.public_url", "", "Externally reachable HTTPS origin, used to register provider webhooks (e.g. Telegram)")
 	pflag.String("service.secret_key", "", "32-byte AES key for token encryption (required)")
 
 	appconfig.RegisterGRPCConnFlags(pflag.CommandLine, "service.conn", false)
