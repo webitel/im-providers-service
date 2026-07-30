@@ -1,13 +1,15 @@
 package model
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	coremodel "github.com/webitel/im-providers-service/internal/core/model"
 )
 
 // ProviderType is the provider identifier used to resolve this adapter in the
 // registry (internal/provider/registry.go) and to build webhook URLs/paths.
-const ProviderType = "telegram_https"
+const ProviderType = "telegram_bot"
 
 type Gate struct {
 	ID            uuid.UUID
@@ -18,8 +20,8 @@ type Gate struct {
 	Token         string
 	URI           string
 	WebhookSecret string
-	CreatedAt     int64
-	UpdatedAt     int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type CreateGate struct {

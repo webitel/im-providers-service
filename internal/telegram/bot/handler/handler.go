@@ -61,8 +61,8 @@ func parseGateToTelegramBotGate(gate *model.Gate) *impb.ProviderTelegramBotGate 
 		Id:        gate.ID.String(),
 		Name:      gate.Name,
 		Status:    ParseGateStatus(gate.Enabled),
-		CreatedAt: gate.CreatedAt,
-		UpdatedAt: gate.UpdatedAt,
+		CreatedAt: gate.CreatedAt.Unix(),
+		UpdatedAt: gate.UpdatedAt.Unix(),
 	}
 }
 

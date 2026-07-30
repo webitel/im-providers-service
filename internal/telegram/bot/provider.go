@@ -95,6 +95,8 @@ func (p *Provider) HandleWebhook(ctx context.Context, payload []byte) error {
 		return err
 	}
 
+	ctx = withGatewayIdentity(ctx, gate)
+
 	err = p.handleUpdate(ctx, gate, update)
 	if err != nil {
 		return err
@@ -165,8 +167,8 @@ func (p *Provider) ValidateSignature(ctx context.Context, headers http.Header, b
 
 func (p *Provider) webhookURI(ctx context.Context) string {
 	uri, _ := ctx.Value(provider.WebhookURIKey).(string)
-	if !strings.HasPrefix(uri, "/") {
-		return "/" + uri
+	if strings.HasPrefix(uri, "/") {
+		uri, _ = strings.CutPrefix(uri, "/")
 	}
 	return uri
 }

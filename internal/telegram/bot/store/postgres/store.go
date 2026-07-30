@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -13,8 +14,15 @@ import (
 )
 
 const (
-	telegramGateType = "telegram"
+	telegramGateType = model.ProviderType
 )
+
+func NewTelegramBotStore(pool *pgxpool.Pool, crypt crypto.Encryptor) *TelegramBotStore {
+	return &TelegramBotStore{
+		pool:   pool,
+		crypto: crypt,
+	}
+}
 
 type TelegramBotStore struct {
 	pool   *pgxpool.Pool
@@ -24,8 +32,8 @@ type TelegramBotStore struct {
 type gateResult struct {
 	ID            uuid.UUID
 	DC            int64
-	CreatedAt     int64
-	UpdatedAt     int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 	Name          string
 	Enabled       bool
 	BotSub        string
