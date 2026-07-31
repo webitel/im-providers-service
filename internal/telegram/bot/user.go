@@ -21,12 +21,16 @@ func (p *Provider) constructFrom(
 	user *model.User,
 ) (*coremodel.Peer, error) {
 
+
+	via := gate.ID.String()
+
 	externalUser := p.toExternalUser(user)
 	res := &coremodel.Peer{
 		Sub:  externalUser.ID,
 		Iss:  p.Type(),
 		Type: coremodel.PeerUser,
 		Name: externalUser.FirstName,
+		Via:  &via,
 	}
 
 	if known, _ := p.userCache.IsKnown(ctx, externalUser); known {
