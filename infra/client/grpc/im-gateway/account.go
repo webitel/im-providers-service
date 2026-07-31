@@ -3,8 +3,9 @@ package imgateway
 import (
 	"context"
 
-	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	"google.golang.org/grpc"
+
+	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 )
 
 // Token generates or refreshes access tokens.

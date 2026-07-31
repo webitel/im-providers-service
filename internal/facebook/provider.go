@@ -95,6 +95,7 @@ func New(
 var (
 	_ provider.InteractiveSender  = (*facebookProvider)(nil)
 	_ provider.CapabilityReporter = (*facebookProvider)(nil)
+	_ provider.TypingSender       = (*facebookProvider)(nil)
 )
 
 func (p *facebookProvider) Type() string { return "facebook" }
@@ -106,6 +107,7 @@ func (p *facebookProvider) Capabilities() sharedmodel.ProviderCapabilities {
 		SupportsDelivered: true,
 		SupportsRead:      true,
 		SupportsFailed:    true,
+		SupportsTyping:    true,
 	}
 }
 
