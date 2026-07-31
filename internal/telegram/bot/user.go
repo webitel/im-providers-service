@@ -116,12 +116,14 @@ func (p *Provider) constructTo(
 	if gate.Bot == nil {
 		return nil, errors.Internal("gate bot required to construct to peer")
 	}
+	via := gate.ID.String()
 
 	res := &coremodel.Peer{
 		Sub:  gate.Bot.Sub,
 		Iss:  gate.Bot.Iss,
 		Type: coremodel.PeerUser,
 		Name: gate.Bot.Name,
+		Via:  &via,
 	}
 	return res, nil
 }
