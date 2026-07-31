@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log/slog"
 
+	"google.golang.org/grpc"
+
+	"github.com/webitel/webitel-go-kit/infra/discovery"
+	rpc "github.com/webitel/webitel-go-kit/infra/transport/gRPC"
+
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	webitel "github.com/webitel/im-providers-service/infra/client/grpc" // Import TLS config
 	infratls "github.com/webitel/im-providers-service/infra/tls"
-	"github.com/webitel/webitel-go-kit/infra/discovery"
-	rpc "github.com/webitel/webitel-go-kit/infra/transport/gRPC"
-	"google.golang.org/grpc"
 )
 
 const ServiceName string = "im-gateway-service"

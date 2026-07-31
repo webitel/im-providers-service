@@ -154,6 +154,16 @@ func (r *resilientGraphAPI) SendInteractive(ctx context.Context, token, psid, bo
 	return res.(*sharedmodel.MessageResponse), nil
 }
 
+func (r *resilientGraphAPI) SendTyping(ctx context.Context, token, psid string, on bool) error {
+	_, err := r.breaker.Execute(func() (any, error) {
+		return nil, backoff.Retry(func() error {
+			return retryable(r.inner.SendTyping(ctx, token, psid, on))
+		}, backoff.WithContext(r.newBackOff(), ctx))
+	})
+
+	return err
+}
+
 func (r *resilientGraphAPI) SetMessengerProfile(ctx context.Context, token string, profile any) error {
 	_, err := r.breaker.Execute(func() (any, error) {
 		return nil, backoff.Retry(func() error {

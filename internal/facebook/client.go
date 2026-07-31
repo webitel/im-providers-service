@@ -35,6 +35,7 @@ type graphAPI interface {
 	SendText(ctx context.Context, token, psid, text string) (*sharedmodel.MessageResponse, error)
 	SendMedia(ctx context.Context, token, psid, mediaType, rawURL string) (*sharedmodel.MessageResponse, error)
 	SendInteractive(ctx context.Context, token, psid, body string, interactive *sharedmodel.Interactive) (*sharedmodel.MessageResponse, error)
+	SendTyping(ctx context.Context, token, psid string, on bool) error
 	SetMessengerProfile(ctx context.Context, token string, profile any) error
 	DeleteMessengerProfile(ctx context.Context, token string, fields []string) error
 }
@@ -208,6 +209,58 @@ func (c *apiClient) ParseWebhook(data []byte) (*WebhookRequest, error) {
 
 func (c *apiClient) SendText(ctx context.Context, token, psid, text string) (*sharedmodel.MessageResponse, error) {
 	return c.send(ctx, token, newTextPayload(psid, text))
+}
+
+// senderActionPayload is the Messenger sender_action request shape. Unlike a
+// message send it carries no messaging_type/message body.
+// https://developers.facebook.com/docs/messenger-platform/send-messages/sender-actions
+type senderActionPayload struct {
+	Recipient    outboundRecipient `json:"recipient"`
+	SenderAction string            `json:"sender_action"`
+}
+
+// SendTyping shows or hides the "typing…" bubble for the recipient. It is
+// fire-and-forget: no message id is returned.
+func (c *apiClient) SendTyping(ctx context.Context, token, psid string, on bool) error {
+	action := "typing_off"
+	if on {
+		action = "typing_on"
+	}
+
+	body, err := json.Marshal(senderActionPayload{
+		Recipient:    outboundRecipient{ID: psid},
+		SenderAction: action,
+	})
+	if err != nil {
+		return fmt.Errorf("marshal sender action: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.apiURL+"/me/messages", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+
+		if isTokenInvalidError(respBody) {
+			return ErrTokenInvalid
+		}
+
+		return fmt.Errorf("fb sender_action: status %d: %s", resp.StatusCode, respBody)
+	}
+
+	return nil
 }
 
 func (c *apiClient) SendMedia(ctx context.Context, token, psid, mediaType, rawURL string) (*sharedmodel.MessageResponse, error) {
