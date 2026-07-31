@@ -44,7 +44,7 @@ func (p *Provider) constructFrom(
 		return nil, err
 	}
 
-	err = p.ensureVia(authCtx, &contact.Sub, &contact.Iss, gate.ID)
+	err = p.ensureVia(authCtx, &externalUser.ID, &contact.Iss, gate.ID)
 	if err != nil {
 		return nil, err
 	}
