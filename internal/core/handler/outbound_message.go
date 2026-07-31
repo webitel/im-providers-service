@@ -360,6 +360,43 @@ func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *imp
 	}, nil
 }
 
+// SendTyping forwards an ephemeral typing indicator to the external chat
+// partner. Best-effort: channels whose provider does not implement TypingSender
+// are a silent no-op (success), so callers need not special-case them.
+func (p *OutboundMessageHandler) SendTyping(ctx context.Context, req *impb.ProviderSendTypingRequest) (*impb.ProviderSendTypingResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendTyping"),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+		slog.Bool("typing_on", req.GetTypingOn()),
+	)
+
+	sender, err := p.resolveSender(ctx, req.GetGateId())
+	if err != nil {
+		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	ts, ok := sender.(provider.TypingSender)
+	if !ok {
+		// Channel does not support typing — no-op success.
+		log.DebugContext(ctx, "provider does not support typing, skipping", slog.String("type", sender.Type()))
+		return &impb.ProviderSendTypingResponse{}, nil
+	}
+
+	if err := ts.SendTyping(ctx, &provider.TypingRequest{
+		GateID:     req.GetGateId(),
+		ExternalID: req.GetExternalUserId(),
+		DomainID:   req.GetDomainId(),
+		TypingOn:   req.GetTypingOn(),
+	}); err != nil {
+		log.WarnContext(ctx, "failed to send typing", slog.String("error", err.Error()))
+		return nil, toGRPCError(err)
+	}
+
+	return &impb.ProviderSendTypingResponse{}, nil
+}
+
 // messageContext is the internal message identity carried by outbound
 // requests for delivery status tracking.
 type messageContext struct {

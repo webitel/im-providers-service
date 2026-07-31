@@ -30,6 +30,22 @@ type InteractiveSender interface {
 	SendInteractive(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error)
 }
 
+// TypingSender is an optional interface for providers that can forward a native
+// "typing…" indicator to the external chat partner (e.g. Telegram
+// sendChatAction, Meta sender_action). Providers that do not implement it are a
+// silent no-op — the channel simply has no typing indicator.
+type TypingSender interface {
+	SendTyping(ctx context.Context, req *TypingRequest) error
+}
+
+// TypingRequest is a fire-and-forget outbound typing action.
+type TypingRequest struct {
+	GateID     string
+	ExternalID string // recipient's platform-specific id (or internal contact id)
+	DomainID   int32
+	TypingOn   bool // true = start typing, false = stop
+}
+
 // Receiver is the inbound side — it handles raw webhook bytes from the platform.
 type Receiver interface {
 	Type() string

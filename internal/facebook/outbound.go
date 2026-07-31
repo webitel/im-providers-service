@@ -8,6 +8,7 @@ import (
 	contactv1 "github.com/webitel/im-providers-service/gen/go/contact/v1"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
+	"github.com/webitel/im-providers-service/internal/provider"
 )
 
 func (p *facebookProvider) SendText(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
@@ -56,6 +57,23 @@ func (p *facebookProvider) SendInteractive(ctx context.Context, req *sharedmodel
 		return nil, err
 	}
 	return withRecipient(p.api.SendInteractive(ctx, g.PageToken, psid, req.Text, req.Interactive))(psid)
+}
+
+// SendTyping forwards a Messenger sender_action (typing_on/typing_off) to the
+// external chat partner. Best-effort: it returns an error to the caller but
+// persists nothing.
+func (p *facebookProvider) SendTyping(ctx context.Context, req *provider.TypingRequest) error {
+	g, err := p.fetchGate(ctx, req.GateID)
+	if err != nil {
+		return err
+	}
+
+	psid, err := p.resolvePSID(ctx, g, req.ExternalID)
+	if err != nil {
+		return err
+	}
+
+	return p.api.SendTyping(ctx, g.PageToken, psid, req.TypingOn)
 }
 
 // resolvePSID returns the Facebook PSID for the given sub.

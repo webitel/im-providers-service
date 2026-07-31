@@ -11,4 +11,7 @@ type ProviderCapabilities struct {
 	SupportsRead bool
 	// SupportsFailed is true when the provider reports failed deliveries.
 	SupportsFailed bool
+	// SupportsTyping is true when the provider can forward a native "typing…"
+	// indicator to the external chat partner.
+	SupportsTyping bool
 }

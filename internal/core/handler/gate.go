@@ -44,6 +44,7 @@ func collectCapabilities(providers []provider.Provider) map[string]*impb.Provide
 			Delivered: c.SupportsDelivered,
 			Read:      c.SupportsRead,
 			Failed:    c.SupportsFailed,
+			Typing:    c.SupportsTyping,
 		}
 	}
 
