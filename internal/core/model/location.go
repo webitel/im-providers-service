@@ -18,6 +18,8 @@ type SendLocationRequest struct {
 	Address    *string
 	ExternalID string
 	DomainID   int
+
+	ForwardOrigin *ForwardOrigin
 }
 
 type SendContactRequest struct {
@@ -29,4 +31,6 @@ type SendContactRequest struct {
 	Metadata    map[string]any
 	ExternalID  string
 	DomainID    int
+
+	ForwardOrigin *ForwardOrigin
 }

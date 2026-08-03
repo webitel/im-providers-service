@@ -5,6 +5,8 @@ import (
 
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // SendText delivers plain text messages to the core gateway.
@@ -102,4 +104,14 @@ func (c *Client) EditMessage(ctx context.Context, in *gatewayv1.EditMessageReque
 		return err
 	})
 	return resp, err
+}
+
+// DeleteMessages implements [gateway.MessageClient].
+func (c *Client) DeleteMessages(ctx context.Context, in *gatewayv1.DeleteMessagesRequest, opts ...grpc.CallOption) (*gatewayv1.DeleteMessagesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+// ForwardMessages implements [gateway.MessageClient].
+func (c *Client) ForwardMessages(ctx context.Context, in *gatewayv1.ForwardMessagesRequest, opts ...grpc.CallOption) (*gatewayv1.ForwardMessagesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
