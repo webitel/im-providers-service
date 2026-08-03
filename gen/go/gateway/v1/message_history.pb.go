@@ -668,13 +668,10 @@ func (x *ReplyToMessage) GetAttachmentMime() string {
 	return ""
 }
 
-// ForwardOrigin identifies who originally wrote a forwarded message. It is a
-// snapshot taken at forward time, not a live reference: the copy may live in a
-// chat whose reader has no access to the source at all.
-//
-// Unlike ReplyToMessage there is no enriched ThreadMember here — the original
-// author is generally not a member of the chat the copy landed in, so
-// sender_name is the only label a client can rely on.
+// ForwardOrigin is a snapshot of the original author taken at forward time.
+// Unlike ReplyToMessage it carries no enriched ThreadMember: the original author
+// is generally not a member of the chat the copy landed in, so sender_name is
+// the only label a client can rely on.
 type ForwardOrigin struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

@@ -3,8 +3,9 @@ package imgateway
 import (
 	"context"
 
-	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	"google.golang.org/grpc"
+
+	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 )
 
 func (c *Client) CreateVia(ctx context.Context, in *gatewayv1.ViasServiceCreateRequest, opts ...grpc.CallOption) (*gatewayv1.ViasServiceCreateResponse, error) {

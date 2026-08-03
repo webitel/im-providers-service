@@ -3,8 +3,9 @@ package imgateway
 import (
 	"context"
 
-	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	"google.golang.org/grpc"
+
+	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 )
 
 func (c *Client) Search(
@@ -40,5 +41,4 @@ func (c *Client) Locate(ctx context.Context, in *gatewayv1.LocateConatctRequest,
 		return err
 	})
 	return resp, err
-
 }

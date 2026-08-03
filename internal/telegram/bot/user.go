@@ -21,12 +21,16 @@ func (p *Provider) constructFrom(
 	user *model.User,
 ) (*coremodel.Peer, error) {
 
+
+	via := gate.ID.String()
+
 	externalUser := p.toExternalUser(user)
 	res := &coremodel.Peer{
 		Sub:  externalUser.ID,
 		Iss:  p.Type(),
 		Type: coremodel.PeerUser,
 		Name: externalUser.FirstName,
+		Via:  &via,
 	}
 
 	if known, _ := p.userCache.IsKnown(ctx, externalUser); known {
@@ -40,7 +44,7 @@ func (p *Provider) constructFrom(
 		return nil, err
 	}
 
-	err = p.ensureVia(authCtx, &contact.Sub, &contact.Iss, gate.ID)
+	err = p.ensureVia(authCtx, &externalUser.ID, &contact.Iss, gate.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -116,12 +120,14 @@ func (p *Provider) constructTo(
 	if gate.Bot == nil {
 		return nil, errors.Internal("gate bot required to construct to peer")
 	}
+	via := gate.ID.String()
 
 	res := &coremodel.Peer{
 		Sub:  gate.Bot.Sub,
 		Iss:  gate.Bot.Iss,
 		Type: coremodel.PeerUser,
 		Name: gate.Bot.Name,
+		Via:  &via,
 	}
 	return res, nil
 }

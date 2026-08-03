@@ -3,10 +3,11 @@ package imgateway
 import (
 	"context"
 
-	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 )
 
 // SendText delivers plain text messages to the core gateway.
@@ -108,7 +109,13 @@ func (c *Client) EditMessage(ctx context.Context, in *gatewayv1.EditMessageReque
 
 // DeleteMessages implements [gateway.MessageClient].
 func (c *Client) DeleteMessages(ctx context.Context, in *gatewayv1.DeleteMessagesRequest, opts ...grpc.CallOption) (*gatewayv1.DeleteMessagesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	var resp *gatewayv1.DeleteMessagesResponse
+	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
+		var err error
+		resp, err = api.DeleteMessages(ctx, in, opts...)
+		return err
+	})
+	return resp, err
 }
 
 // ForwardMessages implements [gateway.MessageClient].
