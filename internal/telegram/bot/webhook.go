@@ -90,6 +90,9 @@ func (p *Provider) handleTextMessage(ctx context.Context, gate *model.Gate, msg 
 	if msg.ReplyToMessage != nil {
 		coreMessage.ReplyToExternalID = strconv.FormatInt(msg.ReplyToMessage.MessageID, 10)
 	}
+
+	coreMessage.ForwardOrigin = mapForwardOrigin(msg.ForwardOrigin)
+
 	_, err = p.coreMessageClient.SendText(ctx, coreMessage)
 	if err != nil {
 		return err
@@ -140,6 +143,8 @@ func (p *Provider) handleDocument(ctx context.Context, gate *model.Gate, msg *mo
 		coreMessage.Document.Body = *text
 	}
 
+	coreMessage.ForwardOrigin = mapForwardOrigin(msg.ForwardOrigin)
+
 	_, err = p.coreMessageClient.SendDocument(ctx, coreMessage)
 	if err != nil {
 		return err
@@ -175,6 +180,8 @@ func (p *Provider) handlePhoto(ctx context.Context, gate *model.Gate, msg *model
 		coreMessage.ReplyToExternalID = strconv.FormatInt(msg.ReplyToMessage.MessageID, 10)
 	}
 
+	coreMessage.ForwardOrigin = mapForwardOrigin(msg.ForwardOrigin)
+
 	for _, image := range msg.Photo {
 		docURL, err := p.tgMessageClient.GenerateFileURL(ctx, gate.Token, image.FileID)
 		if err != nil {
@@ -207,12 +214,13 @@ func (p *Provider) handleLocation(ctx context.Context, gate *model.Gate, msg *mo
 	}
 	var (
 		coreMessage = &coremodel.SendLocationRequest{
-			DomainID:   int(gate.DC), // dangerous
-			From:       *from,
-			To:         *to,
-			Latitude:   msg.Location.Latitude,
-			Longitude:  msg.Location.Longitude,
-			ExternalID: strconv.FormatInt(msg.MessageID, 10),
+			DomainID:      int(gate.DC), // dangerous
+			From:          *from,
+			To:            *to,
+			Latitude:      msg.Location.Latitude,
+			Longitude:     msg.Location.Longitude,
+			ExternalID:    strconv.FormatInt(msg.MessageID, 10),
+			ForwardOrigin: mapForwardOrigin(msg.ForwardOrigin),
 		}
 	)
 
@@ -246,12 +254,38 @@ func (p *Provider) handleContact(ctx context.Context, gate *model.Gate, msg *mod
 			"vcard":     msg.Contact.Vcard,
 			"last_name": msg.Contact.LastName,
 		},
-		ExternalID: strconv.FormatInt(msg.MessageID, 10),
-		DomainID:   int(gate.DC),
+		ExternalID:    strconv.FormatInt(msg.MessageID, 10),
+		DomainID:      int(gate.DC),
+		ForwardOrigin: mapForwardOrigin(msg.ForwardOrigin),
 	})
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func mapForwardOrigin(origin *model.MessageOrigin) *coremodel.ForwardOrigin {
+	if origin == nil {
+		return nil
+	}
+
+	var kind coremodel.ForwardOriginKind
+
+	switch origin.Type {
+	case model.MessageOriginTypeUser:
+		kind = coremodel.ForwardOriginExternalUser
+	case model.MessageOriginTypeHiddenUser:
+		kind = coremodel.ForwardOriginExternalHiddenUser
+	case model.MessageOriginTypeChat, model.MessageOriginTypeChannel:
+		kind = coremodel.ForwardOriginExternalChat
+	default:
+		kind = coremodel.ForwardOriginExternalHiddenUser
+	}
+
+	return &coremodel.ForwardOrigin{
+		Kind:           kind,
+		SenderName:     origin.SenderName(),
+		OriginalSentAt: origin.OriginalSentAtMillis(),
+	}
 }

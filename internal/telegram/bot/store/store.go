@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+
 	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
 )
 

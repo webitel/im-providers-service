@@ -7,10 +7,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/webitel/webitel-go-kit/pkg/errors"
+
 	coremodel "github.com/webitel/im-providers-service/internal/core/model"
 	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
 	"github.com/webitel/im-providers-service/pkg/crypto"
-	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
 
 const (
@@ -44,8 +46,7 @@ type gateResult struct {
 }
 
 func (s *TelegramBotStore) Insert(ctx context.Context, gate *model.CreateGate) (*model.Gate, error) {
-	var (
-		query = `
+	query := `
 		WITH gate AS (
 			INSERT INTO im_provider.gates(dc, name, type, enabled)
 			VALUES (@DC, @Name, @Type, @Enabled)
@@ -78,7 +79,6 @@ func (s *TelegramBotStore) Insert(ctx context.Context, gate *model.CreateGate) (
 		JOIN bot ON gate.id = bot.gate_id
 		JOIN telegram ON gate.id = telegram.gate_id
 		`
-	)
 	token, err := s.crypto.Encrypt(gate.Token)
 	if err != nil {
 		return nil, errors.Internal("failed to encrypt token")
@@ -238,7 +238,6 @@ func (s *TelegramBotStore) Update(ctx context.Context, gate *model.UpdateGate) (
 	}
 
 	return res, nil
-
 }
 
 func (s *TelegramBotStore) scanRow(row pgx.Row) (*model.Gate, error) {
@@ -280,7 +279,6 @@ func (s *TelegramBotStore) scanRow(row pgx.Row) (*model.Gate, error) {
 		URI:           res.URI,
 		WebhookSecret: webhookSecret,
 	}, nil
-
 }
 
 func (s *TelegramBotStore) Delete(ctx context.Context, id uuid.UUID, domainID int64) error {

@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
+
+	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
 )
 
 const (
@@ -56,7 +57,7 @@ func (c *Client) SendDocument(ctx context.Context, token string, req *DocumentRe
 
 // GenerateFileURL resolves a file_id to a downloadable URL via getFile.
 // https://core.telegram.org/bots/api#getfile
-func (c *Client) GenerateFileURL(ctx context.Context, token string, fileID string) (*url.URL, error) {
+func (c *Client) GenerateFileURL(ctx context.Context, token, fileID string) (*url.URL, error) {
 	body, err := json.Marshal(GetDocumentRequest{FileID: fileID})
 	if err != nil {
 		return nil, err

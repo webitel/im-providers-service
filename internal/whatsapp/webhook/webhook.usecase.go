@@ -214,6 +214,7 @@ func (webhook *webhook) HandleTextMessage(ctx context.Context, textEvent *events
 		DomainID:          int64(whatsAppBusinessAccount.DC),
 		ExternalID:        textEvent.MessageID,
 		ReplyToExternalID: textEvent.Context.RepliedToMessageID,
+		ForwardOrigin:     forwardOriginFromEvent(textEvent.BaseMessageEvent),
 	}
 
 	_, err = webhook.coreMessanger.SendText(ctx, &coreTextMessage)
@@ -303,6 +304,7 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 		DomainID:          int64(whatsAppBusinessAccount.DC),
 		ExternalID:        documentEvent.MessageID,
 		ReplyToExternalID: documentEvent.Context.RepliedToMessageID,
+		ForwardOrigin:     forwardOriginFromEvent(documentEvent.BaseMessageEvent),
 	}
 
 	if _, err = webhook.coreMessanger.SendDocument(ctx, &coreDocumentMessage); err != nil {
@@ -363,6 +365,7 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 		DomainID:          int64(whatsAppBusinessAccount.DC),
 		ExternalID:        imageEvent.MessageID,
 		ReplyToExternalID: imageEvent.Context.RepliedToMessageID,
+		ForwardOrigin:     forwardOriginFromEvent(imageEvent.BaseMessageEvent),
 	}
 
 	if _, err := webhook.coreMessanger.SendImage(ctx, &coreImageMessage); err != nil {
@@ -408,6 +411,8 @@ func (webhook *webhook) HandleLocationMessage(ctx context.Context, locationEvent
 		Address:    addressPtr,
 		ExternalID: locationEvent.MessageID,
 		DomainID:   whatsappBusinessAccount.DC,
+
+		ForwardOrigin: forwardOriginFromEvent(locationEvent.BaseMessageEvent),
 	}
 
 	if _, err = webhook.coreMessanger.SendLocation(ctx, &locationMessage); err != nil {
@@ -461,6 +466,8 @@ func (webhook *webhook) HandleContactsMessage(ctx context.Context, contacts *eve
 			Metadata:    contact.AsMetadata(),
 			ExternalID:  "",
 			DomainID:    whatsappBusinessAccount.DC,
+
+			ForwardOrigin: forwardOriginFromEvent(contacts.BaseMessageEvent),
 		}
 
 		if _, err := webhook.coreMessanger.SendContact(ctx, &contactMessage); err != nil {
@@ -470,4 +477,15 @@ func (webhook *webhook) HandleContactsMessage(ctx context.Context, contacts *eve
 	}
 
 	return nil
+}
+
+// forwardOriginFromEvent maps WhatsApp's forwarded flag onto a forward marker.
+// The Cloud API never reports who forwarded the message, so the origin carries
+// the hidden-user kind with no name.
+func forwardOriginFromEvent(base events.BaseMessageEvent) *model.ForwardOrigin {
+	if !base.IsForwarder {
+		return nil
+	}
+
+	return &model.ForwardOrigin{Kind: model.ForwardOriginExternalHiddenUser}
 }

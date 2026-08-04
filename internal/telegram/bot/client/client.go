@@ -53,7 +53,7 @@ type Client struct {
 // callMethod invokes a Telegram Bot API method and, on success, unmarshals the
 // "result" field of the response envelope into out (when non-nil).
 // https://core.telegram.org/bots/api#making-requests
-func (c *Client) callMethod(ctx context.Context, methodName string, token string, body []byte, out any) error {
+func (c *Client) callMethod(ctx context.Context, methodName, token string, body []byte, out any) error {
 	url := ConstructURL(token, methodName)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
 	if err != nil {
@@ -96,6 +96,6 @@ type OutgoingKeyboarder interface {
 	OutgoingKeyboard()
 }
 
-func ConstructURL(token string, method string) string {
+func ConstructURL(token, method string) string {
 	return fmt.Sprintf(baseTelegramURL, token, method)
 }

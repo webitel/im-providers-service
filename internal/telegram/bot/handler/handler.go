@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	coremodel "github.com/webitel/im-providers-service/internal/core/model"
 	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
@@ -76,7 +77,6 @@ func ParseGateStatus(status bool) impb.ProviderStatus {
 
 // DeleteTelegramBotGate implements [provider.TelegramBotServiceServer].
 func (t *TelegramBotHandler) DeleteTelegramBotGate(ctx context.Context, req *impb.DeleteTelegramBotGateRequest) (*impb.DeleteTelegramBotGateResponse, error) {
-
 	id, err := uuid.Parse(req.GetId())
 	if err != nil {
 		return nil, err
