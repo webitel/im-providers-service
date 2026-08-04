@@ -11,6 +11,9 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+
+	"github.com/webitel/webitel-go-kit/pkg/errors"
+
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	coremodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
@@ -19,15 +22,14 @@ import (
 	tgclient "github.com/webitel/im-providers-service/internal/telegram/bot/client"
 	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
 	"github.com/webitel/im-providers-service/internal/telegram/bot/store"
-	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
-
-var _ provider.Provider = (*Provider)(nil)
-var _ provider.SignatureValidator = (*Provider)(nil)
 
 var (
-	noUpdateIDErr = errors.New("update has no ID")
+	_ provider.Provider           = (*Provider)(nil)
+	_ provider.SignatureValidator = (*Provider)(nil)
 )
+
+var noUpdateIDErr = errors.New("update has no ID")
 
 const (
 	providerType      = model.ProviderType
@@ -103,7 +105,6 @@ func (p *Provider) HandleWebhook(ctx context.Context, payload []byte) error {
 	}
 
 	return nil
-
 }
 
 func (p *Provider) unmarshalUpdate(payload []byte) (*model.WebhookUpdate, error) {
@@ -119,7 +120,6 @@ func (p *Provider) unmarshalUpdate(payload []byte) (*model.WebhookUpdate, error)
 }
 
 func (p *Provider) resolveGateFromContext(ctx context.Context) (*model.Gate, error) {
-
 	uri := p.webhookURI(ctx)
 	if uri == "" {
 		return nil, errors.Internal("webhook uri not found")
@@ -131,7 +131,6 @@ func (p *Provider) resolveGateFromContext(ctx context.Context) (*model.Gate, err
 	}
 
 	return gate, nil
-
 }
 
 func (p *Provider) resolveByURI(ctx context.Context, uri string) (*model.Gate, error) {
@@ -178,7 +177,6 @@ func (p *Provider) buildGateCacheKey(uri string) string {
 }
 
 func (p *Provider) handleUpdate(ctx context.Context, gate *model.Gate, update *model.WebhookUpdate) error {
-
 	var (
 		err      error
 		updateID = update.UpdateID
@@ -208,7 +206,6 @@ func (p *Provider) handleUpdate(ctx context.Context, gate *model.Gate, update *m
 	p.idempotencyCache.MarkProcessed(gate.ID, updateID)
 
 	return nil
-
 }
 
 func (p *Provider) fetchGate(ctx context.Context, gateID string) (*model.Gate, error) {
@@ -302,6 +299,46 @@ func (p *Provider) getReplyTo(msg *coremodel.Message) (*model.ReplyParameters, e
 }
 
 var _ provider.InteractiveSender = (*Provider)(nil)
+
+// SendReaction implements [provider.ReactionSender].
+func (p *Provider) SendReaction(ctx context.Context, req *provider.ReactionRequest) error {
+	gate, err := p.fetchGate(ctx, req.GateID)
+	if err != nil {
+		return err
+	}
+
+	if gate == nil {
+		return errors.NotFound("gate not found")
+	}
+
+	chatID, err := strconv.ParseInt(req.ExternalID, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	messageID, err := strconv.ParseInt(req.ExternalMessageID, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	var reaction []tgclient.ReactionEmoji
+	if !req.Removed && req.Emoji != "" {
+		reaction = []tgclient.ReactionEmoji{
+			{
+				Type:  "emoji",
+				Emoji: req.Emoji,
+			},
+		}
+	}
+
+	return p.tgMessageClient.SetMessageReaction(ctx, gate.Token, &tgclient.ReactionRequest{
+		ChatID:    chatID,
+		MessageID: messageID,
+		Reaction:  reaction,
+	})
+}
+
+var _ provider.ReactionSender = (*Provider)(nil)
 
 // SendDocument implements [provider.Provider].
 func (p *Provider) SendDocument(ctx context.Context, req *coremodel.Message) (*coremodel.MessageResponse, error) {

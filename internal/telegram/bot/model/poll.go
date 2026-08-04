@@ -59,7 +59,6 @@ type PollMedia struct {
 	Video     *Video      `json:"video,omitempty"`
 }
 
-
 // https://core.telegram.org/bots/api#polloptionadded
 type PollOptionAdded struct {
 	PollMessage        *MaybeInaccessibleMessage `json:"poll_message,omitempty"`
@@ -76,10 +75,7 @@ type PollOptionDeleted struct {
 	OptionTextEntities []MessageEntity           `json:"option_text_entities,omitempty"`
 }
 
-
-type PollAnswer struct {
-	
-}
+type PollAnswer struct{}
 
 // TODO: fill in fields per https://core.telegram.org/bots/api as each is needed.
 type (

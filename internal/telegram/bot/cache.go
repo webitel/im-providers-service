@@ -1,9 +1,8 @@
 package bot
 
 import (
-	lru "github.com/hashicorp/golang-lru/v2"
-
 	"github.com/google/uuid"
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 type idempotencyKey struct {

@@ -7,7 +7,6 @@ type InlineKeyboardMarkup struct {
 }
 
 func (i *InlineKeyboardMarkup) OutgoingKeyboard() {
-
 }
 
 func (i *InlineKeyboardMarkup) MarshalJSON() ([]byte, error) {
@@ -25,7 +24,6 @@ type ReplyKeyboardMarkup struct {
 }
 
 func (r *ReplyKeyboardMarkup) OutgoingKeyboard() {
-
 }
 
 func (r *ReplyKeyboardMarkup) MarshalJSON() ([]byte, error) {
@@ -39,7 +37,6 @@ type ReplyKeyboardRemove struct {
 }
 
 func (r *ReplyKeyboardRemove) OutgoingKeyboard() {
-
 }
 
 func (r *ReplyKeyboardRemove) MarshalJSON() ([]byte, error) {
@@ -54,7 +51,6 @@ type ForceReply struct {
 }
 
 func (f *ForceReply) OutgoingKeyboard() {
-
 }
 
 func (f *ForceReply) MarshalJSON() ([]byte, error) {

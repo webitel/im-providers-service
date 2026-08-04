@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+
 	"github.com/webitel/im-providers-service/infra/auth"
 	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
 	"github.com/webitel/im-providers-service/internal/telegram/bot/client"
@@ -160,7 +161,6 @@ func (s *TelegramBotService) UpdateTelegramBot(ctx context.Context, req *model.U
 	}
 
 	return res, nil
-
 }
 
 func (s *TelegramBotService) DeleteTelegramBot(ctx context.Context, id uuid.UUID) (*model.Gate, error) {

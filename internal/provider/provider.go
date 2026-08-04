@@ -46,6 +46,23 @@ type TypingRequest struct {
 	TypingOn   bool // true = start typing, false = stop
 }
 
+// ReactionSender is an optional interface for providers that can set/clear an emoji
+// reaction on an existing message (e.g. Telegram setMessageReaction). Non-implementers
+// are a silent no-op.
+type ReactionSender interface {
+	SendReaction(ctx context.Context, req *ReactionRequest) error
+}
+
+// ReactionRequest is a fire-and-forget outbound reaction action.
+type ReactionRequest struct {
+	GateID            string
+	ExternalID        string // recipient's platform-specific id
+	ExternalMessageID string // platform message id to react to
+	DomainID          int32
+	Emoji             string // emoji to set; empty when removing
+	Removed           bool   // true when removing a reaction
+}
+
 // Receiver is the inbound side — it handles raw webhook bytes from the platform.
 type Receiver interface {
 	Type() string

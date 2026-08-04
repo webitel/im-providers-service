@@ -1,12 +1,8 @@
 package model
 
-
-
 type ReplyMarkup struct {
 	InlineKeyboard [][]InlineKeyboardButton `json:"inline_keyboard,omitempty"`
 }
-
-
 
 // https://core.telegram.org/bots/api#inlinekeyboardbutton
 type InlineKeyboardButton struct {

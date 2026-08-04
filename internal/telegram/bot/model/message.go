@@ -36,7 +36,7 @@ type Message struct {
 	Location              *Location            `json:"location,omitempty"`
 	PollOptionAdded       *PollOptionAdded     `json:"poll_option_added,omitempty"`
 	PollOptionDeleted     *PollOptionDeleted   `json:"poll_option_deleted,omitempty"`
-	ReplyMarkup          *ReplyMarkup         `json:"reply_markup,omitempty"`
+	ReplyMarkup           *ReplyMarkup         `json:"reply_markup,omitempty"`
 }
 
 type TextQuote struct {
