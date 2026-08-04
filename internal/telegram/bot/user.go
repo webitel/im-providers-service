@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
+	"github.com/webitel/im-providers-service/gen/go/contact/v1"
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	grpcclient "github.com/webitel/im-providers-service/infra/client/grpc"
 	coremodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -21,7 +22,6 @@ func (p *Provider) constructFrom(
 	user *model.User,
 ) (*coremodel.Peer, error) {
 
-
 	via := gate.ID.String()
 
 	externalUser := p.toExternalUser(user)
@@ -33,9 +33,9 @@ func (p *Provider) constructFrom(
 		Via:  &via,
 	}
 
-	if known, _ := p.userCache.IsKnown(ctx, externalUser); known {
-		return res, nil
-	}
+	// if known, _ := p.userCache.IsKnown(ctx, externalUser); known {
+	// return res, nil
+	// }
 
 	authCtx := withGatewayIdentity(ctx, gate)
 
@@ -49,7 +49,7 @@ func (p *Provider) constructFrom(
 		return nil, err
 	}
 
-	_ = p.userCache.MarkKnown(ctx, externalUser)
+	// _ = p.userCache.MarkKnown(ctx, externalUser)
 
 	return res, nil
 }
@@ -130,4 +130,26 @@ func (p *Provider) constructTo(
 		Via:  &via,
 	}
 	return res, nil
+}
+
+func (p *Provider) fetchContactTelegramID(ctx context.Context, gate *model.Gate, contactID uuid.UUID) (int64, error) {
+	if contactID == uuid.Nil {
+		return 0, nil
+	}
+	authCtx := withGatewayIdentity(ctx, gate)
+	resp, err := p.contactClient.SearchContact(authCtx, &contact.SearchContactRequest{
+		Ids: []string{contactID.String()},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("can't resolve contact %s: %w", contactID, err)
+	}
+	items := resp.GetContacts()
+	if len(items) == 0 || items[0].GetSubject() == "" {
+		return 0, nil
+	}
+	telegramID, err := strconv.ParseInt(items[0].GetSubject(), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid telegram id: %w", err)
+	}
+	return telegramID, nil
 }

@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 
+	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	coremodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
@@ -48,6 +48,7 @@ func New(
 	store store.TelegramBotStore,
 	coreMessageClient sharedsvc.Messenger,
 	gatewayer *imgateway.Client,
+	contacter *imcontact.Client,
 ) *Provider {
 	idempotencyCache, err := newIdempotencyCache()
 	if err != nil {
@@ -62,6 +63,7 @@ func New(
 		coreMessageClient: coreMessageClient,
 		tgMessageClient:   tgclient.NewClient(),
 		gatewayClient:     gatewayer,
+		contactClient:     contacter,
 	}
 }
 
@@ -76,6 +78,7 @@ type Provider struct {
 	tgMessageClient   *tgclient.Client
 	gatewayClient     *imgateway.Client
 	mediaManager      sharedsvc.MediaManager
+	contactClient     *imcontact.Client
 }
 
 // HandleWebhook implements [provider.Provider].
@@ -219,21 +222,19 @@ func (p *Provider) fetchGate(ctx context.Context, gateID string) (*model.Gate, e
 
 // SendInteractive implements [provider.InteractiveSender].
 func (p *Provider) SendInteractive(ctx context.Context, req *coremodel.Message) (*coremodel.MessageResponse, error) {
-	gate, err := p.fetchGate(ctx, req.GateID)
-	if err != nil {
-		return nil, err
-	}
 	if req.Interactive == nil {
 		return nil, errors.InvalidArgument("interactive is required")
 	}
-
 	var (
 		keyboard    tgclient.OutgoingKeyboarder
 		interactive = req.Interactive
 		destination int64
 	)
-
-	destination, err = strconv.ParseInt(req.To.Sub, 10, 64)
+	gate, err := p.fetchGate(ctx, req.GateID)
+	if err != nil {
+		return nil, err
+	}
+	destination, err = p.fetchContactTelegramID(ctx, gate, req.To.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -342,6 +343,9 @@ var _ provider.ReactionSender = (*Provider)(nil)
 
 // SendDocument implements [provider.Provider].
 func (p *Provider) SendDocument(ctx context.Context, req *coremodel.Message) (*coremodel.MessageResponse, error) {
+	if len(req.Documents) == 0 {
+		return nil, errors.InvalidArgument("no documents")
+	}
 	gate, err := p.fetchGate(ctx, req.GateID)
 	if err != nil {
 		return nil, err
@@ -349,11 +353,7 @@ func (p *Provider) SendDocument(ctx context.Context, req *coremodel.Message) (*c
 	if gate == nil {
 		return nil, errors.NotFound("gate not found")
 	}
-	if len(req.Documents) == 0 {
-		return nil, errors.InvalidArgument("no documents")
-	}
-
-	destination, err := strconv.ParseInt(req.To.Sub, 10, 64)
+	destination, err := p.fetchContactTelegramID(ctx, gate, req.To.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -391,6 +391,9 @@ func (p *Provider) SendDocument(ctx context.Context, req *coremodel.Message) (*c
 
 // SendImage implements [provider.Provider].
 func (p *Provider) SendImage(ctx context.Context, req *coremodel.Message) (*coremodel.MessageResponse, error) {
+	if len(req.Images) == 0 {
+		return nil, errors.InvalidArgument("no images")
+	}
 	gate, err := p.fetchGate(ctx, req.GateID)
 	if err != nil {
 		return nil, err
@@ -398,11 +401,7 @@ func (p *Provider) SendImage(ctx context.Context, req *coremodel.Message) (*core
 	if gate == nil {
 		return nil, errors.NotFound("gate not found")
 	}
-	if len(req.Images) == 0 {
-		return nil, errors.InvalidArgument("no images")
-	}
-
-	destination, err := strconv.ParseInt(req.To.Sub, 10, 64)
+	destination, err := p.fetchContactTelegramID(ctx, gate, req.To.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -441,6 +440,9 @@ func (p *Provider) SendImage(ctx context.Context, req *coremodel.Message) (*core
 
 // SendText implements [provider.Provider].
 func (p *Provider) SendText(ctx context.Context, req *coremodel.Message) (*coremodel.MessageResponse, error) {
+	if req.Text == "" {
+		return nil, errors.InvalidArgument("text is empty")
+	}
 	gate, err := p.fetchGate(ctx, req.GateID)
 	if err != nil {
 		return nil, err
@@ -448,8 +450,7 @@ func (p *Provider) SendText(ctx context.Context, req *coremodel.Message) (*corem
 	if gate == nil {
 		return nil, errors.NotFound("gate not found")
 	}
-
-	destination, err := strconv.ParseInt(req.To.Sub, 10, 64)
+	destination, err := p.fetchContactTelegramID(ctx, gate, req.To.ID)
 	if err != nil {
 		return nil, err
 	}

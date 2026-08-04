@@ -37,7 +37,7 @@ func (p *Provider) handleCallbackQuery(ctx context.Context, gate *model.Gate, qu
 		req.InReplyTo = strconv.FormatInt(query.Message.MessageID, 10)
 	}
 
-	err = p.coreMessageClient.SendInteractiveCallback(ctx, req)
+	err = p.coreMessengerFor(gate).SendInteractiveCallback(ctx, req)
 	if err != nil {
 		return err
 	}
