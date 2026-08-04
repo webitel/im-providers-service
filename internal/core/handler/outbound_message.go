@@ -104,9 +104,18 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 
 	mc := messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId())
 
+	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	if err != nil {
+		return nil, err
+	}
+
 	msg := &sharedmodel.Message{
-		GateID:            req.GetGateId(),
-		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		GateID: req.GetGateId(),
+		// TODO: remove the sub
+		//  req.GetExternalUserId() is the CONTACT ID!!! not CONTACT SUB!!!
+		// I added ID to the peer to avoid confusion and saved the SUB for the backward compatibility
+		// for the providers
+		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
 		Text:              req.GetText(),
 		DomainID:          int64(req.DomainId),
 		ReplyToExternalID: req.GetReplyToExternalId(),
