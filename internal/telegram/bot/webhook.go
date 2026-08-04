@@ -93,7 +93,7 @@ func (p *Provider) handleTextMessage(ctx context.Context, gate *model.Gate, msg 
 
 	coreMessage.ForwardOrigin = mapForwardOrigin(msg.ForwardOrigin)
 
-	_, err = p.coreMessageClient.SendText(ctx, coreMessage)
+	_, err = p.coreMessageClient.SendText(withVia(ctx, gate), coreMessage)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func (p *Provider) handleDocument(ctx context.Context, gate *model.Gate, msg *mo
 
 	coreMessage.ForwardOrigin = mapForwardOrigin(msg.ForwardOrigin)
 
-	_, err = p.coreMessageClient.SendDocument(ctx, coreMessage)
+	_, err = p.coreMessageClient.SendDocument(withVia(ctx, gate), coreMessage)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (p *Provider) handlePhoto(ctx context.Context, gate *model.Gate, msg *model
 		})
 	}
 
-	_, err = p.coreMessageClient.SendImage(ctx, coreMessage)
+	_, err = p.coreMessageClient.SendImage(withVia(ctx, gate), coreMessage)
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func (p *Provider) handleLocation(ctx context.Context, gate *model.Gate, msg *mo
 		}
 	)
 
-	_, err = p.coreMessageClient.SendLocation(ctx, coreMessage)
+	_, err = p.coreMessageClient.SendLocation(withVia(ctx, gate), coreMessage)
 	if err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func (p *Provider) handleContact(ctx context.Context, gate *model.Gate, msg *mod
 	if gate.DC < int64(math.MinInt) || gate.DC > int64(math.MaxInt) {
 		return fmt.Errorf("value of domain %d overflows int range", gate.DC)
 	}
-	_, err = p.coreMessageClient.SendContact(ctx, &coremodel.SendContactRequest{
+	_, err = p.coreMessageClient.SendContact(withVia(ctx, gate), &coremodel.SendContactRequest{
 		From:        *from,
 		To:          *to,
 		Name:        &msg.Contact.FirstName,

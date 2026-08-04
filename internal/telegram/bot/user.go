@@ -13,8 +13,14 @@ import (
 	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+// viaHeader identifies which gate/via a message forwarded to im-gateway-service
+// belongs to, so the same external contact sub can be disambiguated across
+// multiple Telegram bots. Must match the Via value registered via ensureVia.
+const viaHeader = "x-webitel-via"
 
 func (p *Provider) constructFrom(
 	ctx context.Context,
@@ -70,6 +76,12 @@ func (p *Provider) toExternalUser(user *model.User) *coremodel.ExternalUser {
 func withGatewayIdentity(ctx context.Context, gate *model.Gate) context.Context {
 	id := fmt.Sprintf("%d.%s", gate.DC, gate.Bot.Sub)
 	return grpcclient.WithIdentity(ctx, grpcclient.StringIdentity(id))
+}
+
+// withVia attaches the gate's via identifier to the outgoing gRPC metadata
+// for calls to im-gateway-service.
+func withVia(ctx context.Context, gate *model.Gate) context.Context {
+	return metadata.AppendToOutgoingContext(ctx, viaHeader, gate.ID.String())
 }
 
 func (p *Provider) ensureContact(ctx context.Context, user *coremodel.ExternalUser) (*gatewayv1.Contact, error) {
