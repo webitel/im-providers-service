@@ -1,9 +1,8 @@
 package bot
 
 import (
-	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
-
 	coremodel "github.com/webitel/im-providers-service/internal/core/model"
+	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
 )
 
 func parseInlineKeyboard(in *coremodel.KeyboardMarkup) (*model.InlineKeyboardMarkup, error) {
@@ -18,7 +17,6 @@ func parseInlineKeyboard(in *coremodel.KeyboardMarkup) (*model.InlineKeyboardMar
 	}
 
 	return &keyboard, nil
-
 }
 
 func parseInlineButton(button coremodel.KeyboardButton) model.InlineKeyboardButton {
@@ -33,7 +31,6 @@ func parseInlineButton(button coremodel.KeyboardButton) model.InlineKeyboardButt
 	}
 
 	return convertedButton
-
 }
 
 func parseReplyKeyboard(in *coremodel.KeyboardListReply, singleUse bool) (*model.ReplyKeyboardMarkup, error) {
@@ -59,5 +56,4 @@ func parseReplyButton(button coremodel.KeyboardButton) model.KeyboardButton {
 	}
 
 	return convertedButton
-
 }

@@ -1,6 +1,8 @@
 package bot
 
 import (
+	"go.uber.org/fx"
+
 	"github.com/webitel/im-providers-service/config"
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	grpcsrv "github.com/webitel/im-providers-service/infra/srv/grpc"
@@ -10,7 +12,6 @@ import (
 	tgservice "github.com/webitel/im-providers-service/internal/telegram/bot/service"
 	tgstore "github.com/webitel/im-providers-service/internal/telegram/bot/store"
 	tgpostgres "github.com/webitel/im-providers-service/internal/telegram/bot/store/postgres"
-	"go.uber.org/fx"
 )
 
 var Module = fx.Module("telegram_bot",

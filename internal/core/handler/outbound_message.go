@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/webitel/webitel-go-kit/pkg/cache"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/webitel/webitel-go-kit/pkg/cache"
 
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -395,6 +396,48 @@ func (p *OutboundMessageHandler) SendTyping(ctx context.Context, req *impb.Provi
 	}
 
 	return &impb.ProviderSendTypingResponse{}, nil
+}
+
+// SendReaction forwards an emoji reaction change to the external chat partner.
+// Best-effort: channels whose provider does not implement ReactionSender
+// are a silent no-op (success), so callers need not special-case them.
+func (p *OutboundMessageHandler) SendReaction(ctx context.Context, req *impb.ProviderSendReactionRequest) (*impb.ProviderSendReactionResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendReaction"),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+		slog.String("emoji", req.GetEmoji()),
+	)
+
+	sender, err := p.resolveSender(ctx, req.GetGateId())
+	if err != nil {
+		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+
+		return nil, err
+	}
+
+	rs, ok := sender.(provider.ReactionSender)
+	if !ok {
+		// Channel does not support reactions — no-op success.
+		log.DebugContext(ctx, "provider does not support reactions, skipping", slog.String("type", sender.Type()))
+
+		return &impb.ProviderSendReactionResponse{}, nil
+	}
+
+	if err := rs.SendReaction(ctx, &provider.ReactionRequest{
+		GateID:            req.GetGateId(),
+		ExternalID:        req.GetExternalUserId(),
+		ExternalMessageID: req.GetExternalMessageId(),
+		DomainID:          req.GetDomainId(),
+		Emoji:             req.GetEmoji(),
+		Removed:           req.GetRemoved(),
+	}); err != nil {
+		log.WarnContext(ctx, "failed to send reaction", slog.String("error", err.Error()))
+
+		return nil, toGRPCError(err)
+	}
+
+	return &impb.ProviderSendReactionResponse{}, nil
 }
 
 // messageContext is the internal message identity carried by outbound

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	coremodel "github.com/webitel/im-providers-service/internal/core/model"
 )
 
