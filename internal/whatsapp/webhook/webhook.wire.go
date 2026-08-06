@@ -17,10 +17,11 @@ func NewWebhookModule(
 	whatsAppBusinessAccountResolver WhatsAppBusinessAccountResolver,
 	client *imgateway.Client,
 	media service.MediaManager,
+	statusReporter *service.StatusReporter,
 ) (*webhookModule, error) {
 	var (
 		coreMessangerDecorated = newDecoratedCoreMessanger(coreMessanger, client)
-		webhookUsecase         = newWebhook(config.Logger, coreMessangerDecorated, whatsAppBusinessAccountResolver, encryptor, media)
+		webhookUsecase         = newWebhook(config.Logger, coreMessangerDecorated, whatsAppBusinessAccountResolver, encryptor, media, statusReporter)
 	)
 
 	webhookMaanager, err := newWebhookManager(config, webhookUsecase)

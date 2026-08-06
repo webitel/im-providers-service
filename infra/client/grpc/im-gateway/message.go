@@ -3,8 +3,11 @@ package imgateway
 import (
 	"context"
 
-	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 )
 
 // SendText delivers plain text messages to the core gateway.
@@ -39,10 +42,6 @@ func (c *Client) SendDocument(
 
 // Read implements [gateway.MessageClient].
 func (c *Client) Read(ctx context.Context, in *gatewayv1.ReadMessageRequest, opts ...grpc.CallOption) (*gatewayv1.ReadMessageResponse, error) {
-	panic("unimplemented")
-}
-
-func (c *Client) EditMessage(ctx context.Context, in *gatewayv1.EditMessageRequest, opts ...grpc.CallOption) (*gatewayv1.EditMessageResponse, error) {
 	panic("unimplemented")
 }
 
@@ -105,4 +104,36 @@ func (c *Client) SendLocation(ctx context.Context, in *gatewayv1.SendLocationReq
 // SendSystemMessage implements [gateway.MessageClient].
 func (c *Client) SendSystemMessage(ctx context.Context, in *gatewayv1.SendSystemMessageRequest, opts ...grpc.CallOption) (*gatewayv1.SendMessageResponse, error) {
 	panic("unimplemented")
+}
+
+// EditMessage implements [gateway.MessageClient].
+func (c *Client) EditMessage(ctx context.Context, in *gatewayv1.EditMessageRequest, opts ...grpc.CallOption) (*gatewayv1.EditMessageResponse, error) {
+	var resp *gatewayv1.EditMessageResponse
+	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
+		var err error
+		resp, err = api.EditMessage(ctx, in, opts...)
+		return err
+	})
+	return resp, err
+}
+
+// DeleteMessages implements [gateway.MessageClient].
+func (c *Client) DeleteMessages(ctx context.Context, in *gatewayv1.DeleteMessagesRequest, opts ...grpc.CallOption) (*gatewayv1.DeleteMessagesResponse, error) {
+	var resp *gatewayv1.DeleteMessagesResponse
+	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
+		var err error
+		resp, err = api.DeleteMessages(ctx, in, opts...)
+		return err
+	})
+	return resp, err
+}
+
+// ForwardMessages implements [gateway.MessageClient].
+func (c *Client) ForwardMessages(ctx context.Context, in *gatewayv1.ForwardMessagesRequest, opts ...grpc.CallOption) (*gatewayv1.ForwardMessagesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+// SetReaction implements [gateway.MessageClient].
+func (c *Client) SetReaction(ctx context.Context, in *gatewayv1.SetReactionRequest, opts ...grpc.CallOption) (*gatewayv1.SetReactionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }

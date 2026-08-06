@@ -7,6 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/webitel/im-providers-service/config"
+	imthread "github.com/webitel/im-providers-service/infra/client/grpc/im-thread"
 	"github.com/webitel/im-providers-service/infra/db/pg"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
 	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
@@ -30,8 +31,15 @@ var Module = fx.Module("shared",
 
 		fx.Annotate(sharedstore.NewGateStore, fx.As(new(sharedstore.GateStore))),
 		fx.Annotate(sharedstore.NewTemplateStore, fx.As(new(sharedstore.TemplateStore))),
+		fx.Annotate(sharedstore.NewMessageRefStore, fx.As(new(sharedstore.MessageRefStore))),
 
 		sharedsvc.NewTemplateRenderer,
+
+		// The reporter depends on the ThreadStatusClient interface; adapt the
+		// concrete im-thread client explicitly (fx matches types exactly).
+		func(l *slog.Logger, thread *imthread.Client, refs sharedstore.MessageRefStore) *sharedsvc.StatusReporter {
+			return sharedsvc.NewStatusReporter(l, thread, refs)
+		},
 
 		sharedsvc.NewMediaService,
 		fx.Annotate(sharedsvc.NewGateService, fx.As(new(sharedsvc.GateManager))),

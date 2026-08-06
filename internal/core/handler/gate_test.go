@@ -8,6 +8,7 @@ import (
 
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	"github.com/webitel/im-providers-service/internal/provider"
 )
 
 type mockGateService struct {
@@ -45,7 +46,7 @@ func TestListGates_Success(t *testing.T) {
 			}, true, nil
 		},
 	}
-	h := NewGateHandler(noopLogger, svc)
+	h := NewGateHandler(noopLogger, svc, nil)
 	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{
 		Page: 1,
 		Size: 10,
@@ -70,7 +71,7 @@ func TestListGates_DefaultSize(t *testing.T) {
 			return nil, false, nil
 		},
 	}
-	h := NewGateHandler(noopLogger, svc)
+	h := NewGateHandler(noopLogger, svc, nil)
 	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -86,7 +87,7 @@ func TestListGates_ServiceError(t *testing.T) {
 			return nil, false, errors.New("db error")
 		},
 	}
-	h := NewGateHandler(noopLogger, svc)
+	h := NewGateHandler(noopLogger, svc, nil)
 	_, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{Size: 10})
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -107,7 +108,7 @@ func TestListGates_NilProviderAppID(t *testing.T) {
 			}}, false, nil
 		},
 	}
-	h := NewGateHandler(noopLogger, svc)
+	h := NewGateHandler(noopLogger, svc, nil)
 	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{Size: 10})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -152,5 +153,68 @@ func TestToProtoStatus(t *testing.T) {
 		if got != c.want {
 			t.Errorf("toProtoStatus(%v) = %v, want %v", c.in, got, c.want)
 		}
+	}
+}
+
+// capableProvider is a minimal provider.Provider that also declares status
+// capabilities, mirroring the facebook/whatsapp adapters.
+type capableProvider struct {
+	typ  string
+	caps sharedmodel.ProviderCapabilities
+}
+
+func (p *capableProvider) Type() string { return p.typ }
+
+func (p *capableProvider) SendText(context.Context, *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
+	return nil, nil
+}
+
+func (p *capableProvider) SendImage(context.Context, *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
+	return nil, nil
+}
+
+func (p *capableProvider) SendDocument(context.Context, *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
+	return nil, nil
+}
+
+func (p *capableProvider) HandleWebhook(context.Context, []byte) error { return nil }
+
+func (p *capableProvider) Capabilities() sharedmodel.ProviderCapabilities { return p.caps }
+
+func TestListGates_ExposesProviderCapabilities(t *testing.T) {
+	svc := &mockGateService{
+		listFn: func(context.Context, sharedmodel.ListFilter) ([]*sharedmodel.GateSummary, bool, error) {
+			return []*sharedmodel.GateSummary{
+				stubGateSummary("g1", sharedmodel.TypeFacebook),
+				stubGateSummary("g2", sharedmodel.TypeTelegramBot),
+			}, false, nil
+		},
+	}
+
+	fb := &capableProvider{
+		typ:  "facebook",
+		caps: sharedmodel.ProviderCapabilities{SupportsDelivered: true, SupportsRead: true, SupportsFailed: true},
+	}
+
+	h := NewGateHandler(noopLogger, svc, []provider.Provider{fb})
+
+	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{Page: 1, Size: 10})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	facebook := resp.Items[0]
+	if facebook.Capabilities == nil {
+		t.Fatal("expected capabilities for the facebook gate")
+	}
+
+	if !facebook.Capabilities.Delivered || !facebook.Capabilities.Read || !facebook.Capabilities.Failed {
+		t.Errorf("capabilities mismatch: %+v", facebook.Capabilities)
+	}
+
+	// No adapter registered for telegram: capabilities stay unset so the UI
+	// draws no unreachable status marks.
+	if resp.Items[1].Capabilities != nil {
+		t.Errorf("expected no capabilities for telegram, got %+v", resp.Items[1].Capabilities)
 	}
 }

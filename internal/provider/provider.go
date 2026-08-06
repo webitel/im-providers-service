@@ -4,6 +4,7 @@ package provider
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -37,6 +38,39 @@ type ContactSender interface {
 	SendContact(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error)
 }
 
+// TypingSender is an optional interface for providers that can forward a native
+// "typing…" indicator to the external chat partner (e.g. Telegram
+// sendChatAction, Meta sender_action). Providers that do not implement it are a
+// silent no-op — the channel simply has no typing indicator.
+type TypingSender interface {
+	SendTyping(ctx context.Context, req *TypingRequest) error
+}
+
+// TypingRequest is a fire-and-forget outbound typing action.
+type TypingRequest struct {
+	GateID     string
+	ExternalID string // recipient's platform-specific id (or internal contact id)
+	DomainID   int32
+	TypingOn   bool // true = start typing, false = stop
+}
+
+// ReactionSender is an optional interface for providers that can set/clear an emoji
+// reaction on an existing message (e.g. Telegram setMessageReaction). Non-implementers
+// are a silent no-op.
+type ReactionSender interface {
+	SendReaction(ctx context.Context, req *ReactionRequest) error
+}
+
+// ReactionRequest is a fire-and-forget outbound reaction action.
+type ReactionRequest struct {
+	GateID            string
+	ExternalID        string // recipient's platform-specific id
+	ExternalMessageID string // platform message id to react to
+	DomainID          int32
+	Emoji             string // emoji to set; empty when removing
+	Removed           bool   // true when removing a reaction
+}
+
 // Receiver is the inbound side — it handles raw webhook bytes from the platform.
 type Receiver interface {
 	Type() string
@@ -49,6 +83,14 @@ type Provider interface {
 	Receiver
 }
 
+// CapabilityReporter is an optional interface for providers that declare
+// which delivery-status receipts (delivered/read/failed) their channel
+// emits. Channels without it are assumed to support none: messages stay in
+// SENT, which is an honest terminal state for such channels.
+type CapabilityReporter interface {
+	Capabilities() sharedmodel.ProviderCapabilities
+}
+
 // Verifier is an optional interface for providers that require a handshake before
 // receiving webhooks (e.g. Meta hub.challenge verification).
 type Verifier interface {
@@ -56,7 +98,8 @@ type Verifier interface {
 }
 
 // SignatureValidator is an optional interface for providers that authenticate
-// webhook requests via a cryptographic signature header (e.g. X-Hub-Signature-256).
+// webhook requests via a header-based signature or secret (e.g. X-Hub-Signature-256,
+// X-Telegram-Bot-Api-Secret-Token). Implementations read whatever header(s) they need.
 type SignatureValidator interface {
-	ValidateSignature(ctx context.Context, header string, body []byte) error
+	ValidateSignature(ctx context.Context, headers http.Header, body []byte) error
 }

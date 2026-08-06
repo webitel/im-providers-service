@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/webitel/im-providers-service/internal/core/model"
@@ -37,12 +38,22 @@ type WhatsAppBusinessAccountResolver interface {
 	Resolve(ctx context.Context, query *WhatsAppBusinessAccountResolveQuery) (*common.WhatsappBusinessAccount, error)
 }
 
+// StatusReporter is the delivery-status surface the webhook needs; satisfied
+// by core/service.StatusReporter. Narrowed to an interface so status routing
+// is testable without the thread client.
+type StatusReporter interface {
+	DeliveredByProviderIDs(ctx context.Context, gateID string, providerMessageIDs []string, at time.Time)
+	ReadByProviderID(ctx context.Context, gateID, providerMessageID string, at time.Time)
+	FailedByProviderID(ctx context.Context, gateID, providerMessageID string, at time.Time, errorCode, errorMessage string)
+}
+
 type webhook struct {
 	logger                          *slog.Logger
 	coreMessanger                   CoreMessanger
 	whatsAppBusinessAccountResolver WhatsAppBusinessAccountResolver
 	encryptor                       common.Encryptor
 	mediaUploader                   MediaUploader
+	statusReporter                  StatusReporter
 }
 
 func newWebhook(
@@ -51,6 +62,7 @@ func newWebhook(
 	whatsAppBusinessAccountResolver WhatsAppBusinessAccountResolver,
 	encryptor common.Encryptor,
 	mediaUploader MediaUploader,
+	statusReporter StatusReporter,
 ) *webhook {
 	log := logger.With("component", "whatsapp_webhook_usecase")
 	return &webhook{
@@ -59,7 +71,76 @@ func newWebhook(
 		whatsAppBusinessAccountResolver: whatsAppBusinessAccountResolver,
 		encryptor:                       encryptor,
 		mediaUploader:                   mediaUploader,
+		statusReporter:                  statusReporter,
 	}
+}
+
+// HandleStatuses maps WhatsApp message status webhooks (sent/delivered/read/
+// failed) to delivery-status reports for im-thread-service. "sent" is
+// skipped: the initial SENT state is created by im-thread on message save.
+func (webhook *webhook) HandleStatuses(ctx context.Context, statuses []Status, phoneNumberID string) error {
+	log := webhook.logger.With("operation", "handle_statuses")
+
+	if len(statuses) == 0 {
+		return nil
+	}
+
+	whatsAppBusinessAccount, err := webhook.resolveWhatsappBusinessAccount(ctx, phoneNumberID)
+	if err != nil {
+		log.Error("resolving whatsapp business account", "error", err, "phone_number_id", phoneNumberID)
+		return errors.Wrap(err, errors.WithID("whatsapp.webhook.usecase.handle_statuses"))
+	}
+
+	if whatsAppBusinessAccount == nil {
+		return nil
+	}
+
+	gateID := whatsAppBusinessAccount.ID.String()
+
+	for _, status := range statuses {
+		if status.ID == "" {
+			continue
+		}
+
+		at := statusTimestamp(status.Timestamp)
+
+		switch status.Status {
+		case "delivered":
+			webhook.statusReporter.DeliveredByProviderIDs(ctx, gateID, []string{status.ID}, at)
+		case "read":
+			webhook.statusReporter.ReadByProviderID(ctx, gateID, status.ID, at)
+		case "failed":
+			code, message := firstStatusError(status.Errors)
+			webhook.statusReporter.FailedByProviderID(ctx, gateID, status.ID, at, code, message)
+		}
+	}
+
+	return nil
+}
+
+// statusTimestamp parses the WhatsApp status timestamp (Unix seconds as a
+// string); zero/invalid values fall back to "now".
+func statusTimestamp(raw string) time.Time {
+	seconds, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || seconds <= 0 {
+		return time.Now()
+	}
+
+	return time.Unix(seconds, 0)
+}
+
+func firstStatusError(errs []Error) (code, message string) {
+	if len(errs) == 0 {
+		return "", ""
+	}
+
+	first := errs[0]
+	message = first.Message
+	if first.ErrorData.Details != "" {
+		message = first.ErrorData.Details
+	}
+
+	return strconv.Itoa(first.Code), message
 }
 
 func (webhook *webhook) resolveWhatsappBusinessAccount(ctx context.Context, phoneNumberID string) (*common.WhatsappBusinessAccount, error) {
@@ -133,6 +214,7 @@ func (webhook *webhook) HandleTextMessage(ctx context.Context, textEvent *events
 		DomainID:          int64(whatsAppBusinessAccount.DC),
 		ExternalID:        textEvent.MessageID,
 		ReplyToExternalID: textEvent.Context.RepliedToMessageID,
+		ForwardOrigin:     forwardOriginFromEvent(textEvent.BaseMessageEvent),
 	}
 
 	_, err = webhook.coreMessanger.SendText(ctx, &coreTextMessage)
@@ -222,6 +304,7 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 		DomainID:          int64(whatsAppBusinessAccount.DC),
 		ExternalID:        documentEvent.MessageID,
 		ReplyToExternalID: documentEvent.Context.RepliedToMessageID,
+		ForwardOrigin:     forwardOriginFromEvent(documentEvent.BaseMessageEvent),
 	}
 
 	if _, err = webhook.coreMessanger.SendDocument(ctx, &coreDocumentMessage); err != nil {
@@ -282,6 +365,7 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 		DomainID:          int64(whatsAppBusinessAccount.DC),
 		ExternalID:        imageEvent.MessageID,
 		ReplyToExternalID: imageEvent.Context.RepliedToMessageID,
+		ForwardOrigin:     forwardOriginFromEvent(imageEvent.BaseMessageEvent),
 	}
 
 	if _, err := webhook.coreMessanger.SendImage(ctx, &coreImageMessage); err != nil {
@@ -327,6 +411,8 @@ func (webhook *webhook) HandleLocationMessage(ctx context.Context, locationEvent
 		Address:    addressPtr,
 		ExternalID: locationEvent.MessageID,
 		DomainID:   whatsappBusinessAccount.DC,
+
+		ForwardOrigin: forwardOriginFromEvent(locationEvent.BaseMessageEvent),
 	}
 
 	if _, err = webhook.coreMessanger.SendLocation(ctx, &locationMessage); err != nil {
@@ -380,6 +466,8 @@ func (webhook *webhook) HandleContactsMessage(ctx context.Context, contacts *eve
 			Metadata:    contact.AsMetadata(),
 			ExternalID:  "",
 			DomainID:    whatsappBusinessAccount.DC,
+
+			ForwardOrigin: forwardOriginFromEvent(contacts.BaseMessageEvent),
 		}
 
 		if _, err := webhook.coreMessanger.SendContact(ctx, &contactMessage); err != nil {
@@ -389,4 +477,15 @@ func (webhook *webhook) HandleContactsMessage(ctx context.Context, contacts *eve
 	}
 
 	return nil
+}
+
+// forwardOriginFromEvent maps WhatsApp's forwarded flag onto a forward marker.
+// The Cloud API never reports who forwarded the message, so the origin carries
+// the hidden-user kind with no name.
+func forwardOriginFromEvent(base events.BaseMessageEvent) *model.ForwardOrigin {
+	if !base.IsForwarder {
+		return nil
+	}
+
+	return &model.ForwardOrigin{Kind: model.ForwardOriginExternalHiddenUser}
 }

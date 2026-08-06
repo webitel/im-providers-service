@@ -3,6 +3,7 @@ package facebook
 import (
 	"context"
 	"fmt"
+	"time"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
@@ -33,6 +34,11 @@ func (p *facebookProvider) HandleWebhook(ctx context.Context, data []byte) error
 func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.FacebookGate, msg Messaging) error {
 	psid := msg.Sender.ID
 	if psid == "" {
+		return nil
+	}
+	if msg.Delivery != nil || msg.Read != nil {
+		p.processReceipt(ctx, gate, psid, msg)
+
 		return nil
 	}
 	if msg.Message == nil && msg.Postback == nil {
@@ -78,6 +84,40 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 		p.routePostback(ctx, gate, peers, msg.Postback)
 	}
 	return nil
+}
+
+// processReceipt maps Facebook delivery/read receipts to delivery-status
+// reports for im-thread-service. Delivery receipts with explicit mids are
+// resolved directly; watermark-only receipts confirm every message sent to
+// the user before the watermark.
+func (p *facebookProvider) processReceipt(ctx context.Context, gate *fbmodel.FacebookGate, psid string, msg Messaging) {
+	if d := msg.Delivery; d != nil {
+		at := watermarkTime(d.Watermark, msg.Timestamp)
+
+		if len(d.Mids) > 0 {
+			p.status.DeliveredByProviderIDs(ctx, gate.ID, d.Mids, at)
+		} else {
+			p.status.DeliveredUpTo(ctx, gate.ID, psid, at)
+		}
+	}
+
+	if r := msg.Read; r != nil {
+		p.status.ReadUpTo(ctx, gate.ID, psid, watermarkTime(r.Watermark, msg.Timestamp))
+	}
+}
+
+// watermarkTime converts a receipt watermark (Unix ms) to time, falling back
+// to the event timestamp and finally to "now".
+func watermarkTime(watermark, eventTimestamp int64) time.Time {
+	if watermark > 0 {
+		return time.UnixMilli(watermark)
+	}
+
+	if eventTimestamp > 0 {
+		return time.UnixMilli(eventTimestamp)
+	}
+
+	return time.Now()
 }
 
 // messageID returns the Facebook message or postback mid for deduplication.

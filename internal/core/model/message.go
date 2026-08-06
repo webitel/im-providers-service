@@ -136,6 +136,8 @@ type SendTextRequest struct {
 
 	ExternalID        string `json:"external_id,omitempty"`
 	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
+
+	ForwardOrigin *ForwardOrigin `json:"forward_origin,omitempty"`
 }
 
 // SendTextResponse confirms the delivery of a text message.
@@ -168,6 +170,8 @@ type SendImageRequest struct {
 
 	ExternalID        string `json:"external_id,omitempty"`
 	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
+
+	ForwardOrigin *ForwardOrigin `json:"forward_origin,omitempty"`
 }
 
 // SendImageResponse confirms the image was sent.
@@ -207,6 +211,8 @@ type SendDocumentRequest struct {
 
 	ExternalID        string `json:"external_id,omitempty"`
 	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
+
+	ForwardOrigin *ForwardOrigin `json:"forward_origin,omitempty"`
 }
 
 // SendDocumentResponse confirms the document was sent.

@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/webitel/webitel-go-kit/pkg/cache"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/webitel/webitel-go-kit/pkg/cache"
 
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -31,6 +32,7 @@ type OutboundMessageHandler struct {
 	store     corestore.GateStore
 	typeCache cache.Cache[string, sharedmodel.GateType]
 	templates *coreservice.TemplateRenderer
+	status    *coreservice.StatusReporter
 	impb.UnimplementedProviderMessageServiceServer
 }
 
@@ -40,6 +42,7 @@ func NewOutboundMessageHandler(
 	registry *provider.Registry,
 	store corestore.GateStore,
 	templates *coreservice.TemplateRenderer,
+	status *coreservice.StatusReporter,
 ) (*OutboundMessageHandler, error) {
 	typeCache, err := cache.New[string, sharedmodel.GateType]().
 		L1(cache.RistrettoConfig{MaxCost: 1000, NumCounters: 10000}).
@@ -53,6 +56,7 @@ func NewOutboundMessageHandler(
 		store:     store,
 		typeCache: typeCache,
 		templates: templates,
+		status:    status,
 	}, nil
 }
 
@@ -100,9 +104,20 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 		return nil, err
 	}
 
+	mc := messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId())
+
+	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	if err != nil {
+		return nil, err
+	}
+
 	msg := &sharedmodel.Message{
-		GateID:            req.GetGateId(),
-		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		GateID: req.GetGateId(),
+		// TODO: remove the sub
+		//  req.GetExternalUserId() is the CONTACT ID!!! not CONTACT SUB!!!
+		// I added ID to the peer to avoid confusion and saved the SUB for the backward compatibility
+		// for the providers
+		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
 		Text:              req.GetText(),
 		DomainID:          int64(req.DomainId),
 		SenderName:        req.GetSenderName(),
@@ -110,6 +125,7 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 	}
 
 	resp, err := sender.SendText(ctx, msg)
+	p.trackOutcome(ctx, mc, resp, err)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send text message", slog.String("error", err.Error()))
 		return nil, toGRPCError(err)
@@ -157,6 +173,7 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 	}
 
 	resp, err := sender.SendImage(ctx, msg)
+	p.trackOutcome(ctx, messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId()), resp, err)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send image message", slog.String("error", err.Error()))
 		return nil, toGRPCError(err)
@@ -204,6 +221,7 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 	}
 
 	resp, err := sender.SendDocument(ctx, msg)
+	p.trackOutcome(ctx, messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId()), resp, err)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send document message", slog.String("error", err.Error()))
 		return nil, toGRPCError(err)
@@ -251,6 +269,7 @@ func (p *OutboundMessageHandler) SendInteractive(ctx context.Context, req *impb.
 	}
 
 	resp, err := is.SendInteractive(ctx, msg)
+	p.trackOutcome(ctx, messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId()), resp, err)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send interactive message", slog.String("error", err.Error()))
 		return nil, toGRPCError(err)
@@ -375,6 +394,7 @@ func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *imp
 	}
 
 	resp, err := sender.SendText(ctx, msg)
+	p.trackOutcome(ctx, messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId()), resp, err)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send system message", slog.String("error", err.Error()))
 		return nil, toGRPCError(err)
@@ -464,6 +484,161 @@ func (p *OutboundMessageHandler) SendContact(ctx context.Context, req *impb.Prov
 		return nil, toGRPCError(err)
 	}
 	return &impb.ProviderSendMessageResponse{ExternalId: resp.ID, CreatedAt: time.Now().Unix()}, nil
+}
+
+// SendTyping forwards an ephemeral typing indicator to the external chat
+// partner. Best-effort: channels whose provider does not implement TypingSender
+// are a silent no-op (success), so callers need not special-case them.
+func (p *OutboundMessageHandler) SendTyping(ctx context.Context, req *impb.ProviderSendTypingRequest) (*impb.ProviderSendTypingResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendTyping"),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+		slog.Bool("typing_on", req.GetTypingOn()),
+	)
+
+	sender, err := p.resolveSender(ctx, req.GetGateId())
+	if err != nil {
+		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	ts, ok := sender.(provider.TypingSender)
+	if !ok {
+		// Channel does not support typing — no-op success.
+		log.DebugContext(ctx, "provider does not support typing, skipping", slog.String("type", sender.Type()))
+		return &impb.ProviderSendTypingResponse{}, nil
+	}
+
+	if err := ts.SendTyping(ctx, &provider.TypingRequest{
+		GateID:     req.GetGateId(),
+		ExternalID: req.GetExternalUserId(),
+		DomainID:   req.GetDomainId(),
+		TypingOn:   req.GetTypingOn(),
+	}); err != nil {
+		log.WarnContext(ctx, "failed to send typing", slog.String("error", err.Error()))
+		return nil, toGRPCError(err)
+	}
+
+	return &impb.ProviderSendTypingResponse{}, nil
+}
+
+// SendReaction forwards an emoji reaction change to the external chat partner.
+// Best-effort: channels whose provider does not implement ReactionSender
+// are a silent no-op (success), so callers need not special-case them.
+func (p *OutboundMessageHandler) SendReaction(ctx context.Context, req *impb.ProviderSendReactionRequest) (*impb.ProviderSendReactionResponse, error) {
+	log := p.logger.With(
+		slog.String("method", "SendReaction"),
+		slog.String("gate_id", req.GetGateId()),
+		slog.String("external_user_id", req.GetExternalUserId()),
+		slog.String("emoji", req.GetEmoji()),
+	)
+
+	sender, err := p.resolveSender(ctx, req.GetGateId())
+	if err != nil {
+		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+
+		return nil, err
+	}
+
+	rs, ok := sender.(provider.ReactionSender)
+	if !ok {
+		// Channel does not support reactions — no-op success.
+		log.DebugContext(ctx, "provider does not support reactions, skipping", slog.String("type", sender.Type()))
+
+		return &impb.ProviderSendReactionResponse{}, nil
+	}
+
+	if err := rs.SendReaction(ctx, &provider.ReactionRequest{
+		GateID:            req.GetGateId(),
+		ExternalID:        req.GetExternalUserId(),
+		ExternalMessageID: req.GetExternalMessageId(),
+		DomainID:          req.GetDomainId(),
+		Emoji:             req.GetEmoji(),
+		Removed:           req.GetRemoved(),
+	}); err != nil {
+		log.WarnContext(ctx, "failed to send reaction", slog.String("error", err.Error()))
+
+		return nil, toGRPCError(err)
+	}
+
+	return &impb.ProviderSendReactionResponse{}, nil
+}
+
+// messageContext is the internal message identity carried by outbound
+// requests for delivery status tracking.
+type messageContext struct {
+	gateID         string
+	externalUserID string
+	messageID      string
+	threadID       string
+	domainID       int32
+}
+
+func messageContextOf(gateID, externalUserID, messageID, threadID string, domainID int32) messageContext {
+	return messageContext{
+		gateID:         gateID,
+		externalUserID: externalUserID,
+		messageID:      messageID,
+		threadID:       threadID,
+		domainID:       domainID,
+	}
+}
+
+// trackOutcome persists the provider message ref on success and reports a
+// FAILED status on synchronous send errors. Requests without message context
+// (older callers) are not tracked.
+func (p *OutboundMessageHandler) trackOutcome(ctx context.Context, mc messageContext, resp *sharedmodel.MessageResponse, sendErr error) {
+	if mc.messageID == "" || mc.threadID == "" {
+		return
+	}
+
+	if sendErr != nil {
+		p.status.SendFailure(ctx, coreservice.SendFailureReport{
+			MessageID:    mc.messageID,
+			ThreadID:     mc.threadID,
+			MemberID:     mc.externalUserID,
+			DomainID:     mc.domainID,
+			ErrorCode:    status.Code(sendErr).String(),
+			ErrorMessage: sendErr.Error(),
+		})
+
+		return
+	}
+
+	if resp == nil || resp.ID == "" {
+		return
+	}
+
+	messageID, err := uuid.Parse(mc.messageID)
+	if err != nil {
+		return
+	}
+
+	threadID, err := uuid.Parse(mc.threadID)
+	if err != nil {
+		return
+	}
+
+	memberID, err := uuid.Parse(mc.externalUserID)
+	if err != nil {
+		return
+	}
+
+	providerUserID := ""
+	if v, ok := resp.MD["recipient_id"].(string); ok {
+		providerUserID = v
+	}
+
+	p.status.SaveRef(ctx, &sharedmodel.MessageRef{
+		GateID:            mc.gateID,
+		ProviderMessageID: resp.ID,
+		ProviderUserID:    providerUserID,
+		MessageID:         messageID,
+		ThreadID:          threadID,
+		MemberID:          memberID,
+		DomainID:          int64(mc.domainID),
+	})
 }
 
 func toGRPCError(err error) error {

@@ -7,16 +7,48 @@ import (
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
+	"github.com/webitel/im-providers-service/internal/provider"
 )
 
 type GateHandler struct {
 	logger *slog.Logger
 	srv    sharedsvc.GateManager
+	// capabilities maps a channel type (provider.Type()) to the
+	// delivery-status receipts its adapter declares.
+	capabilities map[string]*impb.ProviderStatusCapabilities
 	impb.UnimplementedGateServiceServer
 }
 
-func NewGateHandler(logger *slog.Logger, srv sharedsvc.GateManager) *GateHandler {
-	return &GateHandler{logger: logger, srv: srv}
+func NewGateHandler(logger *slog.Logger, srv sharedsvc.GateManager, providers []provider.Provider) *GateHandler {
+	return &GateHandler{
+		logger:       logger,
+		srv:          srv,
+		capabilities: collectCapabilities(providers),
+	}
+}
+
+// collectCapabilities snapshots the status capabilities declared by the
+// registered provider adapters. Adapters without a CapabilityReporter are
+// honest "no receipts" channels and stay absent from the map.
+func collectCapabilities(providers []provider.Provider) map[string]*impb.ProviderStatusCapabilities {
+	caps := make(map[string]*impb.ProviderStatusCapabilities, len(providers))
+
+	for _, p := range providers {
+		reporter, ok := p.(provider.CapabilityReporter)
+		if !ok {
+			continue
+		}
+
+		c := reporter.Capabilities()
+		caps[p.Type()] = &impb.ProviderStatusCapabilities{
+			Delivered: c.SupportsDelivered,
+			Read:      c.SupportsRead,
+			Failed:    c.SupportsFailed,
+			Typing:    c.SupportsTyping,
+		}
+	}
+
+	return caps
 }
 
 // ListGates maps domain results to the unified Proto response.
@@ -53,6 +85,7 @@ func (g *GateHandler) ListGates(ctx context.Context, req *impb.ProviderListGates
 			ProviderAppId: appID,
 			CreatedAt:     v.CreatedAt.UnixMilli(),
 			UpdatedAt:     v.UpdatedAt.UnixMilli(),
+			Capabilities:  g.capabilities[v.Type.String()],
 		}
 	}
 

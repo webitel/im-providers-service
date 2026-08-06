@@ -11,6 +11,7 @@ import (
 	imauth "github.com/webitel/im-providers-service/infra/client/grpc/im-auth"
 	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
+	imthread "github.com/webitel/im-providers-service/infra/client/grpc/im-thread"
 	"github.com/webitel/im-providers-service/infra/client/grpc/storage"
 	grpcsrv "github.com/webitel/im-providers-service/infra/srv/grpc"
 	httpsrv "github.com/webitel/im-providers-service/infra/srv/http"
@@ -20,6 +21,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/core/webhook"
 	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
+	telegrambot "github.com/webitel/im-providers-service/internal/telegram/bot"
 	"github.com/webitel/im-providers-service/internal/viber"
 	"github.com/webitel/im-providers-service/internal/whatsapp"
 	"github.com/webitel/im-providers-service/pkg/crypto"
@@ -41,6 +43,7 @@ func NewApp(cfg *config.Config) *fx.App {
 		tls.Module,
 		crypto.Module,
 		imgateway.Module,
+		imthread.Module,
 		storage.Module,
 		imauth.Module,
 		imcontact.Module,
@@ -48,6 +51,7 @@ func NewApp(cfg *config.Config) *fx.App {
 		facebook.Module,
 		whatsapp.Module,
 		viber.Module,
+		telegrambot.Module,
 		webhook.Module,
 		grpcsrv.Module,
 		httpsrv.Module,

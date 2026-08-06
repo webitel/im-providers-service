@@ -54,6 +54,7 @@ func (m *messageService) SendText(ctx context.Context, in *sharedmodel.SendTextR
 		SendId:            in.ExternalID,
 		ExternalId:        in.ExternalID,
 		ReplyToExternalId: in.ReplyToExternalID,
+		ForwardOrigin:     transformForwardOriginIntoPB(in.ForwardOrigin),
 	})
 	if err != nil {
 		m.logger.Error("failed to send text message", "error", err)
@@ -75,6 +76,18 @@ func transformDomainPeerIntoPB(peer sharedmodel.Peer) *gatewayv1.Peer {
 	}
 }
 
+func transformForwardOriginIntoPB(origin *sharedmodel.ForwardOrigin) *gatewayv1.ForwardOriginInput {
+	if origin == nil {
+		return nil
+	}
+
+	return &gatewayv1.ForwardOriginInput{
+		Kind:           gatewayv1.ForwardOriginKind(origin.Kind),
+		SenderName:     origin.SenderName,
+		OriginalSentAt: origin.OriginalSentAt,
+	}
+}
+
 func (m *messageService) SendLocation(ctx context.Context, in *sharedmodel.SendLocationRequest) (*sharedmodel.SendResponse, error) {
 	resp, err := m.gatewayer.SendLocation(ctx, &gatewayv1.SendLocationRequest{
 		To:        transformDomainPeerIntoPB(in.To),
@@ -83,6 +96,8 @@ func (m *messageService) SendLocation(ctx context.Context, in *sharedmodel.SendL
 		Name:      in.Name,
 		Address:   in.Address,
 		SendId:    in.ExternalID,
+
+		ForwardOrigin: transformForwardOriginIntoPB(in.ForwardOrigin),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, errors.WithID("service.message.send_location"))
@@ -107,6 +122,8 @@ func (m *messageService) SendContact(ctx context.Context, in *sharedmodel.SendCo
 		PhoneNumber: in.PhoneNumber,
 		Metadata:    contactMatadata,
 		SendId:      "",
+
+		ForwardOrigin: transformForwardOriginIntoPB(in.ForwardOrigin),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, errors.WithID("service.message.send_contact"))
@@ -134,6 +151,7 @@ func (m *messageService) SendImage(ctx context.Context, in *sharedmodel.SendImag
 		SendId:            &in.ExternalID,
 		ExternalId:        in.ExternalID,
 		ReplyToExternalId: in.ReplyToExternalID,
+		ForwardOrigin:     transformForwardOriginIntoPB(in.ForwardOrigin),
 	})
 	if err != nil {
 		m.logger.Error("failed to send image message", "error", err)
@@ -151,6 +169,7 @@ func (m *messageService) SendDocument(ctx context.Context, in *sharedmodel.SendD
 		SendId:            &in.ExternalID,
 		ExternalId:        in.ExternalID,
 		ReplyToExternalId: in.ReplyToExternalID,
+		ForwardOrigin:     transformForwardOriginIntoPB(in.ForwardOrigin),
 	})
 	if err != nil {
 		m.logger.Error("failed to send document message", "error", err)
