@@ -5,11 +5,31 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"syscall"
 	"time"
 )
 
 const maxLinkRedirects = 3
+
+// validateFetchURL gates every URL taken from a webhook payload before it
+// reaches the network. Viber always serves media over https from its own CDN,
+// so any other scheme is either a misparse or a forged payload trying to reach
+// a cluster-internal service.
+// https://developers.viber.com/docs/api/rest-bot-api/#message-types
+func validateFetchURL(link string) error {
+	parsed, err := url.Parse(link)
+	if err != nil {
+		return fmt.Errorf("viber: unparsable media url: %w", err)
+	}
+
+	if !strings.EqualFold(parsed.Scheme, "https") || parsed.Host == "" {
+		return fmt.Errorf("viber: refusing to fetch %q, https url required", parsed.Redacted())
+	}
+
+	return nil
+}
 
 func newGuardedClient(timeout time.Duration) *http.Client {
 	dialer := &net.Dialer{
@@ -60,6 +80,11 @@ func isPublicIP(ip net.IP) bool {
 }
 
 func (p *viberProvider) probeLink(ctx context.Context, link string) (contentType string, size int64, ok bool) {
+	if err := validateFetchURL(link); err != nil {
+		p.logger.DebugContext(ctx, "viber link probe skipped", "err", err)
+		return "", 0, false
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, link, nil)
 	if err != nil {
 		return "", 0, false

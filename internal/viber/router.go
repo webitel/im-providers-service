@@ -108,7 +108,7 @@ func (p *viberProvider) handleURL(ctx context.Context, gate *vibmodel.ViberGate,
 		fetch.Media = link
 		fetch.FileName = fileNameFromURL(link)
 
-		media, err := p.syncMedia(ctx, p.linkClient, gate.DomainID, &fetch)
+		media, err := p.syncMedia(ctx, gate.DomainID, &fetch)
 		if err == nil {
 			p.forwardMedia(ctx, gate, peers, media, externalID)
 			return
@@ -125,10 +125,6 @@ func (p *viberProvider) handleURL(ctx context.Context, gate *vibmodel.ViberGate,
 }
 
 func (p *viberProvider) isFetchableMedia(ctx context.Context, link string) bool {
-	if !strings.HasPrefix(strings.ToLower(link), "https://") {
-		return false
-	}
-
 	contentType, size, ok := p.probeLink(ctx, link)
 	if !ok || size > maxInboundBytes {
 		return false

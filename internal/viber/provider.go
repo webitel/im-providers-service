@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
 	"github.com/webitel/webitel-go-kit/pkg/cache"
 
 	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"

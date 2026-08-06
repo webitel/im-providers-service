@@ -28,7 +28,7 @@ func (p *viberProvider) handleMedia(ctx context.Context, gate *vibmodel.ViberGat
 		return
 	}
 
-	media, err := p.syncMedia(ctx, p.httpClient, gate.DomainID, msg)
+	media, err := p.syncMedia(ctx, gate.DomainID, msg)
 	if err != nil {
 		p.logger.Error("failed to sync viber media", "url", msg.Media, "err", err)
 		return
@@ -77,13 +77,22 @@ func (p *viberProvider) forwardMedia(ctx context.Context, gate *vibmodel.ViberGa
 	}
 }
 
-func (p *viberProvider) syncMedia(ctx context.Context, client *http.Client, domainID int64, msg *inboundMessage) (*syncedMedia, error) {
+// syncMedia downloads a webhook-supplied URL and stores it. The URL is
+// untrusted, so it always goes through validateFetchURL and linkClient, which
+// refuses to dial non-public addresses and only follows https redirects — a
+// plain client here would turn any inbound message into a request-forgery
+// primitive with the response body readable from the chat.
+func (p *viberProvider) syncMedia(ctx context.Context, domainID int64, msg *inboundMessage) (*syncedMedia, error) {
+	if err := validateFetchURL(msg.Media); err != nil {
+		return nil, err
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, msg.Media, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := p.linkClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
