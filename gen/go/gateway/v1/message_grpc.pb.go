@@ -27,9 +27,11 @@ const (
 	Message_SendLocation_FullMethodName            = "/webitel.im.api.gateway.v1.Message/SendLocation"
 	Message_SendContact_FullMethodName             = "/webitel.im.api.gateway.v1.Message/SendContact"
 	Message_SendSystemMessage_FullMethodName       = "/webitel.im.api.gateway.v1.Message/SendSystemMessage"
+	Message_UpdateMessageDelivery_FullMethodName   = "/webitel.im.api.gateway.v1.Message/UpdateMessageDelivery"
 	Message_EditMessage_FullMethodName             = "/webitel.im.api.gateway.v1.Message/EditMessage"
 	Message_DeleteMessages_FullMethodName          = "/webitel.im.api.gateway.v1.Message/DeleteMessages"
 	Message_ForwardMessages_FullMethodName         = "/webitel.im.api.gateway.v1.Message/ForwardMessages"
+	Message_SetReaction_FullMethodName             = "/webitel.im.api.gateway.v1.Message/SetReaction"
 )
 
 // MessageClient is the client API for Message service.
@@ -58,6 +60,9 @@ type MessageClient interface {
 	SendContact(ctx context.Context, in *SendContactRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
 	// Sends a system message (e.g., user joined, user left).
 	SendSystemMessage(ctx context.Context, in *SendSystemMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
+	// Records what an external channel reported about a message we sent through it
+	// (delivered / seen / failed). Called by provider services, not by end clients.
+	UpdateMessageDelivery(ctx context.Context, in *UpdateMessageDeliveryRequest, opts ...grpc.CallOption) (*UpdateMessageDeliveryResponse, error)
 	// Edits an existing message by ID. Only the sender or authorized users can edit messages.
 	EditMessage(ctx context.Context, in *EditMessageRequest, opts ...grpc.CallOption) (*EditMessageResponse, error)
 	// Deletes one or more messages authored by the caller in an active chat.
@@ -67,6 +72,8 @@ type MessageClient interface {
 	// stamping each copy with its original author. The source chat is untouched.
 	// Best-effort: the response reports which sources were skipped.
 	ForwardMessages(ctx context.Context, in *ForwardMessagesRequest, opts ...grpc.CallOption) (*ForwardMessagesResponse, error)
+	// Sets or clears the caller's emoji reaction on a single message.
+	SetReaction(ctx context.Context, in *SetReactionRequest, opts ...grpc.CallOption) (*SetReactionResponse, error)
 }
 
 type messageClient struct {
@@ -157,6 +164,16 @@ func (c *messageClient) SendSystemMessage(ctx context.Context, in *SendSystemMes
 	return out, nil
 }
 
+func (c *messageClient) UpdateMessageDelivery(ctx context.Context, in *UpdateMessageDeliveryRequest, opts ...grpc.CallOption) (*UpdateMessageDeliveryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateMessageDeliveryResponse)
+	err := c.cc.Invoke(ctx, Message_UpdateMessageDelivery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *messageClient) EditMessage(ctx context.Context, in *EditMessageRequest, opts ...grpc.CallOption) (*EditMessageResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(EditMessageResponse)
@@ -181,6 +198,16 @@ func (c *messageClient) ForwardMessages(ctx context.Context, in *ForwardMessages
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ForwardMessagesResponse)
 	err := c.cc.Invoke(ctx, Message_ForwardMessages_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messageClient) SetReaction(ctx context.Context, in *SetReactionRequest, opts ...grpc.CallOption) (*SetReactionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetReactionResponse)
+	err := c.cc.Invoke(ctx, Message_SetReaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -213,6 +240,9 @@ type MessageServer interface {
 	SendContact(context.Context, *SendContactRequest) (*SendMessageResponse, error)
 	// Sends a system message (e.g., user joined, user left).
 	SendSystemMessage(context.Context, *SendSystemMessageRequest) (*SendMessageResponse, error)
+	// Records what an external channel reported about a message we sent through it
+	// (delivered / seen / failed). Called by provider services, not by end clients.
+	UpdateMessageDelivery(context.Context, *UpdateMessageDeliveryRequest) (*UpdateMessageDeliveryResponse, error)
 	// Edits an existing message by ID. Only the sender or authorized users can edit messages.
 	EditMessage(context.Context, *EditMessageRequest) (*EditMessageResponse, error)
 	// Deletes one or more messages authored by the caller in an active chat.
@@ -222,6 +252,8 @@ type MessageServer interface {
 	// stamping each copy with its original author. The source chat is untouched.
 	// Best-effort: the response reports which sources were skipped.
 	ForwardMessages(context.Context, *ForwardMessagesRequest) (*ForwardMessagesResponse, error)
+	// Sets or clears the caller's emoji reaction on a single message.
+	SetReaction(context.Context, *SetReactionRequest) (*SetReactionResponse, error)
 	mustEmbedUnimplementedMessageServer()
 }
 
@@ -256,6 +288,9 @@ func (UnimplementedMessageServer) SendContact(context.Context, *SendContactReque
 func (UnimplementedMessageServer) SendSystemMessage(context.Context, *SendSystemMessageRequest) (*SendMessageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendSystemMessage not implemented")
 }
+func (UnimplementedMessageServer) UpdateMessageDelivery(context.Context, *UpdateMessageDeliveryRequest) (*UpdateMessageDeliveryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateMessageDelivery not implemented")
+}
 func (UnimplementedMessageServer) EditMessage(context.Context, *EditMessageRequest) (*EditMessageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EditMessage not implemented")
 }
@@ -264,6 +299,9 @@ func (UnimplementedMessageServer) DeleteMessages(context.Context, *DeleteMessage
 }
 func (UnimplementedMessageServer) ForwardMessages(context.Context, *ForwardMessagesRequest) (*ForwardMessagesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ForwardMessages not implemented")
+}
+func (UnimplementedMessageServer) SetReaction(context.Context, *SetReactionRequest) (*SetReactionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetReaction not implemented")
 }
 func (UnimplementedMessageServer) mustEmbedUnimplementedMessageServer() {}
 func (UnimplementedMessageServer) testEmbeddedByValue()                 {}
@@ -430,6 +468,24 @@ func _Message_SendSystemMessage_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Message_UpdateMessageDelivery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMessageDeliveryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServer).UpdateMessageDelivery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Message_UpdateMessageDelivery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServer).UpdateMessageDelivery(ctx, req.(*UpdateMessageDeliveryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Message_EditMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EditMessageRequest)
 	if err := dec(in); err != nil {
@@ -484,6 +540,24 @@ func _Message_ForwardMessages_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Message_SetReaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetReactionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServer).SetReaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Message_SetReaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServer).SetReaction(ctx, req.(*SetReactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Message_ServiceDesc is the grpc.ServiceDesc for Message service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -524,6 +598,10 @@ var Message_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Message_SendSystemMessage_Handler,
 		},
 		{
+			MethodName: "UpdateMessageDelivery",
+			Handler:    _Message_UpdateMessageDelivery_Handler,
+		},
+		{
 			MethodName: "EditMessage",
 			Handler:    _Message_EditMessage_Handler,
 		},
@@ -534,6 +612,10 @@ var Message_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ForwardMessages",
 			Handler:    _Message_ForwardMessages_Handler,
+		},
+		{
+			MethodName: "SetReaction",
+			Handler:    _Message_SetReaction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

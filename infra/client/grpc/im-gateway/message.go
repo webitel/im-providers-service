@@ -79,6 +79,16 @@ func (c *Client) SendInteractiveCallback(ctx context.Context, in *gatewayv1.Inte
 	return resp, err
 }
 
+func (c *Client) UpdateMessageDelivery(ctx context.Context, in *gatewayv1.UpdateMessageDeliveryRequest, opts ...grpc.CallOption) (*gatewayv1.UpdateMessageDeliveryResponse, error) {
+	var resp *gatewayv1.UpdateMessageDeliveryResponse
+	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
+		var err error
+		resp, err = api.UpdateMessageDelivery(ctx, in, opts...)
+		return err
+	})
+	return resp, err
+}
+
 // SendLocation implements [gateway.MessageClient].
 func (c *Client) SendLocation(ctx context.Context, in *gatewayv1.SendLocationRequest, opts ...grpc.CallOption) (*gatewayv1.SendMessageResponse, error) {
 	var resp *gatewayv1.SendMessageResponse
@@ -120,5 +130,10 @@ func (c *Client) DeleteMessages(ctx context.Context, in *gatewayv1.DeleteMessage
 
 // ForwardMessages implements [gateway.MessageClient].
 func (c *Client) ForwardMessages(ctx context.Context, in *gatewayv1.ForwardMessagesRequest, opts ...grpc.CallOption) (*gatewayv1.ForwardMessagesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+// SetReaction implements [gateway.MessageClient].
+func (c *Client) SetReaction(ctx context.Context, in *gatewayv1.SetReactionRequest, opts ...grpc.CallOption) (*gatewayv1.SetReactionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }

@@ -110,6 +110,8 @@ func toProtoType(t sharedmodel.GateType) impb.ProviderType {
 		return impb.ProviderType_PROVIDER_TYPE_TELEGRAM_BOT
 	case sharedmodel.TypeTelegramApp:
 		return impb.ProviderType_PROVIDER_TYPE_TELEGRAM_APP
+	case sharedmodel.TypeViber:
+		return impb.ProviderType_PROVIDER_TYPE_VIBER
 	default:
 		return impb.ProviderType_PROVIDER_TYPE_UNSPECIFIED
 	}

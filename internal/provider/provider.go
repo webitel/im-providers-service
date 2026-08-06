@@ -30,6 +30,14 @@ type InteractiveSender interface {
 	SendInteractive(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error)
 }
 
+type LocationSender interface {
+	SendLocation(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error)
+}
+
+type ContactSender interface {
+	SendContact(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error)
+}
+
 // TypingSender is an optional interface for providers that can forward a native
 // "typing…" indicator to the external chat partner (e.g. Telegram
 // sendChatAction, Meta sender_action). Providers that do not implement it are a

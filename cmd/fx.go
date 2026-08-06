@@ -22,6 +22,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
 	telegrambot "github.com/webitel/im-providers-service/internal/telegram/bot"
+	"github.com/webitel/im-providers-service/internal/viber"
 	"github.com/webitel/im-providers-service/internal/whatsapp"
 	"github.com/webitel/im-providers-service/pkg/crypto"
 	"go.uber.org/fx"
@@ -49,6 +50,7 @@ func NewApp(cfg *config.Config) *fx.App {
 		core.Module,
 		facebook.Module,
 		whatsapp.Module,
+		viber.Module,
 		telegrambot.Module,
 		webhook.Module,
 		grpcsrv.Module,

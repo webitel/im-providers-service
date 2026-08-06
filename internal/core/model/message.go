@@ -6,11 +6,30 @@ import (
 
 // Interactive represents a rich message with interactive UI elements.
 type Interactive struct {
-	Body      string
-	SingleUse bool
-	Markup    *KeyboardMarkup
-	ListReply *KeyboardListReply
+	Body            string
+	SingleUse       bool
+	Markup          *KeyboardMarkup
+	ListReply       *KeyboardListReply
+	Placement       MenuPlacement
+	InputFieldState InputFieldState
 }
+
+type MenuPlacement int
+
+const (
+	MenuPlacementUnspecified MenuPlacement = iota
+	MenuPlacementInline
+	MenuPlacementPersistent
+)
+
+type InputFieldState int
+
+const (
+	InputFieldStateUnspecified InputFieldState = iota
+	InputFieldStateRegular
+	InputFieldStateMinimized
+	InputFieldStateHidden
+)
 
 // KeyboardMarkup is a grid of button rows.
 type KeyboardMarkup struct {
@@ -74,21 +93,38 @@ type MessageResponse struct {
 
 // Message is the core domain entity representing a message in the system.
 type Message struct {
-	ID          uuid.UUID      `json:"id"`
-	GateID      string         `json:"gate_id"`
-	ThreadID    uuid.UUID      `json:"thread_id"`
-	DomainID    int64          `json:"domain_id"`
-	From        Peer           `json:"from"`
-	To          Peer           `json:"to"`
-	Text        string         `json:"text"`
-	CreatedAt   int64          `json:"created_at"`
-	EditedAt    int64          `json:"updated_at,omitempty"`
-	Metadata    map[string]any `json:"metadata,omitempty"`
-	Documents   []*Document    `json:"documents,omitempty"`
-	Images      []*Image       `json:"images,omitempty"`
-	Interactive *Interactive   `json:"interactive,omitempty"`
+	ID          uuid.UUID         `json:"id"`
+	GateID      string            `json:"gate_id"`
+	ThreadID    uuid.UUID         `json:"thread_id"`
+	DomainID    int64             `json:"domain_id"`
+	From        Peer              `json:"from"`
+	To          Peer              `json:"to"`
+	Text        string            `json:"text"`
+	CreatedAt   int64             `json:"created_at"`
+	EditedAt    int64             `json:"updated_at,omitempty"`
+	Metadata    map[string]any    `json:"metadata,omitempty"`
+	Documents   []*Document       `json:"documents,omitempty"`
+	Images      []*Image          `json:"images,omitempty"`
+	Interactive *Interactive      `json:"interactive,omitempty"`
+	Location    *OutboundLocation `json:"location,omitempty"`
+	Contact     *OutboundContact  `json:"contact,omitempty"`
 
 	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
+
+	SenderName string `json:"sender_name,omitempty"`
+}
+
+type OutboundLocation struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Name      string  `json:"name,omitempty"`
+	Address   string  `json:"address,omitempty"`
+}
+
+type OutboundContact struct {
+	Name        string `json:"name"`
+	PhoneNumber string `json:"phone_number"`
+	Email       string `json:"email,omitempty"`
 }
 
 // SendTextRequest defines the payload for sending a plain text message.

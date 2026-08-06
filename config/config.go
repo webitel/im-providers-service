@@ -8,9 +8,11 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/pflag"
-	"github.com/webitel/im-providers-service/infra/db/postgresx"
+
 	"github.com/webitel/webitel-go-kit/appconfig"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
+
+	"github.com/webitel/im-providers-service/infra/db/postgresx"
 )
 
 type Config struct {
@@ -164,7 +166,7 @@ func registerServiceFlags() {
 	pflag.String("service.addr", "localhost:8080", "gRPC listen address")
 	pflag.String("service.http_addr", ":8085", "HTTP listen address")
 	pflag.String("service.webhook_path", "/wh", "Base path for incoming webhooks")
-	pflag.String("service.public_url", "", "Externally reachable HTTPS origin, used to register provider webhooks (e.g. Telegram)")
+	pflag.String("service.public_url", "", "Externally reachable HTTPS base URL used to register provider webhooks (e.g. Viber, Telegram)")
 	pflag.String("service.secret_key", "", "32-byte AES key for token encryption (required)")
 
 	appconfig.RegisterGRPCConnFlags(pflag.CommandLine, "service.conn", false)
