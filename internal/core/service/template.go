@@ -20,9 +20,10 @@ import (
 type SystemEventType = string
 
 const (
-	EventMemberAdded   SystemEventType = "member_added"
-	EventMemberRemoved SystemEventType = "member_removed"
-	EventTransferred   SystemEventType = "transferred"
+	EventMemberAdded         SystemEventType = "member_added"
+	EventMemberRemoved       SystemEventType = "member_removed"
+	EventTransferred         SystemEventType = "transferred"
+	EventConversationStarted SystemEventType = "conversation_started"
 )
 
 const contactIDSuffix = "_contact_id"

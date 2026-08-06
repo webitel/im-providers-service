@@ -13,9 +13,6 @@ import (
 	vibmodel "github.com/webitel/im-providers-service/internal/viber/model"
 )
 
-// syncContact resolves the internal contact for a Viber user, creating it if
-// necessary. The result is cached so repeated deliveries from the same user id
-// skip the gateway round-trip.
 func (p *viberProvider) syncContact(ctx context.Context, gate *vibmodel.ViberGate, s *inboundSender) (*gatewayv1.Contact, error) {
 	user := toExternalUser(s)
 
@@ -36,7 +33,6 @@ func (p *viberProvider) syncContact(ctx context.Context, gate *vibmodel.ViberGat
 	return contact, nil
 }
 
-// ensureContact creates the internal contact or returns a stub when it already exists.
 func (p *viberProvider) ensureContact(ctx context.Context, user *sharedmodel.ExternalUser) (*gatewayv1.Contact, error) {
 	name := user.FirstName
 	if name == "" {
@@ -58,8 +54,6 @@ func (p *viberProvider) ensureContact(ctx context.Context, user *sharedmodel.Ext
 	return contact, nil
 }
 
-// ensureVia links the gate to the internal contact as a "via" channel.
-// Errors are non-fatal — AlreadyExists is silently ignored.
 func (p *viberProvider) ensureVia(ctx context.Context, contactSub, contactIss *string, gateID string) {
 	_, err := p.gatewayer.CreateVia(ctx, &gatewayv1.ViasServiceCreateRequest{
 		Via: gateID,
@@ -71,8 +65,6 @@ func (p *viberProvider) ensureVia(ctx context.Context, contactSub, contactIss *s
 	}
 }
 
-// toExternalUser maps a Viber sender to the domain cache key. Viber provides a single
-// display name, stored as the first name.
 func toExternalUser(s *inboundSender) *sharedmodel.ExternalUser {
 	return &sharedmodel.ExternalUser{
 		ID:        s.ID,
@@ -80,14 +72,11 @@ func toExternalUser(s *inboundSender) *sharedmodel.ExternalUser {
 	}
 }
 
-// withGatewayIdentity attaches the domain-scoped caller identity required by the
-// im-gateway service to authenticate inbound gRPC calls.
 func withGatewayIdentity(ctx context.Context, gate *vibmodel.ViberGate) context.Context {
 	id := fmt.Sprintf("%d.%s", gate.DomainID, gate.Peer.Sub)
 	return grpcclient.WithIdentity(ctx, grpcclient.StringIdentity(id))
 }
 
-// isAlreadyExists reports whether a gRPC error carries the AlreadyExists code.
 func isAlreadyExists(err error) bool {
 	st, ok := status.FromError(err)
 	return ok && st.Code() == codes.AlreadyExists

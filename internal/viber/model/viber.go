@@ -6,7 +6,6 @@ import (
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 )
 
-// ViberGate represents a Viber bot gate configuration.
 type ViberGate struct {
 	ID           string                 `json:"id" db:"id"`
 	DomainID     int64                  `json:"domain_id" db:"domain_id"`
@@ -14,7 +13,7 @@ type ViberGate struct {
 	Name         string                 `json:"name" db:"name"`
 	BotID        string                 `json:"bot_id" db:"bot_id"`
 	BotURI       string                 `json:"bot_uri" db:"bot_uri"`
-	AuthToken    string                 `json:"-" db:"auth_token"` // decrypted in memory; never serialized
+	AuthToken    string                 `json:"-" db:"auth_token"`
 	SenderName   string                 `json:"sender_name" db:"sender_name"`
 	SenderAvatar string                 `json:"sender_avatar" db:"sender_avatar"`
 	WebhookURI   string                 `json:"webhook_uri" db:"webhook_uri"`
@@ -24,9 +23,6 @@ type ViberGate struct {
 	Enabled      bool                   `json:"enabled" db:"enabled"`
 }
 
-// AccountInfo is the subset of the Viber get_account_info response the service needs.
-// Kept here (leaf package) so both the client and the service can reference it
-// without an import cycle.
 type AccountInfo struct {
 	ID     string
 	Name   string

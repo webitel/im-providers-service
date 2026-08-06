@@ -35,3 +35,15 @@ func (m *messengerAuthMiddleware) SendDocument(ctx context.Context, in *sharedmo
 func (m *messengerAuthMiddleware) SendInteractiveCallback(ctx context.Context, in *sharedmodel.SendInteractiveCallbackRequest) error {
 	return m.Messenger.SendInteractiveCallback(m.withIdentity(ctx, in.DomainID, in.From.Sub), in)
 }
+
+func (m *messengerAuthMiddleware) SendLocation(ctx context.Context, in *sharedmodel.SendLocationRequest) (*sharedmodel.SendResponse, error) {
+	return m.Messenger.SendLocation(m.withIdentity(ctx, int64(in.DomainID), in.From.Sub), in)
+}
+
+func (m *messengerAuthMiddleware) SendContact(ctx context.Context, in *sharedmodel.SendContactRequest) (*sharedmodel.SendResponse, error) {
+	return m.Messenger.SendContact(m.withIdentity(ctx, int64(in.DomainID), in.From.Sub), in)
+}
+
+func (m *messengerAuthMiddleware) UpdateMessageDelivery(ctx context.Context, in *sharedmodel.MessageDeliveryReport) error {
+	return m.Messenger.UpdateMessageDelivery(m.withIdentity(ctx, in.DomainID, in.Sub), in)
+}

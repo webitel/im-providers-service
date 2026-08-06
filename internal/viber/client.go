@@ -18,7 +18,6 @@ import (
 // https://developers.viber.com/docs/api/rest-bot-api/#viber-rest-api
 const APIBaseURL = "https://chatapi.viber.com/pa"
 
-// authHeader carries the bot's auth token on every request.
 const authHeader = "X-Viber-Auth-Token"
 
 // Viber response status codes.
@@ -35,7 +34,6 @@ const (
 // https://developers.viber.com/docs/api/rest-bot-api/#keyboards
 const minAPIVersionKeyboards = 3
 
-// apiError carries an unexpected non-zero Viber status.
 type apiError struct {
 	Status  int
 	Message string
@@ -59,15 +57,11 @@ func newClient(l *slog.Logger) *client {
 	}
 }
 
-// statusEnvelope is embedded by every Viber response so post can inspect the status.
 type statusEnvelope struct {
 	Status        int    `json:"status"`
 	StatusMessage string `json:"status_message"`
 }
 
-// post sends a JSON body to path authenticated with token. Viber returns HTTP 200
-// even on logical failure, so the response body status field is authoritative.
-// When out is non-nil the raw body is additionally decoded into it.
 func (c *client) post(ctx context.Context, token, path string, reqBody, out any) error {
 	raw, err := json.Marshal(reqBody)
 	if err != nil {
@@ -124,7 +118,6 @@ type accountInfoResponse struct {
 	Icon string `json:"icon"`
 }
 
-// GetAccountInfo validates the token and returns the bot's public account details.
 func (c *client) GetAccountInfo(ctx context.Context, token string) (*vibmodel.AccountInfo, error) {
 	var out accountInfoResponse
 	if err := c.post(ctx, token, "/get_account_info", struct{}{}, &out); err != nil {
@@ -140,8 +133,6 @@ type setWebhookRequest struct {
 	SendPhoto  bool     `json:"send_photo"`
 }
 
-// SetWebhook registers the callback URL. send_name/send_photo make Viber include the
-// sender profile inline on every message event, so no profile round-trip is needed.
 func (c *client) SetWebhook(ctx context.Context, token, url string) error {
 	return c.post(ctx, token, "/set_webhook", setWebhookRequest{
 		URL:        url,
@@ -151,7 +142,6 @@ func (c *client) SetWebhook(ctx context.Context, token, url string) error {
 	}, nil)
 }
 
-// RemoveWebhook clears the registered callback URL (Viber removes it when url is empty).
 func (c *client) RemoveWebhook(ctx context.Context, token string) error {
 	return c.post(ctx, token, "/set_webhook", setWebhookRequest{URL: ""}, nil)
 }
@@ -179,10 +169,14 @@ type sendMessageRequest struct {
 	Text          string       `json:"text,omitempty"`
 	Media         string       `json:"media,omitempty"`
 	Size          int64        `json:"size,omitempty"`
+	Duration      int          `json:"duration,omitempty"`
 	FileName      string       `json:"file_name,omitempty"`
 	Location      *msgLocation `json:"location,omitempty"`
 	Contact       *msgContact  `json:"contact,omitempty"`
 	Keyboard      *keyboard    `json:"keyboard,omitempty"`
+	RichMedia     *richMedia   `json:"rich_media,omitempty"`
+	AltText       string       `json:"alt_text,omitempty"`
+	TrackingData  string       `json:"tracking_data,omitempty"`
 }
 
 type sendResponse struct {
@@ -191,8 +185,8 @@ type sendResponse struct {
 }
 
 func (c *client) send(ctx context.Context, token string, msg sendMessageRequest) (*sharedmodel.MessageResponse, error) {
-	if msg.Keyboard != nil {
-		msg.MinAPIVersion = minAPIVersionKeyboards
+	if v := requiredAPIVersion(msg); v > msg.MinAPIVersion {
+		msg.MinAPIVersion = v
 	}
 	var out sendResponse
 	if err := c.post(ctx, token, "/send_message", msg, &out); err != nil {
@@ -201,35 +195,72 @@ func (c *client) send(ctx context.Context, token string, msg sendMessageRequest)
 	return &sharedmodel.MessageResponse{ID: out.MessageToken.String()}, nil
 }
 
-// SendText delivers a text message, optionally with an attached keyboard.
+func requiredAPIVersion(msg sendMessageRequest) int {
+	version := 0
+
+	if msg.RichMedia != nil {
+		version = minAPIVersionRichMedia
+	}
+	if msg.Keyboard != nil && version < minAPIVersionKeyboards {
+		version = minAPIVersionKeyboards
+	}
+	if msg.Keyboard != nil && msg.Keyboard.InputFieldState == inputFieldHidden && version < minAPIVersionHiddenInput {
+		version = minAPIVersionHiddenInput
+	}
+
+	return version
+}
+
+func (c *client) SendRichMedia(ctx context.Context, token string, s sender, receiver string, rm *richMedia, altText, trackingData string) (*sharedmodel.MessageResponse, error) {
+	return c.send(ctx, token, sendMessageRequest{
+		Receiver: receiver, Sender: s, Type: "rich_media", RichMedia: rm, AltText: altText,
+		TrackingData: trackingData,
+	})
+}
+
+func (c *client) SendMenu(ctx context.Context, token string, s sender, receiver, text string, kb *keyboard, trackingData string) (*sharedmodel.MessageResponse, error) {
+	return c.send(ctx, token, sendMessageRequest{
+		Receiver: receiver, Sender: s, Type: "text", Text: text, Keyboard: kb,
+		TrackingData: trackingData,
+	})
+}
+
 func (c *client) SendText(ctx context.Context, token string, s sender, receiver, text string, kb *keyboard) (*sharedmodel.MessageResponse, error) {
 	return c.send(ctx, token, sendMessageRequest{
 		Receiver: receiver, Sender: s, Type: "text", Text: text, Keyboard: kb,
 	})
 }
 
-// SendPicture delivers an image by URL with an optional caption. Viber fetches the media server-side.
 func (c *client) SendPicture(ctx context.Context, token string, s sender, receiver, mediaURL, caption string) (*sharedmodel.MessageResponse, error) {
 	return c.send(ctx, token, sendMessageRequest{
 		Receiver: receiver, Sender: s, Type: "picture", Media: mediaURL, Text: caption,
 	})
 }
 
-// SendFile delivers a document by URL. size is required by Viber for file messages.
+func (c *client) SendVideo(ctx context.Context, token string, s sender, receiver, mediaURL string, size int64, duration int) (*sharedmodel.MessageResponse, error) {
+	return c.send(ctx, token, sendMessageRequest{
+		Receiver: receiver, Sender: s, Type: "video", Media: mediaURL, Size: size, Duration: duration,
+	})
+}
+
+func (c *client) SendURL(ctx context.Context, token string, s sender, receiver, mediaURL string) (*sharedmodel.MessageResponse, error) {
+	return c.send(ctx, token, sendMessageRequest{
+		Receiver: receiver, Sender: s, Type: "url", Media: mediaURL,
+	})
+}
+
 func (c *client) SendFile(ctx context.Context, token string, s sender, receiver, mediaURL, fileName string, size int64) (*sharedmodel.MessageResponse, error) {
 	return c.send(ctx, token, sendMessageRequest{
 		Receiver: receiver, Sender: s, Type: "file", Media: mediaURL, FileName: fileName, Size: size,
 	})
 }
 
-// SendLocation delivers a geographic point.
 func (c *client) SendLocation(ctx context.Context, token string, s sender, receiver string, lat, lon float64) (*sharedmodel.MessageResponse, error) {
 	return c.send(ctx, token, sendMessageRequest{
 		Receiver: receiver, Sender: s, Type: "location", Location: &msgLocation{Lat: lat, Lon: lon},
 	})
 }
 
-// SendContact delivers a contact card.
 func (c *client) SendContact(ctx context.Context, token string, s sender, receiver, name, phone string) (*sharedmodel.MessageResponse, error) {
 	return c.send(ctx, token, sendMessageRequest{
 		Receiver: receiver, Sender: s, Type: "contact", Contact: &msgContact{Name: name, PhoneNumber: phone},

@@ -2,8 +2,12 @@ package viber
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"path"
 	"strings"
+
+	"github.com/google/uuid"
 
 	contactv1 "github.com/webitel/im-providers-service/gen/go/contact/v1"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -11,7 +15,6 @@ import (
 	vibmodel "github.com/webitel/im-providers-service/internal/viber/model"
 )
 
-// Viber implements the outbound location/contact senders in addition to the base Sender.
 var (
 	_ provider.LocationSender = (*viberProvider)(nil)
 	_ provider.ContactSender  = (*viberProvider)(nil)
@@ -22,34 +25,118 @@ func (p *viberProvider) SendText(ctx context.Context, req *sharedmodel.Message) 
 	if err != nil {
 		return nil, err
 	}
-	return p.api.SendText(ctx, g.AuthToken, senderOf(g), receiver, req.Text, nil)
+	return p.api.SendText(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, req.Text, nil)
 }
 
 func (p *viberProvider) SendImage(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
-	g, receiver, err := p.prepare(ctx, req.GateID, req.To.Sub)
-	if err != nil {
-		return nil, err
-	}
 	if len(req.Images) == 0 || req.Images[0] == nil || req.Images[0].URL == "" {
 		return nil, fmt.Errorf("viber: image url missing")
 	}
-	return p.api.SendPicture(ctx, g.AuthToken, senderOf(g), receiver, req.Images[0].URL, req.Text)
+	img := req.Images[0]
+	return p.dispatchMedia(ctx, req, attachment{
+		url:  img.URL,
+		name: img.FileName,
+		mime: img.MimeType,
+		size: img.Size,
+	})
 }
 
 func (p *viberProvider) SendDocument(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
-	g, receiver, err := p.prepare(ctx, req.GateID, req.To.Sub)
-	if err != nil {
-		return nil, err
-	}
 	if len(req.Documents) == 0 || req.Documents[0] == nil || req.Documents[0].URL == "" {
 		return nil, fmt.Errorf("viber: document url missing")
 	}
 	d := req.Documents[0]
-	size := d.Size
-	if size <= 0 {
-		size = 1
+	return p.dispatchMedia(ctx, req, attachment{
+		url:  d.URL,
+		name: d.FileName,
+		mime: d.MimeType,
+		size: d.Size,
+	})
+}
+
+type attachment struct {
+	url  string
+	name string
+	mime string
+	size int64
+}
+
+func (p *viberProvider) dispatchMedia(ctx context.Context, req *sharedmodel.Message, att attachment) (*sharedmodel.MessageResponse, error) {
+	g, receiver, err := p.prepare(ctx, req.GateID, req.To.Sub)
+	if err != nil {
+		return nil, err
 	}
-	return p.api.SendFile(ctx, g.AuthToken, senderOf(g), receiver, d.URL, d.FileName, size)
+
+	p.probeMedia(ctx, att.url, &att.mime, &att.size)
+
+	if att.size > maxFileBytes {
+		return nil, fmt.Errorf("viber: attachment %d bytes exceeds the platform limit of %d", att.size, int64(maxFileBytes))
+	}
+
+	kind := classify(att.mime, att.name)
+	if kind == sendVideo && att.size > maxVideoBytes {
+		kind = sendFile
+	}
+	if kind == sendGIF && len(att.url) > maxMediaURLLen {
+		kind = sendFile
+	}
+
+	if req.Text != "" && kind != sendPicture {
+		if _, err := p.api.SendText(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, req.Text, nil); err != nil {
+			p.logger.WarnContext(ctx, "viber caption send failed", "gate_id", g.ID, "err", err)
+		}
+	}
+
+	resp, err := p.sendAs(ctx, g, receiver, req.SenderName, kind, req.Text, att)
+	if err == nil || kind == sendFile {
+		return resp, err
+	}
+
+	var apiErr *apiError
+	if !errors.As(err, &apiErr) {
+		return nil, err
+	}
+
+	p.logger.WarnContext(ctx, "viber media type refused, retrying as file",
+		"gate_id", g.ID,
+		"kind", kind.String(),
+		"status", apiErr.Status,
+		"err", err,
+	)
+
+	return p.sendAs(ctx, g, receiver, req.SenderName, sendFile, req.Text, att)
+}
+
+func (p *viberProvider) sendAs(ctx context.Context, g *vibmodel.ViberGate, receiver, senderName string, kind sendKind, caption string, att attachment) (*sharedmodel.MessageResponse, error) {
+	switch kind {
+	case sendPicture:
+		return p.api.SendPicture(ctx, g.AuthToken, senderOf(g, senderName), receiver, att.url, caption)
+	case sendVideo:
+		return p.api.SendVideo(ctx, g.AuthToken, senderOf(g, senderName), receiver, att.url, fileSize(att.size), 0)
+	case sendGIF:
+		return p.api.SendURL(ctx, g.AuthToken, senderOf(g, senderName), receiver, att.url)
+	case sendFile:
+		return p.api.SendFile(ctx, g.AuthToken, senderOf(g, senderName), receiver, att.url, fileName(att), fileSize(att.size))
+	default:
+		return p.api.SendFile(ctx, g.AuthToken, senderOf(g, senderName), receiver, att.url, fileName(att), fileSize(att.size))
+	}
+}
+
+func fileSize(size int64) int64 {
+	if size <= 0 {
+		return 1
+	}
+	return size
+}
+
+func fileName(att attachment) string {
+	if att.name != "" {
+		return att.name
+	}
+	if base := path.Base(att.url); base != "" && base != "." && base != "/" {
+		return base
+	}
+	return "file"
 }
 
 func (p *viberProvider) SendInteractive(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
@@ -57,12 +144,40 @@ func (p *viberProvider) SendInteractive(ctx context.Context, req *sharedmodel.Me
 	if err != nil {
 		return nil, err
 	}
-	kb := buildKeyboard(req.Interactive)
+
 	body := req.Text
 	if body == "" && req.Interactive != nil {
 		body = req.Interactive.Body
 	}
-	return p.api.SendText(ctx, g.AuthToken, senderOf(g), receiver, body, kb)
+
+	trackingData := ""
+	if req.ID != uuid.Nil {
+		trackingData = req.ID.String()
+	}
+
+	if req.Interactive != nil && req.Interactive.Placement == sharedmodel.MenuPlacementInline {
+		if rm := buildRichMedia(req.Interactive); rm != nil {
+			if body != "" {
+				if _, err := p.api.SendText(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, body, nil); err != nil {
+					p.logger.WarnContext(ctx, "viber interactive body send failed", "gate_id", g.ID, "err", err)
+				}
+			}
+
+			resp, err := p.api.SendRichMedia(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, rm, altTextFor(body, rm), trackingData)
+			if err == nil {
+				p.rememberMenu(ctx, g.ID, receiver, trackingData, req.Interactive)
+			}
+
+			return resp, err
+		}
+	}
+
+	resp, err := p.api.SendMenu(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, body, buildKeyboard(req.Interactive), trackingData)
+	if err == nil {
+		p.rememberMenu(ctx, g.ID, receiver, trackingData, req.Interactive)
+	}
+
+	return resp, err
 }
 
 func (p *viberProvider) SendLocation(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
@@ -73,7 +188,7 @@ func (p *viberProvider) SendLocation(ctx context.Context, req *sharedmodel.Messa
 	if err != nil {
 		return nil, err
 	}
-	return p.api.SendLocation(ctx, g.AuthToken, senderOf(g), receiver, req.Location.Latitude, req.Location.Longitude)
+	return p.api.SendLocation(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, req.Location.Latitude, req.Location.Longitude)
 }
 
 func (p *viberProvider) SendContact(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
@@ -84,10 +199,9 @@ func (p *viberProvider) SendContact(ctx context.Context, req *sharedmodel.Messag
 	if err != nil {
 		return nil, err
 	}
-	return p.api.SendContact(ctx, g.AuthToken, senderOf(g), receiver, req.Contact.Name, req.Contact.PhoneNumber)
+	return p.api.SendContact(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, req.Contact.Name, req.Contact.PhoneNumber)
 }
 
-// prepare loads the gate and resolves the recipient's Viber user id.
 func (p *viberProvider) prepare(ctx context.Context, gateID, toSub string) (*vibmodel.ViberGate, string, error) {
 	g, err := p.fetchGate(ctx, gateID)
 	if err != nil {
@@ -97,12 +211,14 @@ func (p *viberProvider) prepare(ctx context.Context, gateID, toSub string) (*vib
 	if err != nil {
 		return nil, "", err
 	}
+
+	if p.unreachable(ctx, g.ID, receiver) {
+		return nil, "", vibmodel.ErrReceiverNotSubscribed
+	}
+
 	return g, receiver, nil
 }
 
-// resolveReceiver returns the Viber user id for the given sub. A sub that is already a
-// native Viber id (opaque base64, never contains "-") is returned as-is; otherwise it is
-// treated as an internal contact UUID and resolved via the contact Search RPC.
 func (p *viberProvider) resolveReceiver(ctx context.Context, gate *vibmodel.ViberGate, contactID string) (string, error) {
 	if !strings.Contains(contactID, "-") {
 		return contactID, nil

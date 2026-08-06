@@ -29,14 +29,10 @@ type InteractiveSender interface {
 	SendInteractive(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error)
 }
 
-// LocationSender is an optional interface for providers that can deliver a geographic
-// location outbound (req.Location carries the point). Implement when the platform allows it.
 type LocationSender interface {
 	SendLocation(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error)
 }
 
-// ContactSender is an optional interface for providers that can deliver a contact card
-// outbound (req.Contact carries the card). Implement when the platform allows it.
 type ContactSender interface {
 	SendContact(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error)
 }

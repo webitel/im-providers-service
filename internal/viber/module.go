@@ -13,8 +13,6 @@ import (
 
 var Module = fx.Module("viber",
 	fx.Provide(
-		// Viber REST client — provided as *client for the provider adapter and as
-		// vibservice.ProviderAPI for the gate service (account info + webhook management).
 		newClient,
 		func(c *client) vibservice.ProviderAPI { return c },
 
@@ -33,7 +31,6 @@ var Module = fx.Module("viber",
 	fx.Invoke(RegisterViberServices),
 )
 
-// RegisterViberServices connects the Viber gRPC handler to the gRPC server.
 func RegisterViberServices(server *grpcsrv.Server, viber *vibhandler.ViberHandler) {
 	impb.RegisterViberServiceServer(server.Server, viber)
 }

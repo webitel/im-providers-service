@@ -42,6 +42,10 @@ func (c *Client) Read(ctx context.Context, in *gatewayv1.ReadMessageRequest, opt
 	panic("unimplemented")
 }
 
+func (c *Client) EditMessage(ctx context.Context, in *gatewayv1.EditMessageRequest, opts ...grpc.CallOption) (*gatewayv1.EditMessageResponse, error) {
+	panic("unimplemented")
+}
+
 // SendContact implements [gateway.MessageClient].
 func (c *Client) SendContact(ctx context.Context, in *gatewayv1.SendContactRequest, opts ...grpc.CallOption) (*gatewayv1.SendMessageResponse, error) {
 	var resp *gatewayv1.SendMessageResponse
@@ -71,6 +75,16 @@ func (c *Client) SendInteractiveCallback(ctx context.Context, in *gatewayv1.Inte
 	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
 		var err error
 		resp, err = api.SendInteractiveCallback(ctx, in, opts...)
+		return err
+	})
+	return resp, err
+}
+
+func (c *Client) UpdateMessageDelivery(ctx context.Context, in *gatewayv1.UpdateMessageDeliveryRequest, opts ...grpc.CallOption) (*gatewayv1.UpdateMessageDeliveryResponse, error) {
+	var resp *gatewayv1.UpdateMessageDeliveryResponse
+	err := c.msgRPC.Execute(ctx, func(api gatewayv1.MessageClient) error {
+		var err error
+		resp, err = api.UpdateMessageDelivery(ctx, in, opts...)
 		return err
 	})
 	return resp, err

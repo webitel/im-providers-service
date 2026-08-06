@@ -6,11 +6,30 @@ import (
 
 // Interactive represents a rich message with interactive UI elements.
 type Interactive struct {
-	Body      string
-	SingleUse bool
-	Markup    *KeyboardMarkup
-	ListReply *KeyboardListReply
+	Body            string
+	SingleUse       bool
+	Markup          *KeyboardMarkup
+	ListReply       *KeyboardListReply
+	Placement       MenuPlacement
+	InputFieldState InputFieldState
 }
+
+type MenuPlacement int
+
+const (
+	MenuPlacementUnspecified MenuPlacement = iota
+	MenuPlacementInline
+	MenuPlacementPersistent
+)
+
+type InputFieldState int
+
+const (
+	InputFieldStateUnspecified InputFieldState = iota
+	InputFieldStateRegular
+	InputFieldStateMinimized
+	InputFieldStateHidden
+)
 
 // KeyboardMarkup is a grid of button rows.
 type KeyboardMarkup struct {
@@ -91,9 +110,10 @@ type Message struct {
 	Contact     *OutboundContact  `json:"contact,omitempty"`
 
 	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
+
+	SenderName string `json:"sender_name,omitempty"`
 }
 
-// OutboundLocation is a geographic point attached to an outbound Message.
 type OutboundLocation struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -101,7 +121,6 @@ type OutboundLocation struct {
 	Address   string  `json:"address,omitempty"`
 }
 
-// OutboundContact is a contact card attached to an outbound Message.
 type OutboundContact struct {
 	Name        string `json:"name"`
 	PhoneNumber string `json:"phone_number"`

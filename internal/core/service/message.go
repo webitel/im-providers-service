@@ -21,6 +21,7 @@ type Messenger interface {
 	SendLocation(ctx context.Context, in *sharedmodel.SendLocationRequest) (*sharedmodel.SendResponse, error)
 	SendContact(ctx context.Context, in *sharedmodel.SendContactRequest) (*sharedmodel.SendResponse, error)
 	SendInteractiveCallback(ctx context.Context, in *sharedmodel.SendInteractiveCallbackRequest) error
+	UpdateMessageDelivery(ctx context.Context, in *sharedmodel.MessageDeliveryReport) error
 }
 
 type messageService struct {
@@ -201,6 +202,39 @@ func (m *messageService) SendInteractiveCallback(ctx context.Context, in *shared
 		return err
 	}
 	return nil
+}
+
+func (m *messageService) UpdateMessageDelivery(ctx context.Context, in *sharedmodel.MessageDeliveryReport) error {
+	if in == nil {
+		return nil
+	}
+
+	_, err := m.gatewayer.UpdateMessageDelivery(ctx, &gatewayv1.UpdateMessageDeliveryRequest{
+		GateId:            in.GateID,
+		ExternalMessageId: in.ExternalID,
+		Status:            deliveryStatusToProto(in.Status),
+		Reason:            in.Reason,
+		At:                in.At,
+	})
+	if err != nil {
+		m.logger.Error("failed to update message delivery", "error", err, "gate_id", in.GateID)
+		return err
+	}
+
+	return nil
+}
+
+func deliveryStatusToProto(s sharedmodel.DeliveryStatus) gatewayv1.MessageDeliveryStatus {
+	switch s {
+	case sharedmodel.DeliveryDelivered:
+		return gatewayv1.MessageDeliveryStatus_MESSAGE_DELIVERY_STATUS_DELIVERED
+	case sharedmodel.DeliveryRead:
+		return gatewayv1.MessageDeliveryStatus_MESSAGE_DELIVERY_STATUS_READ
+	case sharedmodel.DeliveryFailed:
+		return gatewayv1.MessageDeliveryStatus_MESSAGE_DELIVERY_STATUS_FAILED
+	default:
+		return gatewayv1.MessageDeliveryStatus_MESSAGE_DELIVERY_STATUS_UNSPECIFIED
+	}
 }
 
 func (m *messageService) parseUUID(id string) uuid.UUID {

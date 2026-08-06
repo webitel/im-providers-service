@@ -31,11 +31,10 @@ type viberProvider struct {
 	media         sharedsvc.MediaManager
 	contactClient *imcontact.Client
 	rdb           *redis.Client
-	// receiverCache maps internal contact UUID → Viber user id to avoid an
-	// im-contact round-trip on every outbound message.
+	templates     *sharedsvc.TemplateRenderer
 	receiverCache cache.Cache[string, string]
-	// httpClient is used exclusively for inbound media downloads.
-	httpClient *http.Client
+	httpClient    *http.Client
+	linkClient    *http.Client
 }
 
 func New(
@@ -49,6 +48,7 @@ func New(
 	contactClient *imcontact.Client,
 	rdb *redis.Client,
 	api *client,
+	templates *sharedsvc.TemplateRenderer,
 ) (provider.Provider, error) {
 	receiverCache, err := cache.New[string, string]().
 		L1(cache.RistrettoConfig{MaxCost: 1000, NumCounters: 10000}).
@@ -67,8 +67,10 @@ func New(
 		media:         media,
 		contactClient: contactClient,
 		rdb:           rdb,
+		templates:     templates,
 		receiverCache: receiverCache,
 		httpClient:    &http.Client{Timeout: 30 * time.Second},
+		linkClient:    newGuardedClient(30 * time.Second),
 	}, nil
 }
 
@@ -76,8 +78,6 @@ var _ provider.InteractiveSender = (*viberProvider)(nil)
 
 func (p *viberProvider) Type() string { return "viber" }
 
-// resolveGate resolves the gate by its secret webhook path segment. Disabled gates
-// are short-circuited from the LRU cache to avoid a DB round-trip on every delivery.
 func (p *viberProvider) resolveGate(ctx context.Context, uri string) (*vibmodel.ViberGate, error) {
 	if cached, ok := p.gateCache.Get(uri); ok && !cached.Enabled {
 		return &vibmodel.ViberGate{Enabled: false}, nil
@@ -101,19 +101,33 @@ func (p *viberProvider) fetchGate(ctx context.Context, gateID string) (*vibmodel
 	return p.repo.Select(ctx, gateID)
 }
 
-// webhookURI extracts the webhook path segment injected by the HTTP layer. It is the
-// unmodified secret token stored as gate_viber.webhook_uri.
 func (p *viberProvider) webhookURI(ctx context.Context) string {
 	uri, _ := ctx.Value(provider.WebhookURIKey).(string)
 	return uri
 }
 
-// senderOf builds the mandatory Viber sender block for outbound messages.
-func senderOf(g *vibmodel.ViberGate) sender {
-	return sender{Name: g.SenderName, Avatar: g.SenderAvatar}
+const maxSenderNameLen = 28
+
+func senderOf(g *vibmodel.ViberGate, name ...string) sender {
+	out := sender{Name: g.SenderName, Avatar: g.SenderAvatar}
+
+	if len(name) > 0 && name[0] != "" {
+		out.Name = trimSenderName(name[0])
+		out.Avatar = ""
+	}
+
+	return out
 }
 
-// peerPair carries the sender and recipient for a single routed message.
+func trimSenderName(name string) string {
+	runes := []rune(name)
+	if len(runes) <= maxSenderNameLen {
+		return name
+	}
+
+	return string(runes[:maxSenderNameLen])
+}
+
 type peerPair struct {
 	from sharedmodel.Peer
 	to   sharedmodel.Peer

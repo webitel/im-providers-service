@@ -22,8 +22,6 @@ type ViberManager interface {
 	DeleteGate(ctx context.Context, id string) (*vibmodel.ViberGate, error)
 }
 
-// ProviderAPI is the subset of the Viber REST client the service needs. Defined here
-// (consumer side) so the parent viber package satisfies it without an import cycle.
 type ProviderAPI interface {
 	GetAccountInfo(ctx context.Context, token string) (*vibmodel.AccountInfo, error)
 	SetWebhook(ctx context.Context, token, url string) error
@@ -51,7 +49,6 @@ func (s *ViberService) CreateGate(ctx context.Context, req vibmodel.CreateViber)
 		return nil, err
 	}
 
-	// Validate the token and discover the bot's account identity.
 	info, err := s.api.GetAccountInfo(ctx, req.AuthToken)
 	if err != nil {
 		return nil, err
@@ -140,15 +137,12 @@ func (s *ViberService) DeleteGate(ctx context.Context, id string) (*vibmodel.Vib
 	return gate, nil
 }
 
-// webhookURL builds the absolute HTTPS URL registered with Viber for the given gate.
 func (s *ViberService) webhookURL(uri string) string {
 	base := strings.TrimRight(s.cfg.Service.PublicURL, "/")
 	path := "/" + strings.Trim(s.cfg.Service.WebhookPath, "/")
 	return fmt.Sprintf("%s%s/viber/%s", base, path, uri)
 }
 
-// genWebhookURI returns a random, unguessable path segment used to resolve the gate
-// on inbound webhooks (Viber does not sign requests, so this secrecy is the guard).
 func genWebhookURI() (string, error) {
 	buf := make([]byte, 24)
 	if _, err := rand.Read(buf); err != nil {

@@ -110,7 +110,6 @@ func (h *ViberHandler) gateToProto(g *vibmodel.ViberGate) *impb.ProviderViberGat
 	}
 }
 
-// webhookURL reconstructs the absolute webhook URL registered with Viber for display.
 func (h *ViberHandler) webhookURL(uri string) string {
 	if uri == "" {
 		return ""

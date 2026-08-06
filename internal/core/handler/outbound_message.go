@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/webitel/webitel-go-kit/pkg/cache"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -104,6 +105,7 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
 		Text:              req.GetText(),
 		DomainID:          int64(req.DomainId),
+		SenderName:        req.GetSenderName(),
 		ReplyToExternalID: req.GetReplyToExternalId(),
 	}
 
@@ -140,6 +142,7 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 		GateID:            req.GetGateId(),
 		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
 		DomainID:          int64(req.DomainId),
+		SenderName:        req.GetSenderName(),
 		Text:              req.GetCaption(),
 		ReplyToExternalID: req.GetReplyToExternalId(),
 	}
@@ -186,6 +189,7 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 		GateID:            req.GetGateId(),
 		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
 		DomainID:          int64(req.DomainId),
+		SenderName:        req.GetSenderName(),
 		Text:              req.GetCaption(),
 		ReplyToExternalID: req.GetReplyToExternalId(),
 	}
@@ -237,8 +241,13 @@ func (p *OutboundMessageHandler) SendInteractive(ctx context.Context, req *impb.
 		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
 		Text:              req.GetBody(),
 		DomainID:          int64(req.GetDomainId()),
+		SenderName:        req.GetSenderName(),
 		Interactive:       mapInteractive(req.GetInteractive()),
 		ReplyToExternalID: req.GetReplyToExternalId(),
+	}
+
+	if id, err := uuid.Parse(req.GetSendId()); err == nil {
+		msg.ID = id
 	}
 
 	resp, err := is.SendInteractive(ctx, msg)
@@ -258,13 +267,41 @@ func mapInteractive(pb *impb.ProviderInteractive) *sharedmodel.Interactive {
 	if pb == nil {
 		return nil
 	}
-	out := &sharedmodel.Interactive{SingleUse: pb.GetSingleUse()}
+	out := &sharedmodel.Interactive{
+		SingleUse:       pb.GetSingleUse(),
+		Placement:       mapMenuPlacement(pb.GetPlacement()),
+		InputFieldState: mapInputFieldState(pb.GetInputFieldState()),
+	}
 	if m := pb.GetMarkup(); m != nil {
 		out.Markup = mapMarkup(m)
 	} else if l := pb.GetListReply(); l != nil {
 		out.ListReply = mapListReply(l)
 	}
 	return out
+}
+
+func mapMenuPlacement(pb impb.MenuPlacement) sharedmodel.MenuPlacement {
+	switch pb {
+	case impb.MenuPlacement_MENU_PLACEMENT_INLINE:
+		return sharedmodel.MenuPlacementInline
+	case impb.MenuPlacement_MENU_PLACEMENT_PERSISTENT:
+		return sharedmodel.MenuPlacementPersistent
+	default:
+		return sharedmodel.MenuPlacementUnspecified
+	}
+}
+
+func mapInputFieldState(pb impb.InputFieldState) sharedmodel.InputFieldState {
+	switch pb {
+	case impb.InputFieldState_INPUT_FIELD_STATE_REGULAR:
+		return sharedmodel.InputFieldStateRegular
+	case impb.InputFieldState_INPUT_FIELD_STATE_MINIMIZED:
+		return sharedmodel.InputFieldStateMinimized
+	case impb.InputFieldState_INPUT_FIELD_STATE_HIDDEN:
+		return sharedmodel.InputFieldStateHidden
+	default:
+		return sharedmodel.InputFieldStateUnspecified
+	}
 }
 
 func mapMarkup(pb *impb.ProviderKeyboardMarkup) *sharedmodel.KeyboardMarkup {
@@ -350,7 +387,6 @@ func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *imp
 	}, nil
 }
 
-// SendLocation delivers a geographic location to the external chat partner.
 func (p *OutboundMessageHandler) SendLocation(ctx context.Context, req *impb.ProviderSendLocationRequest) (*impb.ProviderSendMessageResponse, error) {
 	log := p.logger.With(
 		slog.String("method", "SendLocation"),
@@ -373,6 +409,7 @@ func (p *OutboundMessageHandler) SendLocation(ctx context.Context, req *impb.Pro
 		GateID:            req.GetGateId(),
 		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
 		DomainID:          int64(req.GetDomainId()),
+		SenderName:        req.GetSenderName(),
 		ReplyToExternalID: req.GetReplyToExternalId(),
 		Location: &sharedmodel.OutboundLocation{
 			Latitude:  req.GetLatitude(),
@@ -390,7 +427,6 @@ func (p *OutboundMessageHandler) SendLocation(ctx context.Context, req *impb.Pro
 	return &impb.ProviderSendMessageResponse{ExternalId: resp.ID, CreatedAt: time.Now().Unix()}, nil
 }
 
-// SendContact delivers a contact card to the external chat partner.
 func (p *OutboundMessageHandler) SendContact(ctx context.Context, req *impb.ProviderSendContactRequest) (*impb.ProviderSendMessageResponse, error) {
 	log := p.logger.With(
 		slog.String("method", "SendContact"),
@@ -413,6 +449,7 @@ func (p *OutboundMessageHandler) SendContact(ctx context.Context, req *impb.Prov
 		GateID:            req.GetGateId(),
 		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
 		DomainID:          int64(req.GetDomainId()),
+		SenderName:        req.GetSenderName(),
 		ReplyToExternalID: req.GetReplyToExternalId(),
 		Contact: &sharedmodel.OutboundContact{
 			Name:        req.GetName(),

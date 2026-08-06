@@ -9,7 +9,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// toStatus maps domain sentinel errors to the appropriate gRPC status code.
 func toStatus(err error, internalMsg string) error {
 	var ve *vibmodel.ValidationError
 	switch {
