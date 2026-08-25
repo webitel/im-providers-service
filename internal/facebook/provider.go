@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
+	"github.com/webitel/webitel-go-kit/pkg/cache"
+
 	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -20,7 +23,6 @@ import (
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
 	"github.com/webitel/im-providers-service/internal/provider"
-	"github.com/webitel/webitel-go-kit/pkg/cache"
 )
 
 type facebookProvider struct {

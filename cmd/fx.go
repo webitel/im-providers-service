@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/fx"
+
 	"github.com/webitel/im-providers-service/config"
 	"github.com/webitel/im-providers-service/infra/auth/standard"
 	imauth "github.com/webitel/im-providers-service/infra/client/grpc/im-auth"
@@ -20,12 +22,12 @@ import (
 	sharedhandler "github.com/webitel/im-providers-service/internal/core/handler"
 	"github.com/webitel/im-providers-service/internal/core/webhook"
 	"github.com/webitel/im-providers-service/internal/facebook"
+	"github.com/webitel/im-providers-service/internal/instagram"
 	"github.com/webitel/im-providers-service/internal/provider"
 	telegrambot "github.com/webitel/im-providers-service/internal/telegram/bot"
 	"github.com/webitel/im-providers-service/internal/viber"
 	"github.com/webitel/im-providers-service/internal/whatsapp"
 	"github.com/webitel/im-providers-service/pkg/crypto"
-	"go.uber.org/fx"
 )
 
 func NewApp(cfg *config.Config) *fx.App {
@@ -49,6 +51,7 @@ func NewApp(cfg *config.Config) *fx.App {
 		imcontact.Module,
 		core.Module,
 		facebook.Module,
+		instagram.Module,
 		whatsapp.Module,
 		viber.Module,
 		telegrambot.Module,

@@ -4,14 +4,15 @@ import (
 	"context"
 	"log/slog"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/webitel/im-providers-service/config"
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	"github.com/webitel/im-providers-service/infra/auth"
+	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	fbservice "github.com/webitel/im-providers-service/internal/facebook/service"
-	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type FacebookHandler struct {

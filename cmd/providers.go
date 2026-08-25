@@ -8,13 +8,15 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/fx"
+
+	"github.com/webitel/webitel-go-kit/infra/discovery"
+
 	"github.com/webitel/im-providers-service/cmd/logging"
 	"github.com/webitel/im-providers-service/config"
 	"github.com/webitel/im-providers-service/internal/core/model"
-	"github.com/webitel/webitel-go-kit/infra/discovery"
-	_ "github.com/webitel/webitel-go-kit/infra/discovery/consul"
-	"go.uber.org/fx"
 
+	_ "github.com/webitel/webitel-go-kit/infra/discovery/consul"
 	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/log/otlp"
 	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/log/stdout"
 	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/otlp"

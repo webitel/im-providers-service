@@ -4,10 +4,11 @@ import (
 	"context"
 	"log/slog"
 
+	"go.uber.org/fx"
+
 	"github.com/webitel/im-providers-service/config"
 	"github.com/webitel/im-providers-service/infra/db/pg"
 	"github.com/webitel/im-providers-service/infra/db/postgresx"
-	"go.uber.org/fx"
 )
 
 var Module = fx.Module("store",

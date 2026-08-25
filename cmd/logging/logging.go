@@ -5,14 +5,16 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/webitel/im-providers-service/config"
-	"github.com/webitel/im-providers-service/internal/core/model"
-	"github.com/webitel/webitel-go-kit/infra/discovery"
-	otelsdk "github.com/webitel/webitel-go-kit/infra/otel/sdk"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
 	"go.uber.org/fx"
+
+	"github.com/webitel/webitel-go-kit/infra/discovery"
+	otelsdk "github.com/webitel/webitel-go-kit/infra/otel/sdk"
+
+	"github.com/webitel/im-providers-service/config"
+	"github.com/webitel/im-providers-service/internal/core/model"
 )
 
 // ProvideLogger builds the service's structured logger from cfg.Log, wiring

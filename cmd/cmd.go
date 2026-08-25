@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/urfave/cli/v2"
+
 	"github.com/webitel/im-providers-service/cmd/migrate"
 	"github.com/webitel/im-providers-service/config"
 )
