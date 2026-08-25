@@ -3,10 +3,11 @@ package handler
 import (
 	"errors"
 
-	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 )
 
 // toStatus maps domain sentinel errors to the appropriate gRPC status code.

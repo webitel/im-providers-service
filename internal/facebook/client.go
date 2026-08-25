@@ -279,9 +279,9 @@ type interactiveOutboundPayload struct {
 }
 
 type interactiveOutboundMessage struct {
-	Text         string               `json:"text,omitempty"`
-	Attachment   *templateAttachment  `json:"attachment,omitempty"`
-	QuickReplies []fbQuickReply       `json:"quick_replies,omitempty"`
+	Text         string              `json:"text,omitempty"`
+	Attachment   *templateAttachment `json:"attachment,omitempty"`
+	QuickReplies []fbQuickReply      `json:"quick_replies,omitempty"`
 }
 
 type templateAttachment struct {
@@ -533,7 +533,7 @@ type persistentMenuLocale struct {
 }
 
 type fbMenuAction struct {
-	Type          string         `json:"type"`                              // postback | web_url | nested
+	Type          string         `json:"type"` // postback | web_url | nested
 	Title         string         `json:"title"`
 	Payload       string         `json:"payload,omitempty"`
 	URL           string         `json:"url,omitempty"`

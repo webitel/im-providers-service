@@ -4,10 +4,11 @@ import (
 	"context"
 	"log/slog"
 
-	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 )
 
 func (f *FacebookHandler) SetPersistentMenu(ctx context.Context, req *impb.ProviderSetPersistentMenuRequest) (*impb.ProviderSetPersistentMenuResponse, error) {

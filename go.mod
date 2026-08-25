@@ -59,7 +59,6 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
-	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/serf v0.10.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
@@ -113,6 +112,7 @@ require github.com/webitel/webitel-go-kit/appconfig v0.0.0-20260602143553-df89d5
 
 require (
 	github.com/cenkalti/backoff/v3 v3.2.2
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/pressly/goose/v3 v3.27.1
 	github.com/sony/gobreaker v1.0.0
 	github.com/webitel/webitel-go-kit/pkg/cache v0.0.0-20260706110827-c434ee012806

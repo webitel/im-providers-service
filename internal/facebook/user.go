@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	grpcclient "github.com/webitel/im-providers-service/infra/client/grpc"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // syncContact resolves the internal contact for a Facebook user, creating it

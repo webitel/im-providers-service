@@ -1,6 +1,8 @@
 package facebook
 
 import (
+	"go.uber.org/fx"
+
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	grpcsrv "github.com/webitel/im-providers-service/infra/srv/grpc"
 	fbhandler "github.com/webitel/im-providers-service/internal/facebook/handler"
@@ -8,7 +10,6 @@ import (
 	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
 	fbpostgres "github.com/webitel/im-providers-service/internal/facebook/store/postgres"
 	"github.com/webitel/im-providers-service/internal/provider"
-	"go.uber.org/fx"
 )
 
 var Module = fx.Module("facebook",

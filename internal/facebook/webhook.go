@@ -140,7 +140,7 @@ func (p *facebookProvider) routeMessage(ctx context.Context, gate *fbmodel.Faceb
 	}
 
 	if msg.Text != "" {
-		if _, err := p.messenger.SendText(ctx, &sharedmodel.SendTextRequest{
+		if _, err := p.coreMessengerFor(gate).SendText(ctx, &sharedmodel.SendTextRequest{
 			DomainID:          gate.DomainID,
 			From:              peers.from,
 			To:                peers.to,
@@ -162,7 +162,7 @@ func (p *facebookProvider) routeMessage(ctx context.Context, gate *fbmodel.Faceb
 // rather than interactive callbacks which require an existing message UUID as in_reply_to.
 // https://developers.facebook.com/docs/messenger-platform/reference/webhook-events/messaging-postbacks
 func (p *facebookProvider) routePostback(ctx context.Context, gate *fbmodel.FacebookGate, peers peerPair, pb *Postback) {
-	if _, err := p.messenger.SendText(ctx, &sharedmodel.SendTextRequest{
+	if _, err := p.coreMessengerFor(gate).SendText(ctx, &sharedmodel.SendTextRequest{
 		DomainID:   gate.DomainID,
 		From:       peers.from,
 		To:         peers.to,

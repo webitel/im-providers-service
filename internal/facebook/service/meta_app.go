@@ -88,4 +88,3 @@ func (s *MetaAppService) DeleteMetaApp(ctx context.Context, id string) (*fbmodel
 	s.log.Warn("meta app deleted", "id", id)
 	return app, nil
 }
-

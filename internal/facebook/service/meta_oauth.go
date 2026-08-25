@@ -19,7 +19,7 @@ import (
 var _ MetaOAuthManager = (*MetaOAuthService)(nil)
 
 type MetaOAuthManager interface {
-	StartOAuth(ctx context.Context, req fbmodel.OAuthStart) (authURL string, state string, err error)
+	StartOAuth(ctx context.Context, req fbmodel.OAuthStart) (authURL, state string, err error)
 	HandleCallback(ctx context.Context, req fbmodel.OAuthCallback) (longUserToken string, pages []fbmodel.LinkedPage, err error)
 }
 
