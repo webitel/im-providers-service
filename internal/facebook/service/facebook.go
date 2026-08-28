@@ -18,7 +18,7 @@ type FacebookManager interface {
 
 	SetPersistentMenu(ctx context.Context, gateID string, items []fbmodel.MenuItem, composerDisabled bool) error
 	DeletePersistentMenu(ctx context.Context, gateID string) error
-	SetGetStarted(ctx context.Context, gateID string, payload string) error
+	SetGetStarted(ctx context.Context, gateID, payload string) error
 	DeleteGetStarted(ctx context.Context, gateID string) error
 }
 
@@ -45,10 +45,10 @@ type persistentMenuLocale struct {
 }
 
 type menuAction struct {
-	Type               string       `json:"type"`
-	Title              string       `json:"title"`
-	Payload            string       `json:"payload,omitempty"`
-	URL                string       `json:"url,omitempty"`
+	Type    string `json:"type"`
+	Title   string `json:"title"`
+	Payload string `json:"payload,omitempty"`
+	URL     string `json:"url,omitempty"`
 	// webview_height_ratio is required by FB for web_url buttons in persistent menu.
 	// https://developers.facebook.com/docs/messenger-platform/messenger-profile/persistent-menu
 	WebviewHeightRatio string       `json:"webview_height_ratio,omitempty"`
@@ -177,7 +177,7 @@ func (f *FacebookService) DeletePersistentMenu(ctx context.Context, gateID strin
 }
 
 // SetGetStarted sets the Get Started button payload on the Messenger Profile.
-func (f *FacebookService) SetGetStarted(ctx context.Context, gateID string, payload string) error {
+func (f *FacebookService) SetGetStarted(ctx context.Context, gateID, payload string) error {
 	gate, err := f.repo.Select(ctx, gateID)
 	if err != nil {
 		f.log.ErrorContext(ctx, "failed to fetch gate", "gate_id", gateID, "error", err)

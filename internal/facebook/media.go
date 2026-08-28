@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 )
 
 type syncedMedia struct {
@@ -35,7 +35,7 @@ func (p *facebookProvider) handleAttachments(ctx context.Context, gate *fbmodel.
 
 		switch attach.Type {
 		case "image":
-			if _, err := p.messenger.SendImage(ctx, &sharedmodel.SendImageRequest{
+			if _, err := p.coreMessengerFor(gate).SendImage(ctx, &sharedmodel.SendImageRequest{
 				DomainID: gate.DomainID,
 				From:     peers.from,
 				To:       peers.to,
@@ -50,7 +50,7 @@ func (p *facebookProvider) handleAttachments(ctx context.Context, gate *fbmodel.
 				p.logger.Error("failed to send image", "fileName", name, "err", err)
 			}
 		case "video", "audio", "file":
-			if _, err := p.messenger.SendDocument(ctx, &sharedmodel.SendDocumentRequest{
+			if _, err := p.coreMessengerFor(gate).SendDocument(ctx, &sharedmodel.SendDocumentRequest{
 				DomainID: gate.DomainID,
 				From:     peers.from,
 				To:       peers.to,

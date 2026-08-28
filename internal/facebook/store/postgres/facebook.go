@@ -8,6 +8,7 @@ import (
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"

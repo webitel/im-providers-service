@@ -12,27 +12,29 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
 	"github.com/webitel/webitel-go-kit/pkg/cache"
+
 	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
-	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
-	"github.com/webitel/im-providers-service/internal/provider"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
 	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
+	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
+	"github.com/webitel/im-providers-service/internal/provider"
 )
 
 type facebookProvider struct {
-	api         graphAPI
-	logger      *slog.Logger
-	messenger   sharedsvc.Messenger
-	gateCache   sharedstore.GateCache
-	userCache   sharedstore.ExternalUserCache
-	repo        fbstore.FacebookStore
-	metaAppRepo fbstore.MetaAppStore
-	gatewayer   *imgateway.Client
-	media       sharedsvc.MediaManager
+	api           graphAPI
+	logger        *slog.Logger
+	messenger     sharedsvc.Messenger
+	gateCache     sharedstore.GateCache
+	userCache     sharedstore.ExternalUserCache
+	repo          fbstore.FacebookStore
+	metaAppRepo   fbstore.MetaAppStore
+	gatewayer     *imgateway.Client
+	media         sharedsvc.MediaManager
 	contactClient *imcontact.Client
 	rdb           *redis.Client
 	// psidCache maps internal contact UUID → Facebook PSID to avoid an

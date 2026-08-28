@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
-	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
 )
 
 // -- mock store --
@@ -28,15 +28,19 @@ type mockMetaAppStore struct {
 func (m *mockMetaAppStore) Select(ctx context.Context, id string) (*fbmodel.MetaApp, error) {
 	return m.selectFn(ctx, id)
 }
+
 func (m *mockMetaAppStore) SelectByURI(ctx context.Context, uri string) (*fbmodel.MetaApp, error) {
 	return m.selectByURIFn(ctx, uri)
 }
+
 func (m *mockMetaAppStore) Insert(ctx context.Context, a *fbmodel.MetaApp) error {
 	return m.insertFn(ctx, a)
 }
+
 func (m *mockMetaAppStore) Update(ctx context.Context, a *fbmodel.MetaApp) error {
 	return m.updateFn(ctx, a)
 }
+
 func (m *mockMetaAppStore) Delete(ctx context.Context, id string) error {
 	return m.deleteFn(ctx, id)
 }
@@ -148,7 +152,7 @@ func metaPagesResponse(pages []struct{ ID, Name, AccessToken string }) []byte {
 	for _, p := range pages {
 		data = append(data, page{ID: p.ID, Name: p.Name, AccessToken: p.AccessToken})
 	}
-	b, _ := json.Marshal(map[string]interface{}{"data": data})
+	b, _ := json.Marshal(map[string]any{"data": data})
 	return b
 }
 
@@ -247,8 +251,8 @@ func TestHandleCallback_AppNotFound(t *testing.T) {
 
 func TestHandleCallback_TokenExchangeError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error": map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
+			"error": map[string]any{
 				"message": "Invalid OAuth access token",
 				"type":    "OAuthException",
 				"code":    190,
@@ -277,7 +281,7 @@ func TestHandleCallback_TokenExchangeError(t *testing.T) {
 func TestHandleCallback_EmptyPages(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "me/accounts") {
-			json.NewEncoder(w).Encode(map[string]interface{}{"data": []interface{}{}})
+			json.NewEncoder(w).Encode(map[string]any{"data": []any{}})
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]string{"access_token": "tok"})

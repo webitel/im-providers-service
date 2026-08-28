@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
-	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
+	fbstore "github.com/webitel/im-providers-service/internal/facebook/store"
 )
 
 var noopLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -29,15 +29,19 @@ type mockFacebookStore struct {
 func (m *mockFacebookStore) Insert(ctx context.Context, dc int64, g *fbmodel.FacebookGate) error {
 	return m.insertFn(ctx, dc, g)
 }
+
 func (m *mockFacebookStore) Select(ctx context.Context, id string) (*fbmodel.FacebookGate, error) {
 	return m.selectFn(ctx, id)
 }
+
 func (m *mockFacebookStore) SelectByPageAndURI(ctx context.Context, pageID, uri string) (*fbmodel.FacebookGate, error) {
 	return m.selectByPageAndURIFn(ctx, pageID, uri)
 }
+
 func (m *mockFacebookStore) Update(ctx context.Context, g *fbmodel.FacebookGate) error {
 	return m.updateFn(ctx, g)
 }
+
 func (m *mockFacebookStore) Unbind(ctx context.Context, gateID string) error {
 	return m.unbindFn(ctx, gateID)
 }
@@ -63,6 +67,7 @@ type noopMessengerProfileAPI struct{}
 func (noopMessengerProfileAPI) SetMessengerProfile(_ context.Context, _ string, _ any) error {
 	return nil
 }
+
 func (noopMessengerProfileAPI) DeleteMessengerProfile(_ context.Context, _ string, _ []string) error {
 	return nil
 }

@@ -10,8 +10,8 @@ import (
 
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	"github.com/webitel/im-providers-service/infra/auth"
-	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 )
 
 var noopLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -40,12 +40,15 @@ type mockFacebookService struct {
 func (m *mockFacebookService) CreateGate(ctx context.Context, req fbmodel.CreateFacebook) (*fbmodel.FacebookGate, error) {
 	return m.createFn(ctx, req)
 }
+
 func (m *mockFacebookService) GetGate(ctx context.Context, id string) (*fbmodel.FacebookGate, error) {
 	return m.getFn(ctx, id)
 }
+
 func (m *mockFacebookService) UpdateGate(ctx context.Context, req fbmodel.UpdateFacebook) (*fbmodel.FacebookGate, error) {
 	return m.updateFn(ctx, req)
 }
+
 func (m *mockFacebookService) DeleteGate(ctx context.Context, id string) (*fbmodel.FacebookGate, error) {
 	return m.deleteFn(ctx, id)
 }
@@ -54,7 +57,7 @@ func (m *mockFacebookService) SetPersistentMenu(_ context.Context, _ string, _ [
 	return nil
 }
 func (m *mockFacebookService) DeletePersistentMenu(_ context.Context, _ string) error { return nil }
-func (m *mockFacebookService) SetGetStarted(_ context.Context, _ string, _ string) error {
+func (m *mockFacebookService) SetGetStarted(_ context.Context, _, _ string) error {
 	return nil
 }
 func (m *mockFacebookService) DeleteGetStarted(_ context.Context, _ string) error { return nil }
@@ -102,7 +105,6 @@ func TestCreateFacebookGate_Success(t *testing.T) {
 		PageToken: "tok",
 		Peer:      &impb.Peer{Sub: "sub", Iss: "iss"},
 	})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
