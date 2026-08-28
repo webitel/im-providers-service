@@ -58,9 +58,15 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 		return fmt.Errorf("sync contact [psid=%s]: %w", psid, err)
 	}
 
+	// Do NOT tag the bot recipient (To) with Via: the gate identity travels to
+	// im-thread-service via the x-webitel-via header (see viaCoreMessanger),
+	// which binds it to the external sender. Setting Via on the bot peer makes
+	// thread-service's ExtractExternalPeers treat the bot as the external
+	// recipient, so outbound replies get addressed to the bot's subject id
+	// instead of the customer PSID.
 	peers := peerPair{
 		from: sharedmodel.Peer{Sub: psid, Iss: gate.Peer.Iss},
-		to:   sharedmodel.Peer{Sub: gate.Peer.Sub, Iss: gate.Peer.Iss, Via: &gate.ID},
+		to:   sharedmodel.Peer{Sub: gate.Peer.Sub, Iss: gate.Peer.Iss},
 	}
 
 	p.logger.DebugContext(ctx, "facebook inbound peers built",
@@ -68,7 +74,7 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 		"from_iss", peers.from.Iss,
 		"to_sub", peers.to.Sub,
 		"to_iss", peers.to.Iss,
-		"to_via", gate.ID,
+		"via_header", gate.ID,
 	)
 
 	if msg.Message != nil {
