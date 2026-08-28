@@ -71,6 +71,14 @@ func retryable(err error) error {
 		errors.Is(err, context.DeadlineExceeded) {
 		return backoff.Permanent(err)
 	}
+	// A permanent 4xx from Graph API (e.g. "(#100) You cannot send messages to
+	// this id") will never succeed on retry. Short-circuit so the real error is
+	// returned to the caller instead of being retried until the RPC context is
+	// canceled, which would replace it with a useless "context canceled".
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && apiErr.Permanent() {
+		return backoff.Permanent(err)
+	}
 	return err
 }
 

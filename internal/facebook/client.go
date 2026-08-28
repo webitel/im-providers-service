@@ -46,6 +46,27 @@ type graphAPI interface {
 // https://developers.facebook.com/docs/graph-api/guides/error-handling#errorcodes
 var ErrTokenInvalid = errors.New("facebook: page token invalid or revoked")
 
+// APIError carries a non-2xx Graph API response. It lets the resilient layer
+// distinguish permanent client errors (4xx) from transient ones, so a
+// permanent failure such as "(#100) You cannot send messages to this id" is
+// surfaced immediately instead of being retried until the caller's context is
+// canceled — which would otherwise mask the real Graph API message behind a
+// generic "context canceled".
+type APIError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("status %d: %s", e.StatusCode, e.Body)
+}
+
+// Permanent reports whether the request will never succeed as-is. All 4xx
+// responses are permanent except 429 (rate limit), which is transient.
+func (e *APIError) Permanent() bool {
+	return e.StatusCode >= 400 && e.StatusCode < 500 && e.StatusCode != http.StatusTooManyRequests
+}
+
 type apiClient struct {
 	client *http.Client
 	logger *slog.Logger
@@ -190,7 +211,7 @@ func (c *apiClient) send(ctx context.Context, token string, body outboundPayload
 		if isTokenInvalidError(respBody) {
 			return nil, ErrTokenInvalid
 		}
-		return nil, fmt.Errorf("fb send: status %d: %s", resp.StatusCode, respBody)
+		return nil, fmt.Errorf("fb send: %w", &APIError{StatusCode: resp.StatusCode, Body: string(respBody)})
 	}
 
 	var res struct {
