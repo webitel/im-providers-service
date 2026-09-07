@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/webitel/im-providers-service/pkg/crypto"
 	wamodel "github.com/webitel/im-providers-service/internal/whatsapp/model"
+	"github.com/webitel/im-providers-service/pkg/crypto"
 )
 
 type whatsAppStore struct {

@@ -3,9 +3,9 @@ package whatsapp
 import (
 	"context"
 
-	"github.com/webitel/im-providers-service/internal/provider"
-	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
+	"github.com/webitel/im-providers-service/internal/provider"
 )
 
 // [INTERFACE_GUARDS] Ensure the adapter strictly adheres to all provider contracts.
