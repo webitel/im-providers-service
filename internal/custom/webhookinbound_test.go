@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"testing"
 
@@ -547,4 +548,94 @@ func TestType_MatchesRegistryKey(t *testing.T) {
 	if p.Type() != custommodel.ProviderType {
 		t.Fatalf("Type() = %q, ProviderType = %q", p.Type(), custommodel.ProviderType)
 	}
+}
+
+// The trusted fetch path exists so an on-premise middleware on a private
+// address can serve files. These cases pin down how far that trust goes: a
+// link has to match the configured callback exactly, and loopback stays out of
+// reach even when the callback itself points there — otherwise a payload could
+// walk cluster-internal ports.
+func TestFetcher_TrustBoundary(t *testing.T) {
+	f := newFetcher()
+
+	cases := []struct {
+		name     string
+		link     string
+		callback string
+		trusted  bool
+		refused  bool
+	}{
+		{name: "exact host and port", link: "http://mw.internal:8080/f/1", callback: "http://mw.internal:8080/hook", trusted: true},
+		{name: "implicit https port", link: "https://mw.example.org/f/1", callback: "https://mw.example.org/hook", trusted: true},
+		{name: "other port on the same host", link: "http://mw.internal:9000/f/1", callback: "http://mw.internal:8080/hook"},
+		{name: "other host", link: "https://cdn.example.org/f/1", callback: "https://mw.example.org/hook"},
+		{name: "scheme not http", link: "file:///etc/passwd", callback: "https://mw.example.org/hook", refused: true},
+		{name: "no host", link: "https:///f/1", callback: "https://mw.example.org/hook", refused: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			client, err := f.clientFor(tc.link, tc.callback)
+			if tc.refused {
+				if err == nil {
+					t.Fatal("want the link refused outright, got a client")
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("clientFor: %v", err)
+			}
+
+			if tc.trusted && client != f.trusted {
+				t.Error("want the trusted client")
+			}
+
+			if !tc.trusted && client != f.public {
+				t.Error("want the strict client")
+			}
+		})
+	}
+}
+
+func TestDialableIP(t *testing.T) {
+	cases := []struct {
+		ip              string
+		trusted, strict bool
+	}{
+		{ip: "93.184.216.34", trusted: true, strict: true},
+		{ip: "10.1.2.3", trusted: true},
+		{ip: "192.168.0.10", trusted: true},
+		{ip: "100.64.0.1", trusted: true},
+		{ip: "127.0.0.1"},
+		{ip: "::1"},
+		{ip: "169.254.169.254"},
+		{ip: "0.0.0.0"},
+		{ip: "224.0.0.1"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.ip, func(t *testing.T) {
+			ip := parseIP(t, tc.ip)
+			if got := dialableIP(ip, true); got != tc.trusted {
+				t.Errorf("trusted path: dialableIP(%s) = %v, want %v", tc.ip, got, tc.trusted)
+			}
+
+			if got := dialableIP(ip, false); got != tc.strict {
+				t.Errorf("strict path: dialableIP(%s) = %v, want %v", tc.ip, got, tc.strict)
+			}
+		})
+	}
+}
+
+func parseIP(t *testing.T, raw string) net.IP {
+	t.Helper()
+
+	ip := net.ParseIP(raw)
+	if ip == nil {
+		t.Fatalf("test fixture %q is not an ip address", raw)
+	}
+
+	return ip
 }

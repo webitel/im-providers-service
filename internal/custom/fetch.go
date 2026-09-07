@@ -41,11 +41,12 @@ func newFetcher() *fetcher {
 	return &fetcher{
 		trusted: &http.Client{
 			Timeout:       fetchTimeout,
+			Transport:     &http.Transport{DialContext: guardedDialer(true).DialContext},
 			CheckRedirect: sameHostRedirect,
 		},
 		public: &http.Client{
 			Timeout:       fetchTimeout,
-			Transport:     &http.Transport{DialContext: publicOnlyDialer().DialContext},
+			Transport:     &http.Transport{DialContext: guardedDialer(false).DialContext},
 			CheckRedirect: sameHostRedirect,
 		},
 	}
@@ -69,20 +70,36 @@ func (f *fetcher) clientFor(link, callbackURL string) (*http.Client, error) {
 		return nil, errors.New("custom: refusing to fetch a url without a host")
 	}
 
-	if sameHost(parsed, callbackURL) {
+	if sameEndpoint(parsed, callbackURL) {
 		return f.trusted, nil
 	}
 
 	return f.public, nil
 }
 
-func sameHost(link *url.URL, callbackURL string) bool {
+func sameEndpoint(link *url.URL, callbackURL string) bool {
 	callback, err := url.Parse(callbackURL)
 	if err != nil {
 		return false
 	}
 
-	return callback.Hostname() != "" && strings.EqualFold(callback.Hostname(), link.Hostname())
+	if callback.Hostname() == "" || !strings.EqualFold(callback.Hostname(), link.Hostname()) {
+		return false
+	}
+
+	return portOf(callback) == portOf(link)
+}
+
+func portOf(u *url.URL) string {
+	if p := u.Port(); p != "" {
+		return p
+	}
+
+	if strings.EqualFold(u.Scheme, "https") {
+		return "443"
+	}
+
+	return "80"
 }
 
 func sameHostRedirect(req *http.Request, via []*http.Request) error {
@@ -97,7 +114,13 @@ func sameHostRedirect(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
-func publicOnlyDialer() *net.Dialer {
+// guardedDialer refuses, at dial time, the address ranges a partner's
+// middleware is never legitimately on and that an SSRF is actually after:
+// loopback, the link-local block where cloud metadata lives, the unspecified
+// address and multicast. allowPrivate keeps RFC1918 reachable, because an
+// on-premise middleware usually sits on a private address — that is the whole
+// reason the trusted client exists.
+func guardedDialer(allowPrivate bool) *net.Dialer {
 	return &net.Dialer{
 		Timeout: 5 * time.Second,
 		Control: func(_, address string, _ syscall.RawConn) error {
@@ -107,8 +130,8 @@ func publicOnlyDialer() *net.Dialer {
 			}
 
 			ip := net.ParseIP(host)
-			if ip == nil || !isPublicIP(ip) {
-				return fmt.Errorf("custom: refusing to dial non-public address %q", host)
+			if ip == nil || !dialableIP(ip, allowPrivate) {
+				return fmt.Errorf("custom: refusing to dial %q", host)
 			}
 
 			return nil
@@ -116,16 +139,20 @@ func publicOnlyDialer() *net.Dialer {
 	}
 }
 
-func isPublicIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() ||
-		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() ||
-		ip.IsInterfaceLocalMulticast() {
+func dialableIP(ip net.IP, allowPrivate bool) bool {
+	if ip.IsLoopback() || ip.IsUnspecified() ||
+		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+		ip.IsMulticast() || ip.IsInterfaceLocalMulticast() {
 		return false
+	}
+
+	if ip.IsPrivate() {
+		return allowPrivate
 	}
 
 	// 100.64.0.0/10, the carrier-grade NAT range, is not covered by IsPrivate.
 	if v4 := ip.To4(); v4 != nil && v4[0] == 100 && v4[1] >= 64 && v4[1] <= 127 {
-		return false
+		return allowPrivate
 	}
 
 	return true
