@@ -177,3 +177,13 @@ pids
 .data
 data/.idea
 drafts/
+
+
+# AI
+graphify-out
+CLAUDE.md
+docs/
+.claude
+
+# Debug binaries (dlv debug)
+__debug_bin*
