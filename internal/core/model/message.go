@@ -138,6 +138,9 @@ type SendTextRequest struct {
 	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
 
 	ForwardOrigin *ForwardOrigin `json:"forward_origin,omitempty"`
+
+	// Variables are seeded onto the thread when this message creates it.
+	Variables map[string]string `json:"variables,omitempty"`
 }
 
 // SendTextResponse confirms the delivery of a text message.
@@ -172,6 +175,9 @@ type SendImageRequest struct {
 	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
 
 	ForwardOrigin *ForwardOrigin `json:"forward_origin,omitempty"`
+
+	// Variables are seeded onto the thread when this message creates it.
+	Variables map[string]string `json:"variables,omitempty"`
 }
 
 // SendImageResponse confirms the image was sent.
@@ -213,6 +219,9 @@ type SendDocumentRequest struct {
 	ReplyToExternalID string `json:"reply_to_external_id,omitempty"`
 
 	ForwardOrigin *ForwardOrigin `json:"forward_origin,omitempty"`
+
+	// Variables are seeded onto the thread when this message creates it.
+	Variables map[string]string `json:"variables,omitempty"`
 }
 
 // SendDocumentResponse confirms the document was sent.

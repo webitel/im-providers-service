@@ -21,6 +21,7 @@ func (m *mockGateService) ListGates(ctx context.Context, f sharedmodel.ListFilte
 
 func stubGateSummary(id string, t sharedmodel.GateType) *sharedmodel.GateSummary {
 	appID := "app-1"
+
 	return &sharedmodel.GateSummary{
 		ID:            id,
 		Name:          "Gate " + id,
@@ -40,6 +41,7 @@ func TestListGates_Success(t *testing.T) {
 			if f.Size != 10 {
 				t.Errorf("unexpected size: %d", f.Size)
 			}
+
 			return []*sharedmodel.GateSummary{
 				stubGateSummary("g1", sharedmodel.TypeFacebook),
 				stubGateSummary("g2", sharedmodel.TypeWhatsApp),
@@ -47,6 +49,7 @@ func TestListGates_Success(t *testing.T) {
 		},
 	}
 	h := NewGateHandler(noopLogger, svc, nil)
+
 	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{
 		Page: 1,
 		Size: 10,
@@ -54,10 +57,12 @@ func TestListGates_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(resp.Items) != 2 {
-		t.Errorf("expected 2 items, got %d", len(resp.Items))
+
+	if len(resp.GetItems()) != 2 {
+		t.Errorf("expected 2 items, got %d", len(resp.GetItems()))
 	}
-	if !resp.Next {
+
+	if !resp.GetNext() {
 		t.Error("expected next=true")
 	}
 }
@@ -68,15 +73,18 @@ func TestListGates_DefaultSize(t *testing.T) {
 			if f.Size != 20 {
 				t.Errorf("expected default size 20, got %d", f.Size)
 			}
+
 			return nil, false, nil
 		},
 	}
 	h := NewGateHandler(noopLogger, svc, nil)
+
 	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(resp.Items) != 0 {
+
+	if len(resp.GetItems()) != 0 {
 		t.Errorf("expected 0 items")
 	}
 }
@@ -88,6 +96,7 @@ func TestListGates_ServiceError(t *testing.T) {
 		},
 	}
 	h := NewGateHandler(noopLogger, svc, nil)
+
 	_, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{Size: 10})
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -109,12 +118,14 @@ func TestListGates_NilProviderAppID(t *testing.T) {
 		},
 	}
 	h := NewGateHandler(noopLogger, svc, nil)
+
 	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{Size: 10})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if resp.Items[0].ProviderAppId != "" {
-		t.Errorf("expected empty provider app id, got %s", resp.Items[0].ProviderAppId)
+
+	if resp.GetItems()[0].GetProviderAppId() != "" {
+		t.Errorf("expected empty provider app id, got %s", resp.GetItems()[0].GetProviderAppId())
 	}
 }
 
@@ -128,6 +139,8 @@ func TestToProtoType(t *testing.T) {
 		{sharedmodel.TypeWhatsApp, impb.ProviderType_PROVIDER_TYPE_WHATSAPP},
 		{sharedmodel.TypeTelegramBot, impb.ProviderType_PROVIDER_TYPE_TELEGRAM_BOT},
 		{sharedmodel.TypeTelegramApp, impb.ProviderType_PROVIDER_TYPE_TELEGRAM_APP},
+		{sharedmodel.TypeViber, impb.ProviderType_PROVIDER_TYPE_VIBER},
+		{sharedmodel.TypeCustom, impb.ProviderType_PROVIDER_TYPE_CUSTOM},
 		{sharedmodel.GateType(99), impb.ProviderType_PROVIDER_TYPE_UNSPECIFIED},
 	}
 	for _, c := range cases {
@@ -203,18 +216,18 @@ func TestListGates_ExposesProviderCapabilities(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	facebook := resp.Items[0]
-	if facebook.Capabilities == nil {
+	facebook := resp.GetItems()[0]
+	if facebook.GetCapabilities() == nil {
 		t.Fatal("expected capabilities for the facebook gate")
 	}
 
-	if !facebook.Capabilities.Delivered || !facebook.Capabilities.Read || !facebook.Capabilities.Failed {
-		t.Errorf("capabilities mismatch: %+v", facebook.Capabilities)
+	if !facebook.GetCapabilities().GetDelivered() || !facebook.GetCapabilities().GetRead() || !facebook.GetCapabilities().GetFailed() {
+		t.Errorf("capabilities mismatch: %+v", facebook.GetCapabilities())
 	}
 
 	// No adapter registered for telegram: capabilities stay unset so the UI
 	// draws no unreachable status marks.
-	if resp.Items[1].Capabilities != nil {
-		t.Errorf("expected no capabilities for telegram, got %+v", resp.Items[1].Capabilities)
+	if resp.GetItems()[1].GetCapabilities() != nil {
+		t.Errorf("expected no capabilities for telegram, got %+v", resp.GetItems()[1].GetCapabilities())
 	}
 }

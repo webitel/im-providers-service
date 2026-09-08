@@ -15,17 +15,19 @@ func _() {
 	_ = x[TypeTelegramBot-4]
 	_ = x[TypeTelegramApp-5]
 	_ = x[TypeViber-6]
+	_ = x[TypeCustom-7]
 }
 
-const _GateType_name = "unknownfacebookinstagramwhatsapptelegram_bottelegram_appviber"
+const _GateType_name = "unknownfacebookinstagramwhatsapptelegram_bottelegram_appvibercustom"
 
-var _GateType_index = [...]uint8{0, 7, 15, 24, 32, 44, 56, 61}
+var _GateType_index = [...]uint8{0, 7, 15, 24, 32, 44, 56, 61, 67}
 
 func (i GateType) String() string {
-	if i < 0 || i >= GateType(len(_GateType_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_GateType_index)-1 {
 		return "GateType(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _GateType_name[_GateType_index[i]:_GateType_index[i+1]]
+	return _GateType_name[_GateType_index[idx]:_GateType_index[idx+1]]
 }
 func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
@@ -42,8 +44,9 @@ const _GateStatus_name = "unknownactivedisablederror"
 var _GateStatus_index = [...]uint8{0, 7, 13, 21, 26}
 
 func (i GateStatus) String() string {
-	if i < 0 || i >= GateStatus(len(_GateStatus_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_GateStatus_index)-1 {
 		return "GateStatus(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _GateStatus_name[_GateStatus_index[i]:_GateStatus_index[i+1]]
+	return _GateStatus_name[_GateStatus_index[idx]:_GateStatus_index[idx+1]]
 }

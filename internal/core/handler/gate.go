@@ -54,6 +54,7 @@ func collectCapabilities(providers []provider.Provider) map[string]*impb.Provide
 // ListGates maps domain results to the unified Proto response.
 func (g *GateHandler) ListGates(ctx context.Context, req *impb.ProviderListGatesRequest) (*impb.ProviderListGatesResponse, error) {
 	page := int(req.GetPage())
+
 	size := int(req.GetSize())
 	if size <= 0 {
 		size = 20
@@ -65,6 +66,7 @@ func (g *GateHandler) ListGates(ctx context.Context, req *impb.ProviderListGates
 	})
 	if err != nil {
 		g.logger.Error("grpc: list gates failed", slog.Any("err", err))
+
 		return nil, err
 	}
 
@@ -112,6 +114,8 @@ func toProtoType(t sharedmodel.GateType) impb.ProviderType {
 		return impb.ProviderType_PROVIDER_TYPE_TELEGRAM_APP
 	case sharedmodel.TypeViber:
 		return impb.ProviderType_PROVIDER_TYPE_VIBER
+	case sharedmodel.TypeCustom:
+		return impb.ProviderType_PROVIDER_TYPE_CUSTOM
 	default:
 		return impb.ProviderType_PROVIDER_TYPE_UNSPECIFIED
 	}

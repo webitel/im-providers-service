@@ -22,6 +22,7 @@ const (
 	TypeTelegramBot                 // telegram_bot
 	TypeTelegramApp                 // telegram_app
 	TypeViber                       // viber
+	TypeCustom                      // custom
 )
 
 const (
@@ -54,9 +55,10 @@ type ListFilter struct {
 
 // --- Universal Scanner for GateType ---
 
-func (gt *GateType) Scan(value interface{}) error {
+func (gt *GateType) Scan(value any) error {
 	if value == nil {
 		*gt = TypeUnknown
+
 		return nil
 	}
 
@@ -66,6 +68,7 @@ func (gt *GateType) Scan(value interface{}) error {
 	}
 
 	*gt = ParseGateType(s)
+
 	return nil
 }
 
@@ -76,9 +79,10 @@ func (gt GateType) Value() (driver.Value, error) {
 
 // --- Universal Scanner for GateStatus ---
 
-func (gs *GateStatus) Scan(value interface{}) error {
+func (gs *GateStatus) Scan(value any) error {
 	if value == nil {
 		*gs = StatusUnknown
+
 		return nil
 	}
 
@@ -88,6 +92,7 @@ func (gs *GateStatus) Scan(value interface{}) error {
 	}
 
 	*gs = ParseGateStatus(s)
+
 	return nil
 }
 
@@ -105,6 +110,7 @@ func asString(src any) (string, error) {
 	case []byte:
 		return string(v), nil
 	}
+
 	return "", fmt.Errorf("unexpected type: %T", src)
 }
 
@@ -118,15 +124,18 @@ func ParseGateType(s string) GateType {
 		"telegram_bot": TypeTelegramBot,
 		"telegram_app": TypeTelegramApp,
 		"viber":        TypeViber,
+		"custom":       TypeCustom,
 	}
 	if v, ok := m[val]; ok {
 		return v
 	}
+
 	return TypeUnknown
 }
 
 func ParseGateStatus(s string) GateStatus {
 	val := strings.ToLower(strings.TrimSpace(s))
+
 	m := map[string]GateStatus{
 		"active":   StatusActive,
 		"disabled": StatusDisabled,
@@ -135,5 +144,6 @@ func ParseGateStatus(s string) GateStatus {
 	if v, ok := m[val]; ok {
 		return v
 	}
+
 	return StatusUnknown
 }
