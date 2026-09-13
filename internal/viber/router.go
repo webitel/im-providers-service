@@ -87,7 +87,7 @@ func (p *viberProvider) forwardText(ctx context.Context, gate *vibmodel.ViberGat
 		DomainID:   gate.DomainID,
 		From:       peers.from,
 		To:         peers.to,
-		Body:       body,
+		Body:       ParseViberMarkdown(body),
 		ExternalID: externalID,
 	}); err != nil {
 		p.logger.Error("send text failed", "err", err)

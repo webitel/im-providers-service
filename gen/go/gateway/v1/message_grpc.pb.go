@@ -32,6 +32,8 @@ const (
 	Message_DeleteMessages_FullMethodName          = "/webitel.im.api.gateway.v1.Message/DeleteMessages"
 	Message_ForwardMessages_FullMethodName         = "/webitel.im.api.gateway.v1.Message/ForwardMessages"
 	Message_SetReaction_FullMethodName             = "/webitel.im.api.gateway.v1.Message/SetReaction"
+	Message_SendTyping_FullMethodName              = "/webitel.im.api.gateway.v1.Message/SendTyping"
+	Message_SendInternalNote_FullMethodName        = "/webitel.im.api.gateway.v1.Message/SendInternalNote"
 )
 
 // MessageClient is the client API for Message service.
@@ -74,6 +76,13 @@ type MessageClient interface {
 	ForwardMessages(ctx context.Context, in *ForwardMessagesRequest, opts ...grpc.CallOption) (*ForwardMessagesResponse, error)
 	// Sets or clears the caller's emoji reaction on a single message.
 	SetReaction(ctx context.Context, in *SetReactionRequest, opts ...grpc.CallOption) (*SetReactionResponse, error)
+	// Sends an ephemeral "…is typing" indicator to the other participants of a
+	// thread. Real-time only: it is never stored and never triggers a push. The
+	// typing member is the authenticated caller, resolved from the token.
+	SendTyping(ctx context.Context, in *SendTypingRequest, opts ...grpc.CallOption) (*SendTypingResponse, error)
+	// Posts an internal note into the thread — visible only to Webitel users,
+	// never delivered to the client and never forwarded to an external messenger.
+	SendInternalNote(ctx context.Context, in *SendInternalNoteRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
 }
 
 type messageClient struct {
@@ -214,6 +223,26 @@ func (c *messageClient) SetReaction(ctx context.Context, in *SetReactionRequest,
 	return out, nil
 }
 
+func (c *messageClient) SendTyping(ctx context.Context, in *SendTypingRequest, opts ...grpc.CallOption) (*SendTypingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendTypingResponse)
+	err := c.cc.Invoke(ctx, Message_SendTyping_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messageClient) SendInternalNote(ctx context.Context, in *SendInternalNoteRequest, opts ...grpc.CallOption) (*SendMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendMessageResponse)
+	err := c.cc.Invoke(ctx, Message_SendInternalNote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MessageServer is the server API for Message service.
 // All implementations must embed UnimplementedMessageServer
 // for forward compatibility.
@@ -254,6 +283,13 @@ type MessageServer interface {
 	ForwardMessages(context.Context, *ForwardMessagesRequest) (*ForwardMessagesResponse, error)
 	// Sets or clears the caller's emoji reaction on a single message.
 	SetReaction(context.Context, *SetReactionRequest) (*SetReactionResponse, error)
+	// Sends an ephemeral "…is typing" indicator to the other participants of a
+	// thread. Real-time only: it is never stored and never triggers a push. The
+	// typing member is the authenticated caller, resolved from the token.
+	SendTyping(context.Context, *SendTypingRequest) (*SendTypingResponse, error)
+	// Posts an internal note into the thread — visible only to Webitel users,
+	// never delivered to the client and never forwarded to an external messenger.
+	SendInternalNote(context.Context, *SendInternalNoteRequest) (*SendMessageResponse, error)
 	mustEmbedUnimplementedMessageServer()
 }
 
@@ -302,6 +338,12 @@ func (UnimplementedMessageServer) ForwardMessages(context.Context, *ForwardMessa
 }
 func (UnimplementedMessageServer) SetReaction(context.Context, *SetReactionRequest) (*SetReactionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetReaction not implemented")
+}
+func (UnimplementedMessageServer) SendTyping(context.Context, *SendTypingRequest) (*SendTypingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendTyping not implemented")
+}
+func (UnimplementedMessageServer) SendInternalNote(context.Context, *SendInternalNoteRequest) (*SendMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendInternalNote not implemented")
 }
 func (UnimplementedMessageServer) mustEmbedUnimplementedMessageServer() {}
 func (UnimplementedMessageServer) testEmbeddedByValue()                 {}
@@ -558,6 +600,42 @@ func _Message_SetReaction_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Message_SendTyping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendTypingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServer).SendTyping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Message_SendTyping_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServer).SendTyping(ctx, req.(*SendTypingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Message_SendInternalNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendInternalNoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServer).SendInternalNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Message_SendInternalNote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServer).SendInternalNote(ctx, req.(*SendInternalNoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Message_ServiceDesc is the grpc.ServiceDesc for Message service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -616,6 +694,14 @@ var Message_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetReaction",
 			Handler:    _Message_SetReaction_Handler,
+		},
+		{
+			MethodName: "SendTyping",
+			Handler:    _Message_SendTyping_Handler,
+		},
+		{
+			MethodName: "SendInternalNote",
+			Handler:    _Message_SendInternalNote_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

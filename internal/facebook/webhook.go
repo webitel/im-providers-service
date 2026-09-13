@@ -150,7 +150,7 @@ func (p *facebookProvider) routeMessage(ctx context.Context, gate *fbmodel.Faceb
 			DomainID:          gate.DomainID,
 			From:              peers.from,
 			To:                peers.to,
-			Body:              msg.Text,
+			Body:              ParseFacebookMarkdown(msg.Text),
 			ExternalID:        msg.Mid,
 			ReplyToExternalID: replyTo,
 		}); err != nil {

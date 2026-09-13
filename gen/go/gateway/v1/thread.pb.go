@@ -407,8 +407,11 @@ type ThreadSearchRequest struct {
 	// Filter threads by their kinds.
 	// UNKNOWN (0) is not allowed.
 	Types []ThreadKind `protobuf:"varint,3,rep,packed,name=types,proto3,enum=webitel.im.api.gateway.v1.ThreadKind" json:"types,omitempty"`
-	// Full-text search query.
-	// Typically applied to subject.
+	// Full-text search query, matched case-insensitively against any part of
+	// the thread subject (or the direct title), the name or username of any of
+	// its members, and the values of the thread variables — so a chat can be
+	// found by who is in it or by data collected with it (phone number, tax id,
+	// any custom variable).
 	Q string `protobuf:"bytes,5,opt,name=q,proto3" json:"q,omitempty"`
 	// Maximum number of threads to return per page.
 	// Must be greater than 0 and less than or equal to 100.

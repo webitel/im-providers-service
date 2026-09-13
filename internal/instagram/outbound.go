@@ -22,15 +22,17 @@ func (p *instagramProvider) SendText(ctx context.Context, req *sharedmodel.Messa
 		return nil, err
 	}
 
-	if len(req.Text) > 1000 {
+	renderedText := RenderInstagram(req.Text, req.Entities)
+
+	if len(renderedText) > 1000 {
 		return nil, errors.New("instagram: message text exceeds 1000 characters")
 	}
 
 	if !p.withinMessageWindow(ctx, req.GateID, igsid) {
-		return p.sendHumanAgentText(ctx, g.IGToken, igsid, req.Text, igsid)
+		return p.sendHumanAgentText(ctx, g.IGToken, igsid, renderedText, igsid)
 	}
 
-	return withRecipient(p.api.SendText(ctx, g.IGToken, igsid, req.Text))(igsid)
+	return withRecipient(p.api.SendText(ctx, g.IGToken, igsid, renderedText))(igsid)
 }
 
 func (p *instagramProvider) SendImage(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {

@@ -83,7 +83,7 @@ func (p *Provider) handleTextMessage(ctx context.Context, gate *model.Gate, msg 
 			DomainID:   gate.DC,
 			From:       *from,
 			To:         *to,
-			Body:       *msg.Text,
+			Body:       ParseTelegramMarkdown(*msg.Text, msg.Entities),
 			ExternalID: strconv.FormatInt(msg.MessageID, 10),
 		}
 	)

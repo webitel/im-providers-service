@@ -19,6 +19,7 @@ import (
 	corestore "github.com/webitel/im-providers-service/internal/core/store"
 	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
+	"github.com/webitel/im-providers-service/internal/provider/format"
 	vibmodel "github.com/webitel/im-providers-service/internal/viber/model"
 )
 
@@ -111,6 +112,11 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 		return nil, err
 	}
 
+	entities, invalidEntities := format.FilterValidEntities(req.GetText(), mapEntities(req.GetEntities()))
+	if len(invalidEntities) > 0 {
+		log.WarnContext(ctx, "dropping out-of-bounds entities", slog.Int("count", len(invalidEntities)))
+	}
+
 	msg := &sharedmodel.Message{
 		GateID: req.GetGateId(),
 		// TODO: remove the sub
@@ -119,6 +125,7 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 		// for the providers
 		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
 		Text:              req.GetText(),
+		Entities:          entities,
 		DomainID:          int64(req.DomainId),
 		SenderName:        req.GetSenderName(),
 		ReplyToExternalID: req.GetReplyToExternalId(),
@@ -202,12 +209,18 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 		return nil, err
 	}
 
+	entities, invalidEntities := format.FilterValidEntities(req.GetCaption(), mapEntities(req.GetEntities()))
+	if len(invalidEntities) > 0 {
+		log.WarnContext(ctx, "dropping out-of-bounds entities", slog.Int("count", len(invalidEntities)))
+	}
+
 	msg := &sharedmodel.Message{
 		GateID:            req.GetGateId(),
 		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
 		DomainID:          int64(req.DomainId),
 		SenderName:        req.GetSenderName(),
 		Text:              req.GetCaption(),
+		Entities:          entities,
 		ReplyToExternalID: req.GetReplyToExternalId(),
 	}
 	for _, f := range req.GetDocuments() {
@@ -280,6 +293,19 @@ func (p *OutboundMessageHandler) SendInteractive(ctx context.Context, req *impb.
 		ExternalId: resp.ID,
 		CreatedAt:  time.Now().Unix(),
 	}, nil
+}
+
+func mapEntities(pbs []*impb.Entity) []sharedmodel.Entity {
+	out := make([]sharedmodel.Entity, 0, len(pbs))
+	for _, e := range pbs {
+		out = append(out, sharedmodel.Entity{
+			Type:   e.GetType(),
+			Offset: e.GetOffset(),
+			Length: e.GetLength(),
+			Value:  e.GetValue(),
+		})
+	}
+	return out
 }
 
 func mapInteractive(pb *impb.ProviderInteractive) *sharedmodel.Interactive {

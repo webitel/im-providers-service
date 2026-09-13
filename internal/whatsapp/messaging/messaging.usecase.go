@@ -146,8 +146,9 @@ func (messaging *Messaging) SendText(ctx context.Context, req *model.Message) (*
 		return nil, err
 	}
 
+	renderedText := RenderWhatsApp(req.Text, req.Entities)
 	textMessage, err := components.NewTextMessage(components.TextMessageConfigs{
-		Text:         req.Text,
+		Text:         renderedText,
 		AllowPreview: false,
 	})
 
@@ -210,9 +211,10 @@ func (messaging *Messaging) SendDocument(ctx context.Context, req *model.Message
 		return nil, err
 	}
 
+	renderedCaption := RenderWhatsApp(req.Text, req.Entities)
 	documentMessage, err := components.NewDocumentMessage(components.DocumentMessageConfigs{
 		Link:     req.Documents[0].URL,
-		Caption:  &req.Text,
+		Caption:  &renderedCaption,
 		FileName: req.Documents[0].FileName,
 	})
 
