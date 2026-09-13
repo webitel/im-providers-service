@@ -210,7 +210,7 @@ func (webhook *webhook) HandleTextMessage(ctx context.Context, textEvent *events
 	coreTextMessage := model.SendTextRequest{
 		To:                extractPeerFromWhatsAppBusinessAccount(whatsAppBusinessAccount),
 		From:              extractPeerFromWebhookInput(textEvent.From, textEvent.SenderName),
-		Body:              textEvent.Text,
+		Body:              ParseWhatsAppMarkdown(textEvent.Text),
 		DomainID:          int64(whatsAppBusinessAccount.DC),
 		ExternalID:        textEvent.MessageID,
 		ReplyToExternalID: textEvent.Context.RepliedToMessageID,
@@ -291,7 +291,7 @@ func (webhook *webhook) HandleDocumentMessage(ctx context.Context, documentEvent
 		From: extractPeerFromWebhookInput(documentEvent.From, documentEvent.SenderName),
 		To:   extractPeerFromWhatsAppBusinessAccount(whatsAppBusinessAccount),
 		Document: model.DocumentRequest{
-			Body: *documentEvent.Document.Caption,
+			Body: ParseWhatsAppMarkdown(*documentEvent.Document.Caption),
 			Documents: []*model.Document{
 				{
 					FileName: documentEvent.Document.FileName,
@@ -360,7 +360,7 @@ func (webhook *webhook) HandleImageMessage(ctx context.Context, imageEvent *even
 					ID:       mediaMetadata.ID,
 				},
 			},
-			Body: *imageEvent.Image.Caption,
+			Body: ParseWhatsAppMarkdown(*imageEvent.Image.Caption),
 		},
 		DomainID:          int64(whatsAppBusinessAccount.DC),
 		ExternalID:        imageEvent.MessageID,

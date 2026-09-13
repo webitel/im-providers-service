@@ -20,7 +20,8 @@ func (p *facebookProvider) SendText(ctx context.Context, req *sharedmodel.Messag
 	if err != nil {
 		return nil, err
 	}
-	return withRecipient(p.api.SendText(ctx, g.PageToken, psid, req.Text))(psid)
+	renderedText := RenderFacebook(req.Text, req.Entities)
+	return withRecipient(p.api.SendText(ctx, g.PageToken, psid, renderedText))(psid)
 }
 
 func (p *facebookProvider) SendImage(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
