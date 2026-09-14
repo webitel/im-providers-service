@@ -21,8 +21,8 @@ type PhotoRequest struct {
 	HasSpoiler            bool                   `json:"has_spoiler"`
 	DisableNotification   bool                   `json:"disable_notification"`
 	ProtectContent        bool                   `json:"protect_content"`
-	ReplyParameters       *model.ReplyParameters `json:"reply_parameters"`
-	ReplyMarkup           OutgoingKeyboarder     `json:"reply_markup"`
+	ReplyParameters       *model.ReplyParameters `json:"reply_parameters,omitempty"`
+	ReplyMarkup           OutgoingKeyboarder     `json:"reply_markup,omitempty"`
 }
 
 func (c *Client) SendPhoto(ctx context.Context, token string, req *PhotoRequest) (*model.Message, error) {

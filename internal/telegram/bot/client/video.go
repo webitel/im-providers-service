@@ -19,8 +19,8 @@ type VideoRequest struct {
 	SupportsStreaming     bool                   `json:"supports_streaming"`
 	DisableNotification   bool                   `json:"disable_notification"`
 	ProtectContent        bool                   `json:"protect_content"`
-	ReplyParameters       *model.ReplyParameters `json:"reply_parameters"`
-	ReplyMarkup           OutgoingKeyboarder
+	ReplyParameters       *model.ReplyParameters `json:"reply_parameters,omitempty"`
+	ReplyMarkup           OutgoingKeyboarder     `json:"reply_markup,omitempty"`
 }
 
 func (c *Client) SendVideo(req *VideoRequest) (*model.Message, error) {

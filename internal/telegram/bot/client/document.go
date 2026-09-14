@@ -26,8 +26,8 @@ type DocumentRequest struct {
 	ParseMode           *string                `json:"parse_mode"`
 	DisableNotification bool                   `json:"disable_notification"`
 	ProtectContent      bool                   `json:"protect_content"`
-	ReplyParameters     *model.ReplyParameters `json:"reply_parameters"`
-	ReplyMarkup         OutgoingKeyboarder     `json:"reply_markup"`
+	ReplyParameters     *model.ReplyParameters `json:"reply_parameters,omitempty"`
+	ReplyMarkup         OutgoingKeyboarder     `json:"reply_markup,omitempty"`
 }
 
 type GetDocumentRequest struct {

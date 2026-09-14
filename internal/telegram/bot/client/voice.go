@@ -11,8 +11,8 @@ type VoiceRequest struct {
 	Duration            *int64                 `json:"duration"` // In seconds
 	DisableNotification bool                   `json:"disable_notification"`
 	ProtectContent      bool                   `json:"protect_content"`
-	ReplyParameters     *model.ReplyParameters `json:"reply_parameters"`
-	ReplyMarkup         OutgoingKeyboarder
+	ReplyParameters     *model.ReplyParameters `json:"reply_parameters,omitempty"`
+	ReplyMarkup         OutgoingKeyboarder     `json:"reply_markup,omitempty"`
 }
 
 func (c *Client) SendVoice(req *VoiceRequest) (*model.Message, error) {
