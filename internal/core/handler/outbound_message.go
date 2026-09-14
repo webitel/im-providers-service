@@ -161,9 +161,15 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 		return nil, err
 	}
 
+	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	if err != nil {
+		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+		return nil, err
+	}
+
 	msg := &sharedmodel.Message{
 		GateID:            req.GetGateId(),
-		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
 		DomainID:          int64(req.DomainId),
 		SenderName:        req.GetSenderName(),
 		Text:              req.GetCaption(),
@@ -209,6 +215,12 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 		return nil, err
 	}
 
+	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	if err != nil {
+		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+		return nil, err
+	}
+
 	entities, invalidEntities := format.FilterValidEntities(req.GetCaption(), mapEntities(req.GetEntities()))
 	if len(invalidEntities) > 0 {
 		log.WarnContext(ctx, "dropping out-of-bounds entities", slog.Int("count", len(invalidEntities)))
@@ -216,7 +228,7 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 
 	msg := &sharedmodel.Message{
 		GateID:            req.GetGateId(),
-		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
 		DomainID:          int64(req.DomainId),
 		SenderName:        req.GetSenderName(),
 		Text:              req.GetCaption(),
@@ -267,9 +279,15 @@ func (p *OutboundMessageHandler) SendInteractive(ctx context.Context, req *impb.
 		return nil, status.Errorf(codes.Unimplemented, "provider %s does not support interactive messages", sender.Type())
 	}
 
+	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	if err != nil {
+		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+		return nil, err
+	}
+
 	msg := &sharedmodel.Message{
 		GateID:            req.GetGateId(),
-		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
 		Text:              req.GetBody(),
 		DomainID:          int64(req.GetDomainId()),
 		SenderName:        req.GetSenderName(),
@@ -412,9 +430,15 @@ func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *imp
 		return &impb.ProviderSendMessageResponse{CreatedAt: time.Now().Unix()}, nil
 	}
 
+	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	if err != nil {
+		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+		return nil, err
+	}
+
 	msg := &sharedmodel.Message{
 		GateID:   req.GetGateId(),
-		To:       sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		To:       sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
 		Text:     text,
 		DomainID: int64(req.GetDomainId()),
 	}
@@ -451,9 +475,15 @@ func (p *OutboundMessageHandler) SendLocation(ctx context.Context, req *impb.Pro
 		return nil, status.Errorf(codes.Unimplemented, "provider %s does not support location messages", sender.Type())
 	}
 
+	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	if err != nil {
+		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+		return nil, err
+	}
+
 	msg := &sharedmodel.Message{
 		GateID:            req.GetGateId(),
-		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
 		DomainID:          int64(req.GetDomainId()),
 		SenderName:        req.GetSenderName(),
 		ReplyToExternalID: req.GetReplyToExternalId(),
@@ -491,9 +521,15 @@ func (p *OutboundMessageHandler) SendContact(ctx context.Context, req *impb.Prov
 		return nil, status.Errorf(codes.Unimplemented, "provider %s does not support contact messages", sender.Type())
 	}
 
+	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	if err != nil {
+		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+		return nil, err
+	}
+
 	msg := &sharedmodel.Message{
 		GateID:            req.GetGateId(),
-		To:                sharedmodel.Peer{Sub: req.GetExternalUserId()},
+		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
 		DomainID:          int64(req.GetDomainId()),
 		SenderName:        req.GetSenderName(),
 		ReplyToExternalID: req.GetReplyToExternalId(),
