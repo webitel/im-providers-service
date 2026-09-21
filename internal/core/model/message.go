@@ -91,6 +91,16 @@ type MessageResponse struct {
 	MD map[string]any `json:"metadata,omitempty"`
 }
 
+// Entity mirrors gen/go/provider/v1.Entity, representing a span of formatted text.
+// Type is an open allow-list (BOLD, ITALIC, STRIKETHROUGH, CODE, PRE, LINK today;
+// new kinds may appear later). Value is flattened from the proto's *string.
+type Entity struct {
+	Type   string `json:"type"`
+	Offset int32  `json:"offset"`
+	Length int32  `json:"length"`
+	Value  string `json:"value"`
+}
+
 // Message is the core domain entity representing a message in the system.
 type Message struct {
 	ID          uuid.UUID         `json:"id"`
@@ -100,6 +110,7 @@ type Message struct {
 	From        Peer              `json:"from"`
 	To          Peer              `json:"to"`
 	Text        string            `json:"text"`
+	Entities    []Entity          `json:"entities,omitempty"`
 	CreatedAt   int64             `json:"created_at"`
 	EditedAt    int64             `json:"updated_at,omitempty"`
 	Metadata    map[string]any    `json:"metadata,omitempty"`

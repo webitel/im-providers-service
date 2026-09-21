@@ -365,6 +365,8 @@ func (p *Provider) SendDocument(ctx context.Context, req *coremodel.Message) (*c
 	if err != nil {
 		return nil, err
 	}
+	renderedCaption := RenderTelegramHTML(req.Text, req.Entities)
+	parseMode := "HTML"
 	var (
 		msgs           = make(map[string]any, len(req.Documents))
 		firstMessageID string
@@ -374,7 +376,8 @@ func (p *Provider) SendDocument(ctx context.Context, req *coremodel.Message) (*c
 			ReplyMarkup:     keyboard,
 			ChatID:          destination,
 			Document:        doc.URL,
-			Caption:         &req.Text,
+			Caption:         &renderedCaption,
+			ParseMode:       &parseMode,
 			ReplyParameters: replyTo,
 		}
 		msg, err := p.tgMessageClient.SendDocument(ctx, gate.Token, request)
@@ -463,11 +466,13 @@ func (p *Provider) SendText(ctx context.Context, req *coremodel.Message) (*corem
 		return nil, err
 	}
 
+	renderedText := RenderTelegramHTML(req.Text, req.Entities)
 	request := &tgclient.TextRequest{
-		Text:            req.Text,
+		Text:            renderedText,
 		ReplyMarkup:     keyboard,
 		ChatID:          destination,
 		ReplyParameters: replyTo,
+		ParseMode:       "HTML",
 	}
 
 	msg, err := p.tgMessageClient.SendText(ctx, gate.Token, request)

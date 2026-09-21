@@ -134,7 +134,7 @@ func (p *Provider) constructTo(
 
 func (p *Provider) fetchContactTelegramID(ctx context.Context, gate *model.Gate, contactID uuid.UUID) (int64, error) {
 	if contactID == uuid.Nil {
-		return 0, nil
+		return 0, errors.InvalidArgument("contact id is required to resolve telegram chat id")
 	}
 	authCtx := withGatewayIdentity(ctx, gate)
 	resp, err := p.contactClient.SearchContact(authCtx, &contact.SearchContactRequest{
@@ -145,7 +145,7 @@ func (p *Provider) fetchContactTelegramID(ctx context.Context, gate *model.Gate,
 	}
 	items := resp.GetContacts()
 	if len(items) == 0 || items[0].GetSubject() == "" {
-		return 0, nil
+		return 0, errors.NotFound(fmt.Sprintf("telegram chat id not found for contact %s: user has not started a conversation with the bot", contactID))
 	}
 	telegramID, err := strconv.ParseInt(items[0].GetSubject(), 10, 64)
 	if err != nil {

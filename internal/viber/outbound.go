@@ -25,7 +25,8 @@ func (p *viberProvider) SendText(ctx context.Context, req *sharedmodel.Message) 
 	if err != nil {
 		return nil, err
 	}
-	return p.api.SendText(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, req.Text, nil)
+	renderedText := RenderViber(req.Text, req.Entities)
+	return p.api.SendText(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, renderedText, nil)
 }
 
 func (p *viberProvider) SendImage(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
@@ -67,6 +68,8 @@ func (p *viberProvider) dispatchMedia(ctx context.Context, req *sharedmodel.Mess
 		return nil, err
 	}
 
+	renderedText := RenderViber(req.Text, req.Entities)
+
 	p.probeMedia(ctx, att.url, &att.mime, &att.size)
 
 	if att.size > maxFileBytes {
@@ -81,13 +84,13 @@ func (p *viberProvider) dispatchMedia(ctx context.Context, req *sharedmodel.Mess
 		kind = sendFile
 	}
 
-	if req.Text != "" && kind != sendPicture {
-		if _, err := p.api.SendText(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, req.Text, nil); err != nil {
+	if renderedText != "" && kind != sendPicture {
+		if _, err := p.api.SendText(ctx, g.AuthToken, senderOf(g, req.SenderName), receiver, renderedText, nil); err != nil {
 			p.logger.WarnContext(ctx, "viber caption send failed", "gate_id", g.ID, "err", err)
 		}
 	}
 
-	resp, err := p.sendAs(ctx, g, receiver, req.SenderName, kind, req.Text, att)
+	resp, err := p.sendAs(ctx, g, receiver, req.SenderName, kind, renderedText, att)
 	if err == nil || kind == sendFile {
 		return resp, err
 	}
@@ -104,7 +107,7 @@ func (p *viberProvider) dispatchMedia(ctx context.Context, req *sharedmodel.Mess
 		"err", err,
 	)
 
-	return p.sendAs(ctx, g, receiver, req.SenderName, sendFile, req.Text, att)
+	return p.sendAs(ctx, g, receiver, req.SenderName, sendFile, renderedText, att)
 }
 
 func (p *viberProvider) sendAs(ctx context.Context, g *vibmodel.ViberGate, receiver, senderName string, kind sendKind, caption string, att attachment) (*sharedmodel.MessageResponse, error) {

@@ -196,7 +196,7 @@ func (p *instagramProvider) routeMessage(ctx context.Context, gate *igmodel.Inst
 			DomainID:          gate.DomainID,
 			From:              peers.from,
 			To:                peers.to,
-			Body:              msg.Text,
+			Body:              ParseInstagramMarkdown(msg.Text),
 			ExternalID:        msg.Mid,
 			ReplyToExternalID: replyTo,
 		}); err != nil {

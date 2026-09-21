@@ -72,8 +72,18 @@ type RichMessage struct {
 	// TODO: new telegram feature, add later
 }
 
+// https://core.telegram.org/bots/api#messageentity
 type MessageEntity struct {
-	// TODO: add fields
+	Type   string `json:"type"`
+	Offset int64  `json:"offset"` // UTF-16 code units, not bytes
+	Length int64  `json:"length"` // UTF-16 code units, not bytes
+
+	URL            *string `json:"url,omitempty"`              // "text_link" only
+	User           *User   `json:"user,omitempty"`             // "text_mention" only
+	Language       *string `json:"language,omitempty"`         // "pre" only
+	CustomEmojiID  *string `json:"custom_emoji_id,omitempty"`  // "custom_emoji" only
+	UnixTime       *int64  `json:"unix_time,omitempty"`        // "date_time" only
+	DateTimeFormat *string `json:"date_time_format,omitempty"` // "date_time" only
 }
 
 type DirectMessagesTopic struct {

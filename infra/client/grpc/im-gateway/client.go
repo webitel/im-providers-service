@@ -1,6 +1,7 @@
 package imgateway
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -29,6 +30,16 @@ type Client struct {
 	accountRPC *rpc.Client[gatewayv1.AccountClient]
 	contactRPC *rpc.Client[gatewayv1.ContactsClient]
 	viasRPC    *rpc.Client[gatewayv1.ViasServiceClient]
+}
+
+// SendInternalNote implements [gateway.MessageClient].
+func (c *Client) SendInternalNote(ctx context.Context, in *gatewayv1.SendInternalNoteRequest, opts ...grpc.CallOption) (*gatewayv1.SendMessageResponse, error) {
+	panic("unimplemented")
+}
+
+// SendTyping implements [gateway.MessageClient].
+func (c *Client) SendTyping(ctx context.Context, in *gatewayv1.SendTypingRequest, opts ...grpc.CallOption) (*gatewayv1.SendTypingResponse, error) {
+	panic("unimplemented")
 }
 
 // New initializes a resilient gRPC client for the IM Gateway service.

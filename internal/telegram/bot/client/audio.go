@@ -23,8 +23,8 @@ type AudioRequest struct {
 	Thumbnail           *string                `json:"thumbnail"`
 	DisableNotification bool                   `json:"disable_notification"`
 	ProtectContent      bool                   `json:"protect_content"`
-	ReplyParameters     *model.ReplyParameters `json:"reply_parameters"`
-	ReplyMarkup         OutgoingKeyboarder     `json:"reply_markup"`
+	ReplyParameters     *model.ReplyParameters `json:"reply_parameters,omitempty"`
+	ReplyMarkup         OutgoingKeyboarder     `json:"reply_markup,omitempty"`
 }
 
 func (c *Client) SendAudio(ctx context.Context, token string, req *AudioRequest) (*model.Message, error) {
