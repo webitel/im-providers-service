@@ -3,11 +3,12 @@ package custom
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
+
+	"github.com/webitel/webitel-go-kit/pkg/errors"
 
 	contactv1 "github.com/webitel/im-providers-service/gen/go/contact/v1"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -17,13 +18,16 @@ import (
 
 const webitelSenderType = "webitel"
 
+const resolveReceiverErrID = "custom.outbound.resolve_receiver"
+
 func (p *customProvider) SendText(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
 	return p.send(ctx, req, func(msg *wireMessage) { msg.Text = req.Text })
 }
 
 func (p *customProvider) SendImage(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
 	if len(req.Images) == 0 || req.Images[0] == nil {
-		return nil, errors.New("custom: image payload missing")
+		return nil, errors.InvalidArgument("custom: image payload missing",
+			errors.WithID("custom.outbound.send_image"))
 	}
 
 	img := req.Images[0]
@@ -36,7 +40,8 @@ func (p *customProvider) SendImage(ctx context.Context, req *sharedmodel.Message
 
 func (p *customProvider) SendDocument(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
 	if len(req.Documents) == 0 || req.Documents[0] == nil {
-		return nil, errors.New("custom: document payload missing")
+		return nil, errors.InvalidArgument("custom: document payload missing",
+			errors.WithID("custom.outbound.send_document"))
 	}
 
 	doc := req.Documents[0]
@@ -50,7 +55,8 @@ func (p *customProvider) SendDocument(ctx context.Context, req *sharedmodel.Mess
 func (p *customProvider) SendInteractive(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
 	menu := buildMenu(req.Interactive)
 	if menu == nil {
-		return nil, errors.New("custom: interactive payload carries no buttons")
+		return nil, errors.InvalidArgument("custom: interactive payload carries no buttons",
+			errors.WithID("custom.outbound.send_interactive"))
 	}
 
 	return p.send(ctx, req, func(msg *wireMessage) {
@@ -61,7 +67,8 @@ func (p *customProvider) SendInteractive(ctx context.Context, req *sharedmodel.M
 
 func (p *customProvider) SendLocation(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
 	if req.Location == nil {
-		return nil, errors.New("custom: location payload missing")
+		return nil, errors.InvalidArgument("custom: location payload missing",
+			errors.WithID("custom.outbound.send_location"))
 	}
 
 	return p.send(ctx, req, func(msg *wireMessage) {
@@ -77,7 +84,8 @@ func (p *customProvider) SendLocation(ctx context.Context, req *sharedmodel.Mess
 
 func (p *customProvider) SendContact(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
 	if req.Contact == nil {
-		return nil, errors.New("custom: contact payload missing")
+		return nil, errors.InvalidArgument("custom: contact payload missing",
+			errors.WithID("custom.outbound.send_contact"))
 	}
 
 	return p.send(ctx, req, func(msg *wireMessage) {
@@ -157,15 +165,40 @@ func (p *customProvider) deliver(
 ) (*sharedmodel.MessageResponse, error) {
 	payload, err := json.Marshal(env)
 	if err != nil {
-		return nil, fmt.Errorf("custom: encode payload: %w", err)
+		return nil, errors.Internal("custom: encode payload",
+			errors.WithCause(err), errors.WithID("custom.outbound.deliver"))
+	}
+
+	rec := custommodel.OutboxRecord{
+		GateID:    gate.ID,
+		ChatKey:   chatKey,
+		MessageID: messageID,
+		Payload:   payload,
+	}
+
+	accepted := &sharedmodel.MessageResponse{ID: messageID}
+
+	if gate.RetryAttempts > 0 {
+		queued, pendErr := p.retries.enqueueBehindPending(ctx, rec)
+		if pendErr != nil {
+			p.logger.ErrorContext(ctx, "failed to inspect the outbox, sending inline",
+				"gate_id", gate.ID,
+				"message_id", messageID,
+				"err", pendErr,
+			)
+		}
+
+		if queued {
+			return accepted, nil
+		}
 	}
 
 	err = p.api.post(ctx, gate, payload)
 	if err == nil {
-		return &sharedmodel.MessageResponse{ID: messageID}, nil
+		return accepted, nil
 	}
 
-	if errors.Is(err, custommodel.ErrCallbackRejected) {
+	if errors.Is(err, custommodel.ErrCallbackRejected) || gate.RetryAttempts <= 0 {
 		return nil, err
 	}
 
@@ -175,16 +208,20 @@ func (p *customProvider) deliver(
 		"err", err,
 	)
 
-	p.retries.enqueue(context.WithoutCancel(ctx), retryTask{
-		gate:      gate,
-		chatKey:   chatKey,
-		payload:   payload,
-		messageID: messageID,
-		attempt:   0,
-		lastErr:   err,
-	})
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), outboxWriteWait)
+	defer cancel()
 
-	return &sharedmodel.MessageResponse{ID: messageID}, nil
+	if queueErr := p.retries.enqueue(writeCtx, rec); queueErr != nil {
+		p.logger.ErrorContext(ctx, "failed to queue payload for retry",
+			"gate_id", gate.ID,
+			"message_id", messageID,
+			"err", queueErr,
+		)
+
+		return nil, err
+	}
+
+	return accepted, nil
 }
 
 func (p *customProvider) resolveChat(ctx context.Context, gateID string, to sharedmodel.Peer) (*custommodel.CustomGate, *custommodel.Chat, error) {
@@ -219,7 +256,8 @@ func (p *customProvider) resolveReceiver(ctx context.Context, gate *custommodel.
 	}
 
 	if contactID == "" {
-		return "", errors.New("custom: recipient is empty")
+		return "", errors.InvalidArgument("custom: recipient is empty",
+			errors.WithID(resolveReceiverErrID))
 	}
 
 	if _, err := uuid.Parse(contactID); err != nil {
@@ -236,12 +274,14 @@ func (p *customProvider) resolveReceiver(ctx context.Context, gate *custommodel.
 		Ids: []string{contactID},
 	})
 	if err != nil {
-		return "", fmt.Errorf("resolve custom subject for %s: %w", contactID, err)
+		return "", errors.Internal(fmt.Sprintf("custom: resolve subject for %s", contactID),
+			errors.WithCause(err), errors.WithID(resolveReceiverErrID))
 	}
 
 	items := resp.GetContacts()
 	if len(items) == 0 || items[0].GetSubject() == "" {
-		return "", fmt.Errorf("resolve custom subject for %s: contact not found or has no subject", contactID)
+		return "", errors.NotFound(fmt.Sprintf("custom: resolve subject for %s: contact not found or has no subject", contactID),
+			errors.WithID(resolveReceiverErrID))
 	}
 
 	sub := items[0].GetSubject()

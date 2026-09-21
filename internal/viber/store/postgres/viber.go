@@ -111,9 +111,12 @@ func (s *viberStore) selectOne(ctx context.Context, query, arg string) (*vibmode
 		return nil, fmt.Errorf("postgres: select viber gate: %w", err)
 	}
 
-	if dec, err := s.crypto.Decrypt(g.AuthToken); err == nil {
-		g.AuthToken = dec
+	token, err := s.crypto.Decrypt(g.AuthToken)
+	if err != nil {
+		return nil, fmt.Errorf("postgres: decrypt viber auth token: %w", err)
 	}
+
+	g.AuthToken = token
 
 	s.mapVirtualFields(&g)
 	return &g, nil

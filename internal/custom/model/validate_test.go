@@ -1,9 +1,12 @@
 package model
 
 import (
-	"errors"
 	"net"
 	"testing"
+
+	"google.golang.org/grpc/codes"
+
+	"github.com/webitel/webitel-go-kit/pkg/errors"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 )
@@ -95,45 +98,79 @@ func TestParseAllowedIP(t *testing.T) {
 	}
 }
 
-func TestUpdateCustom_ApplyTo_KeepsSecretWhenNotRotated(t *testing.T) {
-	gate := &CustomGate{AppSecret: "current", CallbackURL: "https://partner.example.org/hook", RetryAttempts: 3}
+func TestUpdateCustom_Validate(t *testing.T) {
+	str := func(v string) *string { return &v }
+	num := func(v int32) *int32 { return &v }
 
-	empty := ""
-	UpdateCustom{AppSecret: &empty, CallbackURL: &empty}.ApplyTo(gate)
-
-	if gate.AppSecret != "current" {
-		t.Errorf("app secret = %q, want it untouched by an empty update", gate.AppSecret)
+	cases := []struct {
+		name    string
+		upd     UpdateCustom
+		wantErr bool
+	}{
+		{name: "nothing to change", upd: UpdateCustom{}},
+		{name: "rotated secret", upd: UpdateCustom{AppSecret: str("next")}},
+		{name: "callback replaced", upd: UpdateCustom{CallbackURL: str("https://partner.example.org/hook")}},
+		{name: "empty secret", upd: UpdateCustom{AppSecret: str("")}, wantErr: true},
+		{name: "empty callback", upd: UpdateCustom{CallbackURL: str("")}, wantErr: true},
+		{name: "relative callback", upd: UpdateCustom{CallbackURL: str("/hook")}, wantErr: true},
+		{name: "timeout below the accepted range", upd: UpdateCustom{RequestTimeoutMS: num(1)}, wantErr: true},
+		{name: "timeout above the accepted range", upd: UpdateCustom{RequestTimeoutMS: num(MaxRequestTimeoutMS + 1)}, wantErr: true},
+		{name: "retries above the accepted range", upd: UpdateCustom{RetryAttempts: num(MaxRetryAttempts + 1)}, wantErr: true},
+		{name: "retries disabled", upd: UpdateCustom{RetryAttempts: num(0)}},
+		{name: "unparsable allowlist entry", upd: UpdateCustom{AllowedIPs: &[]string{"not-an-address"}}, wantErr: true},
 	}
 
-	if gate.CallbackURL != "https://partner.example.org/hook" {
-		t.Errorf("callback url = %q, want it untouched by an empty update", gate.CallbackURL)
-	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.upd.Validate()
+			if tc.wantErr && err == nil {
+				t.Fatal("want a validation error, got none")
+			}
 
-	rotated := "next"
-	UpdateCustom{AppSecret: &rotated}.ApplyTo(gate)
-
-	if gate.AppSecret != "next" {
-		t.Errorf("app secret = %q, want the rotated value", gate.AppSecret)
+			if !tc.wantErr && err != nil {
+				t.Fatalf("want no error, got %v", err)
+			}
+		})
 	}
 }
 
-func TestValidationErrorsAreTyped(t *testing.T) {
-	err := CreateCustom{}.Validate()
-
-	var ve *ValidationError
-	if !errors.As(err, &ve) {
-		t.Fatalf("missing required fields should report *ValidationError, got %T", err)
+func TestValidate_ReportsInvalidArgument(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		id   string
+	}{
+		{
+			name: "missing required fields",
+			err:  CreateCustom{}.Validate(),
+			id:   "custom.model.create_custom.validate",
+		},
+		{
+			name: "bad field value",
+			err: CreateCustom{
+				Name:        "n",
+				CallbackURL: "ftp://x",
+				Peer:        sharedmodel.Peer{Sub: "s", Iss: "i"},
+			}.Validate(),
+			id: "custom.model.validate_callback_url",
+		},
+		{
+			name: "bad allowlist entry",
+			err:  UpdateCustom{AllowedIPs: &[]string{"not-an-address"}}.Validate(),
+			id:   "custom.model.validate_allowed_ips",
+		},
 	}
 
-	err = CreateCustom{
-		Name:        "n",
-		CallbackURL: "ftp://x",
-		Peer:        sharedmodel.Peer{Sub: "s", Iss: "i"},
-	}.Validate()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := errors.Code(tc.err); got != codes.InvalidArgument {
+				t.Errorf("grpc code = %s, want InvalidArgument", got)
+			}
 
-	var fe *FieldError
-	if !errors.As(err, &fe) {
-		t.Fatalf("a bad field value should report *FieldError, got %T", err)
+			if got := errors.ID(tc.err); got != tc.id {
+				t.Errorf("error id = %q, want %q", got, tc.id)
+			}
+		})
 	}
 }
 

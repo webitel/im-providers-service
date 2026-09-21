@@ -3,11 +3,12 @@ package custom
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	"google.golang.org/grpc/metadata"
+
+	"github.com/webitel/webitel-go-kit/pkg/errors"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
@@ -16,10 +17,13 @@ import (
 
 const sourceVariable = "source"
 
+const handleMessageErrID = "custom.webhook.handle_message"
+
 func (p *customProvider) HandleWebhook(ctx context.Context, data []byte) error {
 	var evt envelope
 	if err := json.Unmarshal(data, &evt); err != nil {
-		return fmt.Errorf("custom: unparsable payload: %w", err)
+		return errors.InvalidArgument("custom: unparsable payload",
+			errors.WithCause(err), errors.WithID("custom.webhook.handle_webhook"))
 	}
 
 	switch {
@@ -30,7 +34,8 @@ func (p *customProvider) HandleWebhook(ctx context.Context, data []byte) error {
 	case evt.Broadcast != nil:
 		return p.handleBroadcastResult(ctx, evt.Broadcast)
 	default:
-		return errors.New("custom: payload carries no message, status or broadcast")
+		return errors.InvalidArgument("custom: payload carries no message, status or broadcast",
+			errors.WithID("custom.webhook.handle_webhook"))
 	}
 }
 
@@ -66,11 +71,13 @@ func (p *customProvider) gateFor(ctx context.Context) (*custommodel.CustomGate, 
 
 func (p *customProvider) handleMessage(ctx context.Context, msg *wireMessage) error {
 	if msg.Sender == nil || msg.Sender.ID == "" {
-		return errors.New("custom: message.sender.id is required")
+		return errors.InvalidArgument("custom: message.sender.id is required",
+			errors.WithID(handleMessageErrID))
 	}
 
 	if msg.ChatID == "" {
-		return errors.New("custom: message.chatId is required")
+		return errors.InvalidArgument("custom: message.chatId is required",
+			errors.WithID(handleMessageErrID))
 	}
 
 	gate, err := p.gateFor(ctx)
@@ -85,7 +92,8 @@ func (p *customProvider) handleMessage(ctx context.Context, msg *wireMessage) er
 	}
 
 	if _, err := p.syncContact(ctx, gate, msg.Sender); err != nil {
-		return fmt.Errorf("sync contact [id=%s]: %w", msg.Sender.ID, err)
+		return errors.Internal(fmt.Sprintf("custom: sync contact [id=%s]", msg.Sender.ID),
+			errors.WithCause(err), errors.WithID(handleMessageErrID))
 	}
 
 	sub := contactSub(msg.Sender)
@@ -159,7 +167,8 @@ func senderName(s *wireSender) string {
 // handleStatus records what the external system reports about a message we sent
 func (p *customProvider) handleStatus(ctx context.Context, in *wireStatus) error {
 	if in.MessageID == "" {
-		return errors.New("custom: status.messageId is required")
+		return errors.InvalidArgument("custom: status.messageId is required",
+			errors.WithID("custom.webhook.handle_status"))
 	}
 
 	gate, err := p.gateFor(ctx)
@@ -180,7 +189,8 @@ func (p *customProvider) handleStatus(ctx context.Context, in *wireStatus) error
 	case "failed":
 		p.status.FailedByProviderID(ctx, gate.ID, in.MessageID, at, "external_failed", in.Reason)
 	default:
-		return fmt.Errorf("custom: unknown status %q", in.Status)
+		return errors.InvalidArgument(fmt.Sprintf("custom: unknown status %q", in.Status),
+			errors.WithID("custom.webhook.handle_status"))
 	}
 
 	return nil
@@ -191,7 +201,8 @@ func (p *customProvider) handleStatus(ctx context.Context, in *wireStatus) error
 // present in the reply are the ones that did not receive it.
 func (p *customProvider) handleBroadcastResult(ctx context.Context, in *wireBroadcast) error {
 	if in.EventID == "" {
-		return errors.New("custom: broadcast.eventId is required")
+		return errors.InvalidArgument("custom: broadcast.eventId is required",
+			errors.WithID("custom.webhook.handle_broadcast_result"))
 	}
 
 	gate, err := p.gateFor(ctx)

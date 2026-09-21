@@ -13,6 +13,10 @@ const ProviderType = "custom"
 const (
 	DefaultRequestTimeoutMS = 5000
 	DefaultRetryAttempts    = 3
+
+	MinRequestTimeoutMS = 500
+	MaxRequestTimeoutMS = 60000
+	MaxRetryAttempts    = 10
 )
 
 type CustomGate struct {
@@ -52,6 +56,11 @@ type CreateCustom struct {
 	Enabled          bool
 }
 
+type GateFilter struct {
+	ID         *string
+	WebhookURI *string
+}
+
 type UpdateCustom struct {
 	ID               string
 	Name             *string
@@ -62,40 +71,6 @@ type UpdateCustom struct {
 	RequestTimeoutMS *int32
 	RetryAttempts    *int32
 	Enabled          *bool
-}
-
-func (r UpdateCustom) ApplyTo(g *CustomGate) {
-	if r.Name != nil {
-		g.Name = *r.Name
-	}
-
-	if r.Peer != nil {
-		g.Peer = *r.Peer
-	}
-
-	if r.CallbackURL != nil && *r.CallbackURL != "" {
-		g.CallbackURL = *r.CallbackURL
-	}
-
-	if r.AppSecret != nil && *r.AppSecret != "" {
-		g.AppSecret = *r.AppSecret
-	}
-
-	if r.AllowedIPs != nil {
-		g.AllowedIPs = *r.AllowedIPs
-	}
-
-	if r.RequestTimeoutMS != nil && *r.RequestTimeoutMS > 0 {
-		g.RequestTimeoutMS = *r.RequestTimeoutMS
-	}
-
-	if r.RetryAttempts != nil && *r.RetryAttempts >= 0 {
-		g.RetryAttempts = *r.RetryAttempts
-	}
-
-	if r.Enabled != nil {
-		g.Enabled = *r.Enabled
-	}
 }
 
 // Chat maps a conversation id owned by the external system to the external user

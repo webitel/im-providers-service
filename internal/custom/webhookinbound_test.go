@@ -10,7 +10,9 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sync"
 	"testing"
+	"time"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
@@ -29,7 +31,10 @@ var noopLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 // --- stubs ---
 
-var _ customstore.CustomStore = (*stubStore)(nil)
+var (
+	_ customstore.CustomStore = (*stubStore)(nil)
+	_ customstore.OutboxStore = (*stubStore)(nil)
+)
 
 type stubStore struct {
 	gate *custommodel.CustomGate
@@ -38,6 +43,9 @@ type stubStore struct {
 	chatsByID        map[string]*custommodel.Chat
 
 	upserted []upsertedChat
+
+	mu     sync.Mutex
+	queued []custommodel.OutboxRecord
 }
 
 type upsertedChat struct {
@@ -48,24 +56,66 @@ type upsertedChat struct {
 
 func (s *stubStore) Insert(context.Context, int64, *custommodel.CustomGate) error { return nil }
 
-func (s *stubStore) Select(_ context.Context, _ string) (*custommodel.CustomGate, error) {
+func (s *stubStore) Select(_ context.Context, filter custommodel.GateFilter) (*custommodel.CustomGate, error) {
 	if s.gate == nil {
 		return nil, sharedstore.ErrNotFound
 	}
 
-	return s.gate, nil
-}
-
-func (s *stubStore) SelectByURI(_ context.Context, uri string) (*custommodel.CustomGate, error) {
-	if s.gate == nil || s.gate.WebhookURI != uri {
+	if filter.WebhookURI != nil && s.gate.WebhookURI != *filter.WebhookURI {
 		return nil, sharedstore.ErrNotFound
 	}
 
 	return s.gate, nil
 }
 
-func (s *stubStore) Update(context.Context, *custommodel.CustomGate) error { return nil }
-func (s *stubStore) Unbind(context.Context, string) error                  { return nil }
+func (s *stubStore) Update(context.Context, custommodel.UpdateCustom) (*custommodel.CustomGate, error) {
+	return s.gate, nil
+}
+
+func (s *stubStore) Unbind(context.Context, string) (*custommodel.CustomGate, error) {
+	return s.gate, nil
+}
+
+func (s *stubStore) EnqueueOutbox(_ context.Context, rec custommodel.OutboxRecord) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.queued = append(s.queued, rec)
+
+	return nil
+}
+
+func (s *stubStore) EnqueueOutboxIfPending(_ context.Context, rec custommodel.OutboxRecord) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, pending := range s.queued {
+		if pending.GateID == rec.GateID && pending.ChatKey == rec.ChatKey {
+			s.queued = append(s.queued, rec)
+
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (s *stubStore) ClaimOutbox(context.Context, int, time.Duration) ([]custommodel.OutboxTask, error) {
+	return nil, nil
+}
+
+func (s *stubStore) RetryOutbox(context.Context, int64, time.Time, string) error { return nil }
+
+func (s *stubStore) FailOutbox(context.Context, int64, string) error { return nil }
+
+func (s *stubStore) DeleteOutbox(context.Context, int64) error { return nil }
+
+func (s *stubStore) outbox() []custommodel.OutboxRecord {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]custommodel.OutboxRecord(nil), s.queued...)
+}
 
 func (s *stubStore) UpsertChat(_ context.Context, gateID, chatID, externalSub string) error {
 	s.upserted = append(s.upserted, upsertedChat{gateID: gateID, chatID: chatID, sub: externalSub})

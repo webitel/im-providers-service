@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/webitel/webitel-go-kit/pkg/errors"
+
 	"github.com/webitel/im-providers-service/config"
 	custommodel "github.com/webitel/im-providers-service/internal/custom/model"
 	customstore "github.com/webitel/im-providers-service/internal/custom/store"
@@ -44,13 +46,15 @@ func (s *CustomService) CreateGate(ctx context.Context, req custommodel.CreateCu
 
 	webhookURI, err := genWebhookURI()
 	if err != nil {
-		return nil, fmt.Errorf("custom: generate webhook uri: %w", err)
+		return nil, errors.Internal("failed to generate webhook uri",
+			errors.WithCause(err), errors.WithID("custom.service.create_gate"))
 	}
 
 	secret := req.AppSecret
 	if secret == "" {
 		if secret, err = genAppSecret(); err != nil {
-			return nil, fmt.Errorf("custom: generate app secret: %w", err)
+			return nil, errors.Internal("failed to generate app secret",
+				errors.WithCause(err), errors.WithID("custom.service.create_gate"))
 		}
 	}
 
@@ -88,7 +92,7 @@ func (s *CustomService) CreateGate(ctx context.Context, req custommodel.CreateCu
 }
 
 func (s *CustomService) GetGate(ctx context.Context, id string) (*custommodel.CustomGate, error) {
-	return s.store.Select(ctx, id)
+	return s.store.Select(ctx, custommodel.GateFilter{ID: &id})
 }
 
 func (s *CustomService) UpdateGate(ctx context.Context, req custommodel.UpdateCustom) (*custommodel.CustomGate, error) {
@@ -96,14 +100,8 @@ func (s *CustomService) UpdateGate(ctx context.Context, req custommodel.UpdateCu
 		return nil, err
 	}
 
-	gate, err := s.store.Select(ctx, req.ID)
+	gate, err := s.store.Update(ctx, req)
 	if err != nil {
-		return nil, err
-	}
-
-	req.ApplyTo(gate)
-
-	if err := s.store.Update(ctx, gate); err != nil {
 		s.log.Error("failed to update custom gate", "id", req.ID, "err", err)
 
 		return nil, err
@@ -115,12 +113,8 @@ func (s *CustomService) UpdateGate(ctx context.Context, req custommodel.UpdateCu
 }
 
 func (s *CustomService) DeleteGate(ctx context.Context, id string) (*custommodel.CustomGate, error) {
-	gate, err := s.store.Select(ctx, id)
+	gate, err := s.store.Unbind(ctx, id)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := s.store.Unbind(ctx, id); err != nil {
 		s.log.Error("failed to unbind custom gate", "id", id, "err", err)
 
 		return nil, err

@@ -4,8 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/webitel/webitel-go-kit/pkg/errors"
 
 	impb "github.com/webitel/im-providers-service/gen/go/provider/v1"
 	"github.com/webitel/im-providers-service/infra/auth"
@@ -28,7 +27,8 @@ func NewCustomHandler(logger *slog.Logger, srv customservice.CustomManager) *Cus
 func (h *CustomHandler) CreateCustomGate(ctx context.Context, req *impb.ProviderCreateCustomGateRequest) (*impb.ProviderCreateCustomGateResponse, error) {
 	identity, ok := auth.GetIdentityFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing identity in context")
+		return nil, errors.Unauthenticated("missing identity in context",
+			errors.WithID("custom.handler.create_custom_gate"))
 	}
 
 	gate, err := h.srv.CreateGate(ctx, custommodel.CreateCustom{
@@ -42,7 +42,7 @@ func (h *CustomHandler) CreateCustomGate(ctx context.Context, req *impb.Provider
 		RetryAttempts:    req.GetRetryAttempts(),
 	})
 	if err != nil {
-		return nil, toStatus(err, "create gate")
+		return nil, err
 	}
 
 	return &impb.ProviderCreateCustomGateResponse{Item: h.gateToProto(gate)}, nil
@@ -51,30 +51,24 @@ func (h *CustomHandler) CreateCustomGate(ctx context.Context, req *impb.Provider
 func (h *CustomHandler) GetCustomGate(ctx context.Context, req *impb.ProviderGetCustomGateRequest) (*impb.ProviderGetCustomGateResponse, error) {
 	gate, err := h.srv.GetGate(ctx, req.GetId())
 	if err != nil {
-		return nil, toStatus(err, "get gate")
+		return nil, err
 	}
 
 	return &impb.ProviderGetCustomGateResponse{Item: h.gateToProto(gate)}, nil
 }
 
 func (h *CustomHandler) UpdateCustomGate(ctx context.Context, req *impb.ProviderUpdateCustomGateRequest) (*impb.ProviderUpdateCustomGateResponse, error) {
-	name := req.GetName()
-	callbackURL := req.GetCallbackUrl()
-	appSecret := req.GetAppSecret()
 	allowedIPs := req.GetAllowedIps()
-	timeout := req.GetRequestTimeoutMs()
-	retries := req.GetRetryAttempts()
-	enabled := req.GetEnabled()
 
 	upd := custommodel.UpdateCustom{
 		ID:               req.GetId(),
-		Name:             &name,
-		CallbackURL:      &callbackURL,
-		AppSecret:        &appSecret,
+		Name:             req.Name,
+		CallbackURL:      req.CallbackUrl,
+		AppSecret:        req.AppSecret,
 		AllowedIPs:       &allowedIPs,
-		RequestTimeoutMS: &timeout,
-		RetryAttempts:    &retries,
-		Enabled:          &enabled,
+		RequestTimeoutMS: req.RequestTimeoutMs,
+		RetryAttempts:    req.RetryAttempts,
+		Enabled:          req.Enabled,
 	}
 	if p := req.GetPeer(); p != nil {
 		upd.Peer = &sharedmodel.Peer{Sub: p.GetSub(), Iss: p.GetIss()}
@@ -82,7 +76,7 @@ func (h *CustomHandler) UpdateCustomGate(ctx context.Context, req *impb.Provider
 
 	gate, err := h.srv.UpdateGate(ctx, upd)
 	if err != nil {
-		return nil, toStatus(err, "update gate")
+		return nil, err
 	}
 
 	return &impb.ProviderUpdateCustomGateResponse{Item: h.gateToProto(gate)}, nil
@@ -91,7 +85,7 @@ func (h *CustomHandler) UpdateCustomGate(ctx context.Context, req *impb.Provider
 func (h *CustomHandler) DeleteCustomGate(ctx context.Context, req *impb.ProviderDeleteCustomGateRequest) (*impb.ProviderDeleteCustomGateResponse, error) {
 	gate, err := h.srv.DeleteGate(ctx, req.GetId())
 	if err != nil {
-		return nil, toStatus(err, "delete gate")
+		return nil, err
 	}
 
 	return &impb.ProviderDeleteCustomGateResponse{Item: h.gateToProto(gate)}, nil

@@ -2,12 +2,12 @@ package custom
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/redis/go-redis/v9"
 
 	"github.com/webitel/webitel-go-kit/pkg/cache"
+	"github.com/webitel/webitel-go-kit/pkg/errors"
 
 	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
@@ -57,7 +57,8 @@ func New(
 		L1(cache.RistrettoConfig{MaxCost: 1000, NumCounters: 10000}).
 		Build()
 	if err != nil {
-		return nil, fmt.Errorf("custom provider: init receiver cache: %w", err)
+		return nil, errors.Internal("failed to init custom receiver cache",
+			errors.WithCause(err), errors.WithID("custom.provider.new"))
 	}
 
 	return &customProvider{
@@ -103,7 +104,7 @@ func (p *customProvider) resolveGate(ctx context.Context, uri string) (*custommo
 		return &custommodel.CustomGate{Enabled: false}, nil
 	}
 
-	g, err := p.repo.SelectByURI(ctx, uri)
+	g, err := p.repo.Select(ctx, custommodel.GateFilter{WebhookURI: &uri})
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +121,7 @@ func (p *customProvider) resolveGate(ctx context.Context, uri string) (*custommo
 }
 
 func (p *customProvider) fetchGate(ctx context.Context, gateID string) (*custommodel.CustomGate, error) {
-	return p.repo.Select(ctx, gateID)
+	return p.repo.Select(ctx, custommodel.GateFilter{ID: &gateID})
 }
 
 func (p *customProvider) webhookURI(ctx context.Context) string {

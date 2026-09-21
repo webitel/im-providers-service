@@ -2,7 +2,6 @@ package custom
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,12 +10,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/webitel/webitel-go-kit/pkg/errors"
+
 	custommodel "github.com/webitel/im-providers-service/internal/custom/model"
 )
 
 const (
 	maxLinkRedirects = 3
 	fetchTimeout     = 30 * time.Second
+)
+
+const (
+	clientForErrID = "custom.fetch.client_for"
+	getErrID       = "custom.fetch.get"
 )
 
 // Inbound files arrive as a URL owned by the external system, and that URL is
@@ -57,17 +63,20 @@ func newFetcher() *fetcher {
 func (f *fetcher) clientFor(link, callbackURL string) (*http.Client, error) {
 	parsed, err := url.Parse(link)
 	if err != nil {
-		return nil, fmt.Errorf("custom: unparsable file url: %w", err)
+		return nil, errors.InvalidArgument("custom: unparsable file url",
+			errors.WithCause(err), errors.WithID(clientForErrID))
 	}
 
 	switch strings.ToLower(parsed.Scheme) {
 	case "http", "https":
 	default:
-		return nil, fmt.Errorf("custom: refusing to fetch %q, http(s) url required", parsed.Redacted())
+		return nil, errors.InvalidArgument(fmt.Sprintf("custom: refusing to fetch %q, http(s) url required", parsed.Redacted()),
+			errors.WithID(clientForErrID))
 	}
 
 	if parsed.Host == "" {
-		return nil, errors.New("custom: refusing to fetch a url without a host")
+		return nil, errors.InvalidArgument("custom: refusing to fetch a url without a host",
+			errors.WithID(clientForErrID))
 	}
 
 	if sameEndpoint(parsed, callbackURL) {
@@ -104,11 +113,13 @@ func portOf(u *url.URL) string {
 
 func sameHostRedirect(req *http.Request, via []*http.Request) error {
 	if len(via) >= maxLinkRedirects {
-		return fmt.Errorf("custom: too many redirects for %q", req.URL.Redacted())
+		return errors.Forbidden(fmt.Sprintf("custom: too many redirects for %q", req.URL.Redacted()),
+			errors.WithID("custom.fetch.same_host_redirect"))
 	}
 
 	if origin := via[0].URL; !strings.EqualFold(origin.Hostname(), req.URL.Hostname()) {
-		return fmt.Errorf("custom: refusing to follow a cross-host redirect to %q", req.URL.Redacted())
+		return errors.Forbidden(fmt.Sprintf("custom: refusing to follow a cross-host redirect to %q", req.URL.Redacted()),
+			errors.WithID("custom.fetch.same_host_redirect"))
 	}
 
 	return nil
@@ -131,7 +142,8 @@ func guardedDialer(allowPrivate bool) *net.Dialer {
 
 			ip := net.ParseIP(host)
 			if ip == nil || !dialableIP(ip, allowPrivate) {
-				return fmt.Errorf("custom: refusing to dial %q", host)
+				return errors.Forbidden(fmt.Sprintf("custom: refusing to dial %q", host),
+					errors.WithID("custom.fetch.guarded_dialer"))
 			}
 
 			return nil
@@ -166,18 +178,20 @@ func (f *fetcher) get(ctx context.Context, gate *custommodel.CustomGate, link st
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.Internal("custom: build file request",
+			errors.WithCause(err), errors.WithID(getErrID))
 	}
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, errors.WithID(getErrID))
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		_ = resp.Body.Close()
 
-		return nil, fmt.Errorf("custom: file download status %s", resp.Status)
+		return nil, errors.Unavailable("custom: file download status "+resp.Status,
+			errors.WithID(getErrID))
 	}
 
 	return resp, nil

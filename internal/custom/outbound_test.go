@@ -92,14 +92,7 @@ func outboundFixture(t *testing.T, chats map[string]*custommodel.Chat) (*customP
 	}
 
 	p := newTestProvider(t, store, &recordedMessenger{})
-	// The queue is built without starting its workers: these tests assert what
-	// lands in it, not how it drains.
-	shards := make([]chan retryTask, retryShards)
-	for i := range shards {
-		shards[i] = make(chan retryTask, retryQueueDepth)
-	}
-
-	p.retries = &retryQueue{logger: noopLogger, api: p.api, shards: shards}
+	p.retries = &retryQueue{logger: noopLogger, api: p.api, outbox: store}
 
 	return p, store, server
 }
@@ -311,7 +304,7 @@ func TestSendText_RefusalIsReportedImmediately(t *testing.T) {
 // An unreachable endpoint is a transport problem, so the message keeps its
 // reference and the retry queue owns the outcome from here.
 func TestSendText_UnreachableEndpointIsQueuedNotFailed(t *testing.T) {
-	p, _, server := outboundFixture(t, knownChat())
+	p, store, server := outboundFixture(t, knownChat())
 	server.Close()
 
 	resp, err := p.SendText(t.Context(), operatorMessage())
@@ -323,13 +316,38 @@ func TestSendText_UnreachableEndpointIsQueuedNotFailed(t *testing.T) {
 		t.Fatal("no external id reported, so the message would have no reference to fail later")
 	}
 
-	queued := 0
-	for _, shard := range p.retries.shards {
-		queued += len(shard)
+	if queued := len(store.outbox()); queued != 1 {
+		t.Fatalf("want the message queued for retry, queued = %d", queued)
+	}
+}
+
+func TestSendText_PendingChatQueuesInsteadOfSending(t *testing.T) {
+	p, store, server := outboundFixture(t, knownChat())
+
+	server.mu.Lock()
+	server.status = http.StatusBadGateway
+	server.mu.Unlock()
+
+	if _, err := p.SendText(t.Context(), operatorMessage()); err != nil {
+		t.Fatalf("a 502 must be queued, not failed inline: %v", err)
 	}
 
-	if queued != 1 {
-		t.Fatalf("want the message queued for retry, queued = %d", queued)
+	server.mu.Lock()
+	server.status = http.StatusOK
+	server.mu.Unlock()
+
+	delivered := len(server.captured())
+
+	if _, err := p.SendText(t.Context(), operatorMessage()); err != nil {
+		t.Fatalf("the follow-up send failed: %v", err)
+	}
+
+	if got := len(server.captured()); got != delivered {
+		t.Errorf("the follow-up overtook a queued payload: %d extra calls reached the endpoint", got-delivered)
+	}
+
+	if queued := len(store.outbox()); queued != 2 {
+		t.Fatalf("want both payloads queued for the conversation, queued = %d", queued)
 	}
 }
 
@@ -358,7 +376,7 @@ func TestSendText_QuotedResponseFlagIsAccepted(t *testing.T) {
 }
 
 func TestSendText_NonSuccessStatusIsRetryable(t *testing.T) {
-	p, _, server := outboundFixture(t, knownChat())
+	p, store, server := outboundFixture(t, knownChat())
 
 	server.mu.Lock()
 	server.status = http.StatusBadGateway
@@ -368,12 +386,7 @@ func TestSendText_NonSuccessStatusIsRetryable(t *testing.T) {
 		t.Fatalf("a 502 must be queued, not failed inline: %v", err)
 	}
 
-	queued := 0
-	for _, shard := range p.retries.shards {
-		queued += len(shard)
-	}
-
-	if queued != 1 {
+	if queued := len(store.outbox()); queued != 1 {
 		t.Fatalf("want the message queued for retry, queued = %d", queued)
 	}
 }

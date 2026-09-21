@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/webitel/webitel-go-kit/pkg/errors"
 
 	custommodel "github.com/webitel/im-providers-service/internal/custom/model"
 )
@@ -17,6 +18,8 @@ import (
 // contract's response is a two-field object, and an endpoint answering with a
 // page of HTML must not be able to hold a buffer open.
 const maxResponseBytes = 8 << 10 // 8 KiB
+
+const postErrID = "custom.client.post"
 
 type client struct {
 	logger *slog.Logger
@@ -36,7 +39,8 @@ func (c *client) post(ctx context.Context, gate *custommodel.CustomGate, payload
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, gate.CallbackURL, bytes.NewReader(payload))
 	if err != nil {
-		return fmt.Errorf("%w: build request: %w", custommodel.ErrCallbackRejected, err)
+		return errors.Append(custommodel.ErrCallbackRejected, "build request: "+err.Error(),
+			errors.WithCause(err), errors.WithID(postErrID))
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -44,14 +48,20 @@ func (c *client) post(ctx context.Context, gate *custommodel.CustomGate, payload
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("%w: %w", custommodel.ErrCallbackFailed, err)
+		return errors.Append(custommodel.ErrCallbackFailed, err.Error(),
+			errors.WithCause(err), errors.WithID(postErrID))
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
-
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("%w: status %s", custommodel.ErrCallbackFailed, resp.Status)
+		return errors.Append(custommodel.ErrCallbackFailed, "status "+resp.Status,
+			errors.WithID(postErrID))
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
+	if err != nil {
+		return errors.Append(custommodel.ErrCallbackFailed, "read response: "+err.Error(),
+			errors.WithCause(err), errors.WithID(postErrID))
 	}
 
 	if len(bytes.TrimSpace(body)) == 0 {
@@ -66,7 +76,8 @@ func (c *client) post(ctx context.Context, gate *custommodel.CustomGate, payload
 	}
 
 	if !bool(decoded.Success) && decoded.Error != "" {
-		return fmt.Errorf("%w: %s", custommodel.ErrCallbackRejected, decoded.Error)
+		return errors.Append(custommodel.ErrCallbackRejected, decoded.Error,
+			errors.WithID(postErrID))
 	}
 
 	return nil

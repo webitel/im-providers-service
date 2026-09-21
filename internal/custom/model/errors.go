@@ -1,11 +1,11 @@
 package model
 
-import "errors"
+import "github.com/webitel/webitel-go-kit/pkg/errors"
 
 var (
-	ErrSignatureInvalid = errors.New("custom: request signature invalid")
-	ErrSourceNotAllowed = errors.New("custom: source address not allowed")
-	ErrCallbackRejected = errors.New("custom: external system rejected the payload")
-	ErrCallbackFailed   = errors.New("custom: external system unreachable")
-	ErrChatUnknown      = errors.New("custom: no chat known for this recipient")
+	ErrSignatureInvalid = errors.Unauthenticated("custom: request signature invalid")
+	ErrSourceNotAllowed = errors.Forbidden("custom: source address not allowed")
+	ErrCallbackRejected = errors.Aborted("custom: external system rejected the payload")
+	ErrCallbackFailed   = errors.Unavailable("custom: external system unreachable")
+	ErrChatUnknown      = errors.NotFound("custom: no chat known for this recipient")
 )

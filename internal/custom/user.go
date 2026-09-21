@@ -8,6 +8,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/webitel/webitel-go-kit/pkg/errors"
+
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	grpcclient "github.com/webitel/im-providers-service/infra/client/grpc"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -69,7 +71,8 @@ func (p *customProvider) ensureContact(ctx context.Context, user *sharedmodel.Ex
 			return &gatewayv1.Contact{Sub: user.ID, Iss: p.Type()}, nil
 		}
 
-		return nil, fmt.Errorf("create contact: %w", err)
+		return nil, errors.Internal("custom: create contact",
+			errors.WithCause(err), errors.WithID("custom.user.ensure_contact"))
 	}
 
 	return contact, nil

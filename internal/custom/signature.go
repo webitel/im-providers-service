@@ -5,16 +5,18 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/webitel/webitel-go-kit/pkg/errors"
 
 	custommodel "github.com/webitel/im-providers-service/internal/custom/model"
 )
 
 const signHeader = "X-Webitel-Sign"
+
+const validateSignatureErrID = "custom.signature.validate_signature"
 
 // sign is the shared authentication of the channel, computed identically in
 // both directions: hex-encoded HMAC-SHA256 of the raw body under the gate secret.
@@ -28,11 +30,11 @@ func sign(body []byte, secret string) string {
 func (p *customProvider) ValidateSignature(ctx context.Context, headers http.Header, body []byte) error {
 	gate, err := p.resolveGate(ctx, p.webhookURI(ctx))
 	if err != nil {
-		return fmt.Errorf("custom: resolve gate: %w", err)
+		return errors.Wrap(err, errors.WithID(validateSignatureErrID))
 	}
 
 	if gate == nil || !gate.Enabled {
-		return errors.New("custom: gate missing or disabled")
+		return errors.NotFound("custom: gate missing or disabled", errors.WithID(validateSignatureErrID))
 	}
 
 	if err := allowedSource(gate.AllowedIPs, headers); err != nil {
@@ -41,7 +43,8 @@ func (p *customProvider) ValidateSignature(ctx context.Context, headers http.Hea
 
 	given := strings.TrimSpace(headers.Get(signHeader))
 	if given == "" {
-		return fmt.Errorf("%w: %s header missing", custommodel.ErrSignatureInvalid, signHeader)
+		return errors.Append(custommodel.ErrSignatureInvalid, signHeader+" header missing",
+			errors.WithID(validateSignatureErrID))
 	}
 
 	expected := sign(body, gate.AppSecret)
@@ -60,7 +63,8 @@ func allowedSource(allowed []string, headers http.Header) error {
 
 	remote := sourceIP(headers)
 	if remote == nil {
-		return fmt.Errorf("%w: source address unknown", custommodel.ErrSourceNotAllowed)
+		return errors.Append(custommodel.ErrSourceNotAllowed, "source address unknown",
+			errors.WithID("custom.signature.allowed_source"))
 	}
 
 	for _, entry := range allowed {
@@ -78,7 +82,8 @@ func allowedSource(allowed []string, headers http.Header) error {
 		}
 	}
 
-	return fmt.Errorf("%w: %s", custommodel.ErrSourceNotAllowed, remote)
+	return errors.Append(custommodel.ErrSourceNotAllowed, remote.String(),
+		errors.WithID("custom.signature.allowed_source"))
 }
 
 func sourceIP(headers http.Header) net.IP {

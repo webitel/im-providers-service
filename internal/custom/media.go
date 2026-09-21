@@ -31,42 +31,12 @@ func (p *customProvider) handleFile(ctx context.Context, in *inbound) {
 		return
 	}
 
-	p.forwardMedia(ctx, in, media)
-}
-
-func (p *customProvider) forwardMedia(ctx context.Context, in *inbound, media *syncedMedia) {
-	gate, peers, msg := in.gate, in.peers, in.msg
-
-	if strings.HasPrefix(media.mimeType, "image/") {
-		if _, err := p.messenger.SendImage(ctx, &sharedmodel.SendImageRequest{
-			DomainID: gate.DomainID,
-			From:     peers.from,
-			To:       peers.to,
-			Image: sharedmodel.ImageRequest{
-				Body: msg.Text,
-				Images: []*sharedmodel.Image{{
-					ID:       media.id,
-					FileName: media.name,
-					MimeType: media.mimeType,
-					Size:     media.size,
-				}},
-			},
-			ExternalID:        in.externalID,
-			ReplyToExternalID: msg.ReplyTo,
-			Variables:         in.variables,
-		}); err != nil {
-			p.logger.ErrorContext(ctx, "failed to send image", "file_name", media.name, "err", err)
-		}
-
-		return
-	}
-
 	if _, err := p.messenger.SendDocument(ctx, &sharedmodel.SendDocumentRequest{
-		DomainID: gate.DomainID,
-		From:     peers.from,
-		To:       peers.to,
+		DomainID: in.gate.DomainID,
+		From:     in.peers.from,
+		To:       in.peers.to,
 		Document: sharedmodel.DocumentRequest{
-			Body: msg.Text,
+			Body: in.msg.Text,
 			Documents: []*sharedmodel.Document{{
 				ID:       media.id,
 				FileName: media.name,
@@ -75,7 +45,7 @@ func (p *customProvider) forwardMedia(ctx context.Context, in *inbound, media *s
 			}},
 		},
 		ExternalID:        in.externalID,
-		ReplyToExternalID: msg.ReplyTo,
+		ReplyToExternalID: in.msg.ReplyTo,
 		Variables:         in.variables,
 	}); err != nil {
 		p.logger.ErrorContext(ctx, "failed to send document", "file_name", media.name, "err", err)

@@ -3,6 +3,8 @@ package model
 import (
 	"net"
 	"strings"
+
+	"github.com/webitel/webitel-go-kit/pkg/errors"
 )
 
 // ParseAllowedIP accepts both a bare address and a CIDR block, so an operator
@@ -21,7 +23,8 @@ func ParseAllowedIP(entry string) (*net.IPNet, error) {
 
 	ip := net.ParseIP(entry)
 	if ip == nil {
-		return nil, &FieldError{Field: "allowed_ips", Reason: "not an ip address or cidr block: " + entry}
+		return nil, errors.InvalidArgument("not an ip address or cidr block: "+entry,
+			errors.WithID("custom.model.parse_allowed_ip"))
 	}
 
 	bits := 8 * net.IPv6len
@@ -39,11 +42,8 @@ func ValidateAllowedIPs(entries []string) error {
 		}
 
 		if _, err := ParseAllowedIP(entry); err != nil {
-			if fe, ok := err.(*FieldError); ok {
-				return fe
-			}
-
-			return &FieldError{Field: "allowed_ips", Reason: err.Error()}
+			return errors.InvalidArgument("allowed_ips: "+err.Error(),
+				errors.WithCause(err), errors.WithID("custom.model.validate_allowed_ips"))
 		}
 	}
 
