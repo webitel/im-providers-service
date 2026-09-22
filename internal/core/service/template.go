@@ -51,6 +51,7 @@ func NewTemplateRenderer(store sharedstore.TemplateStore, contacts *imcontact.Cl
 	if err != nil {
 		return nil, fmt.Errorf("template renderer: init contact names cache: %w", err)
 	}
+
 	return &TemplateRenderer{
 		store:        store,
 		contacts:     contacts,
@@ -73,8 +74,10 @@ func (r *TemplateRenderer) Render(ctx context.Context, gateID, eventType string,
 			"event_type", eventType,
 			"err", err,
 		)
+
 		return ""
 	}
+
 	return result
 }
 
@@ -84,6 +87,7 @@ func (r *TemplateRenderer) resolve(ctx context.Context, gateID, eventType string
 		if err == nil {
 			return tpl
 		}
+
 		if !errors.Is(err, sharedstore.ErrNotFound) {
 			r.logger.WarnContext(ctx, "template store lookup failed, falling back to default",
 				"gate_id", gateID,
@@ -104,6 +108,7 @@ func (r *TemplateRenderer) enrichWithNames(ctx context.Context, vars map[string]
 	}
 
 	type pair struct{ prefix, id string }
+
 	var toResolve []pair
 
 	for k, v := range vars {
@@ -112,6 +117,7 @@ func (r *TemplateRenderer) enrichWithNames(ctx context.Context, vars map[string]
 			toResolve = append(toResolve, pair{prefix, v})
 		}
 	}
+
 	if len(toResolve) == 0 {
 		return vars
 	}
@@ -124,6 +130,7 @@ func (r *TemplateRenderer) enrichWithNames(ctx context.Context, vars map[string]
 	for _, p := range toResolve {
 		enriched[p.prefix+"_name"] = r.resolveName(ctx, p.id)
 	}
+
 	return enriched
 }
 
@@ -139,6 +146,7 @@ func (r *TemplateRenderer) resolveName(ctx context.Context, contactID string) st
 	})
 	if err != nil || resp == nil || len(resp.GetContacts()) == 0 {
 		r.logger.WarnContext(ctx, "contact name resolution failed", "contact_id", contactID, "err", err)
+
 		return contactID
 	}
 
@@ -146,7 +154,9 @@ func (r *TemplateRenderer) resolveName(ctx context.Context, contactID string) st
 	if name == "" {
 		name = resp.GetContacts()[0].GetUsername()
 	}
+
 	_ = r.contactNames.Set(ctx, contactID, name)
+
 	return name
 }
 
@@ -158,9 +168,11 @@ func executeTemplate(tpl string, vars map[string]string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	var buf bytes.Buffer
 	if err := t.Execute(&buf, vars); err != nil {
 		return "", err
 	}
+
 	return buf.String(), nil
 }

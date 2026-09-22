@@ -21,6 +21,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/core"
 	sharedhandler "github.com/webitel/im-providers-service/internal/core/handler"
 	"github.com/webitel/im-providers-service/internal/core/webhook"
+	"github.com/webitel/im-providers-service/internal/custom"
 	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/instagram"
 	"github.com/webitel/im-providers-service/internal/provider"
@@ -31,7 +32,11 @@ import (
 )
 
 func NewApp(cfg *config.Config) *fx.App {
-	return fx.New(
+	return fx.New(AppOptions(cfg))
+}
+
+func AppOptions(cfg *config.Config) fx.Option {
+	return fx.Options(
 		fx.Supply(cfg),
 		fx.Provide(
 			ProvideLogger,
@@ -55,6 +60,7 @@ func NewApp(cfg *config.Config) *fx.App {
 		whatsapp.Module,
 		viber.Module,
 		telegrambot.Module,
+		custom.Module,
 		webhook.Module,
 		grpcsrv.Module,
 		httpsrv.Module,

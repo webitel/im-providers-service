@@ -103,3 +103,11 @@ type Verifier interface {
 type SignatureValidator interface {
 	ValidateSignature(ctx context.Context, headers http.Header, body []byte) error
 }
+
+// WebhookResponder is an optional interface for providers whose channel
+// contract prescribes a response body, not just a status code. The handler
+// renders it for accepted and rejected payloads alike; providers without it
+// keep the bare status code they have always returned.
+type WebhookResponder interface {
+	WebhookResponse(handleErr error) (contentType string, body []byte)
+}

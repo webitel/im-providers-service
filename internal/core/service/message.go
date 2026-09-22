@@ -5,11 +5,13 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/structpb"
+
+	"github.com/webitel/webitel-go-kit/pkg/errors"
+
 	gatewayv1 "github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
-	"github.com/webitel/webitel-go-kit/pkg/errors"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var _ Messenger = (*messageService)(nil)
@@ -41,6 +43,7 @@ func (m *messageService) SendText(ctx context.Context, in *sharedmodel.SendTextR
 	if in.To.Via != nil {
 		toVia = *in.To.Via
 	}
+
 	m.logger.Info("dispatching text message to gateway",
 		"from_sub", in.From.Sub,
 		"to_sub", in.To.Sub,
@@ -55,9 +58,11 @@ func (m *messageService) SendText(ctx context.Context, in *sharedmodel.SendTextR
 		ExternalId:        in.ExternalID,
 		ReplyToExternalId: in.ReplyToExternalID,
 		ForwardOrigin:     transformForwardOriginIntoPB(in.ForwardOrigin),
+		Variables:         in.Variables,
 	})
 	if err != nil {
 		m.logger.Error("failed to send text message", "error", err)
+
 		return nil, err
 	}
 
@@ -97,6 +102,9 @@ func (m *messageService) SendLocation(ctx context.Context, in *sharedmodel.SendL
 		Address:   in.Address,
 		SendId:    in.ExternalID,
 
+		ExternalId:        in.ExternalID,
+		ReplyToExternalId: in.ReplyToExternalID,
+
 		ForwardOrigin: transformForwardOriginIntoPB(in.ForwardOrigin),
 	})
 	if err != nil {
@@ -121,7 +129,10 @@ func (m *messageService) SendContact(ctx context.Context, in *sharedmodel.SendCo
 		Email:       in.Email,
 		PhoneNumber: in.PhoneNumber,
 		Metadata:    contactMatadata,
-		SendId:      "",
+		SendId:      in.ExternalID,
+
+		ExternalId:        in.ExternalID,
+		ReplyToExternalId: in.ReplyToExternalID,
 
 		ForwardOrigin: transformForwardOriginIntoPB(in.ForwardOrigin),
 	})
@@ -152,9 +163,11 @@ func (m *messageService) SendImage(ctx context.Context, in *sharedmodel.SendImag
 		ExternalId:        in.ExternalID,
 		ReplyToExternalId: in.ReplyToExternalID,
 		ForwardOrigin:     transformForwardOriginIntoPB(in.ForwardOrigin),
+		Variables:         in.Variables,
 	})
 	if err != nil {
 		m.logger.Error("failed to send image message", "error", err)
+
 		return nil, err
 	}
 
@@ -170,9 +183,11 @@ func (m *messageService) SendDocument(ctx context.Context, in *sharedmodel.SendD
 		ExternalId:        in.ExternalID,
 		ReplyToExternalId: in.ReplyToExternalID,
 		ForwardOrigin:     transformForwardOriginIntoPB(in.ForwardOrigin),
+		Variables:         in.Variables,
 	})
 	if err != nil {
 		m.logger.Error("failed to send document message", "error", err)
+
 		return nil, err
 	}
 
@@ -189,10 +204,12 @@ func (m *messageService) mapImagesAsDocuments(src []*sharedmodel.Image) []*gatew
 		if img == nil {
 			continue
 		}
+
 		res = append(res, &gatewayv1.DocumentInput{
 			Id: img.ID, Url: img.URL, FileName: img.FileName, MimeType: img.MimeType,
 		})
 	}
+
 	return res
 }
 
@@ -202,11 +219,13 @@ func (m *messageService) mapDocuments(src []*sharedmodel.Document) []*gatewayv1.
 		if doc == nil {
 			continue
 		}
+
 		size := doc.Size
 		res = append(res, &gatewayv1.DocumentInput{
 			Id: doc.ID, Url: doc.URL, FileName: doc.FileName, MimeType: doc.MimeType, SizeBytes: &size,
 		})
 	}
+
 	return res
 }
 
@@ -218,8 +237,10 @@ func (m *messageService) SendInteractiveCallback(ctx context.Context, in *shared
 	})
 	if err != nil {
 		m.logger.Error("failed to send interactive callback", "error", err)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -237,6 +258,7 @@ func (m *messageService) UpdateMessageDelivery(ctx context.Context, in *sharedmo
 	})
 	if err != nil {
 		m.logger.Error("failed to update message delivery", "error", err, "gate_id", in.GateID)
+
 		return err
 	}
 
@@ -260,9 +282,11 @@ func (m *messageService) parseUUID(id string) uuid.UUID {
 	if id == "" {
 		return uuid.Nil
 	}
+
 	res, err := uuid.Parse(id)
 	if err != nil {
 		return uuid.Nil
 	}
+
 	return res
 }

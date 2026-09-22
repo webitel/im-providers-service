@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/webitel/im-providers-service/internal/provider"
 )
 
@@ -20,6 +21,7 @@ func NewHandler(logger *slog.Logger, providers []provider.Provider) *Handler {
 	for _, p := range providers {
 		m[p.Type()] = p
 	}
+
 	return &Handler{
 		logger:    logger,
 		providers: m,
@@ -35,6 +37,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		h.logger.Warn("webhook received for unknown provider", "type", pType)
 		http.Error(w, "provider not found", http.StatusNotFound)
+
 		return
 	}
 
@@ -42,16 +45,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		if v, ok := p.(provider.Verifier); ok {
 			gCtx := context.WithValue(r.Context(), provider.WebhookURIKey, uri)
+
 			challenge, err := v.Verify(gCtx, r.URL.Query())
 			if err != nil {
 				h.logger.Error("verification failed", "provider", pType, "error", err)
 				http.Error(w, "forbidden", http.StatusForbidden)
+
 				return
 			}
 
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(challenge))
+
 			return
 		}
 	}
@@ -60,6 +66,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error("failed to read body", "error", err)
 		http.Error(w, "invalid request", http.StatusBadRequest)
+
 		return
 	}
 	defer r.Body.Close()
@@ -72,13 +79,34 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err := sv.ValidateSignature(ctx, r.Header, body); err != nil {
 			h.logger.Warn("signature validation failed", "provider", pType, "uri", uri, "err", err)
 			http.Error(w, "forbidden", http.StatusForbidden)
+
 			return
 		}
 	}
 
-	if err := p.HandleWebhook(ctx, body); err != nil {
-		h.logger.Error("processing failed", "provider", pType, "uri", uri, "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	handleErr := p.HandleWebhook(ctx, body)
+	if handleErr != nil {
+		h.logger.Error("processing failed", "provider", pType, "uri", uri, "error", handleErr)
+	}
+
+	if responder, ok := p.(provider.WebhookResponder); ok {
+		contentType, payload := responder.WebhookResponse(handleErr)
+
+		status := http.StatusOK
+		if handleErr != nil {
+			status = http.StatusInternalServerError
+		}
+
+		w.Header().Set("Content-Type", contentType)
+		w.WriteHeader(status)
+		_, _ = w.Write(payload)
+
+		return
+	}
+
+	if handleErr != nil {
+		http.Error(w, handleErr.Error(), http.StatusInternalServerError)
+
 		return
 	}
 

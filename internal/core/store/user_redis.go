@@ -43,4 +43,3 @@ func (r *redisUserCache) IsKnown(ctx context.Context, user *sharedmodel.External
 func (r *redisUserCache) MarkKnown(ctx context.Context, user *sharedmodel.ExternalUser) error {
 	return r.identity.Set(ctx, user.Hash(), "1")
 }
-

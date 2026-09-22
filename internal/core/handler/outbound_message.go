@@ -17,6 +17,7 @@ import (
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	coreservice "github.com/webitel/im-providers-service/internal/core/service"
 	corestore "github.com/webitel/im-providers-service/internal/core/store"
+	custommodel "github.com/webitel/im-providers-service/internal/custom/model"
 	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/provider/format"
@@ -51,6 +52,7 @@ func NewOutboundMessageHandler(
 	if err != nil {
 		return nil, fmt.Errorf("outbound handler: init type cache: %w", err)
 	}
+
 	return &OutboundMessageHandler{
 		logger:    logger,
 		registry:  registry,
@@ -72,8 +74,10 @@ func (p *OutboundMessageHandler) resolveSender(ctx context.Context, gateID strin
 			if errors.Is(err, corestore.ErrNotFound) {
 				return nil, status.Errorf(codes.NotFound, "gate not found: %s", gateID)
 			}
+
 			return nil, status.Errorf(codes.Internal, "failed to resolve gate type for: %s", gateID)
 		}
+
 		_ = p.typeCache.Set(ctx, gateID, t)
 		gateType = t
 	}
@@ -83,10 +87,12 @@ func (p *OutboundMessageHandler) resolveSender(ctx context.Context, gateID strin
 	}
 
 	key := gateType.String()
+
 	prov, err := p.registry.Get(key)
 	if err != nil {
 		return nil, status.Errorf(codes.Unimplemented, "provider not registered: %s", key)
 	}
+
 	return prov, nil
 }
 
@@ -102,6 +108,7 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 	sender, err := p.resolveSender(ctx, req.GetGateId())
 	if err != nil {
 		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -126,19 +133,22 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
 		Text:              req.GetText(),
 		Entities:          entities,
-		DomainID:          int64(req.DomainId),
+		DomainID:          int64(req.GetDomainId()),
 		SenderName:        req.GetSenderName(),
 		ReplyToExternalID: req.GetReplyToExternalId(),
 	}
 
 	resp, err := sender.SendText(ctx, msg)
 	p.trackOutcome(ctx, mc, resp, err)
+
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send text message", slog.String("error", err.Error()))
+
 		return nil, toGRPCError(err)
 	}
 
 	log.InfoContext(ctx, "text message sent", slog.String("external_id", resp.ID))
+
 	return &impb.ProviderSendMessageResponse{
 		ExternalId: resp.ID,
 		CreatedAt:  time.Now().Unix(),
@@ -158,6 +168,7 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 	sender, err := p.resolveSender(ctx, req.GetGateId())
 	if err != nil {
 		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -170,7 +181,7 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 	msg := &sharedmodel.Message{
 		GateID:            req.GetGateId(),
 		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
-		DomainID:          int64(req.DomainId),
+		DomainID:          int64(req.GetDomainId()),
 		SenderName:        req.GetSenderName(),
 		Text:              req.GetCaption(),
 		ReplyToExternalID: req.GetReplyToExternalId(),
@@ -187,12 +198,15 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 
 	resp, err := sender.SendImage(ctx, msg)
 	p.trackOutcome(ctx, messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId()), resp, err)
+
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send image message", slog.String("error", err.Error()))
+
 		return nil, toGRPCError(err)
 	}
 
 	log.InfoContext(ctx, "image message sent", slog.String("external_id", resp.ID))
+
 	return &impb.ProviderSendMessageResponse{
 		ExternalId: resp.ID,
 		CreatedAt:  time.Now().Unix(),
@@ -212,6 +226,7 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 	sender, err := p.resolveSender(ctx, req.GetGateId())
 	if err != nil {
 		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -229,7 +244,7 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 	msg := &sharedmodel.Message{
 		GateID:            req.GetGateId(),
 		To:                sharedmodel.Peer{ID: externalContactID, Sub: req.GetExternalUserId()},
-		DomainID:          int64(req.DomainId),
+		DomainID:          int64(req.GetDomainId()),
 		SenderName:        req.GetSenderName(),
 		Text:              req.GetCaption(),
 		Entities:          entities,
@@ -247,12 +262,15 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 
 	resp, err := sender.SendDocument(ctx, msg)
 	p.trackOutcome(ctx, messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId()), resp, err)
+
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send document message", slog.String("error", err.Error()))
+
 		return nil, toGRPCError(err)
 	}
 
 	log.InfoContext(ctx, "document message sent", slog.String("external_id", resp.ID))
+
 	return &impb.ProviderSendMessageResponse{
 		ExternalId: resp.ID,
 		CreatedAt:  time.Now().Unix(),
@@ -271,6 +289,7 @@ func (p *OutboundMessageHandler) SendInteractive(ctx context.Context, req *impb.
 	sender, err := p.resolveSender(ctx, req.GetGateId())
 	if err != nil {
 		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -301,12 +320,15 @@ func (p *OutboundMessageHandler) SendInteractive(ctx context.Context, req *impb.
 
 	resp, err := is.SendInteractive(ctx, msg)
 	p.trackOutcome(ctx, messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId()), resp, err)
+
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send interactive message", slog.String("error", err.Error()))
+
 		return nil, toGRPCError(err)
 	}
 
 	log.InfoContext(ctx, "interactive message sent", slog.String("external_id", resp.ID))
+
 	return &impb.ProviderSendMessageResponse{
 		ExternalId: resp.ID,
 		CreatedAt:  time.Now().Unix(),
@@ -330,6 +352,7 @@ func mapInteractive(pb *impb.ProviderInteractive) *sharedmodel.Interactive {
 	if pb == nil {
 		return nil
 	}
+
 	out := &sharedmodel.Interactive{
 		SingleUse:       pb.GetSingleUse(),
 		Placement:       mapMenuPlacement(pb.GetPlacement()),
@@ -340,6 +363,7 @@ func mapInteractive(pb *impb.ProviderInteractive) *sharedmodel.Interactive {
 	} else if l := pb.GetListReply(); l != nil {
 		out.ListReply = mapListReply(l)
 	}
+
 	return out
 }
 
@@ -372,6 +396,7 @@ func mapMarkup(pb *impb.ProviderKeyboardMarkup) *sharedmodel.KeyboardMarkup {
 	for _, r := range pb.GetRows() {
 		rows = append(rows, sharedmodel.KeyboardRow{Buttons: mapButtons(r.GetButtons())})
 	}
+
 	return &sharedmodel.KeyboardMarkup{Rows: rows}
 }
 
@@ -383,6 +408,7 @@ func mapListReply(pb *impb.ProviderKeyboardListReply) *sharedmodel.KeyboardListR
 			Buttons: mapButtons(s.GetButtons()),
 		})
 	}
+
 	return &sharedmodel.KeyboardListReply{
 		MainButtonTitle: pb.GetMainButtonTitle(),
 		Sections:        sections,
@@ -401,15 +427,17 @@ func mapButtons(pbs []*impb.ProviderKeyboardButton) []sharedmodel.KeyboardButton
 		case b.GetRequest() != nil:
 			btn.Request = &sharedmodel.KeyboardButtonRequest{Action: b.GetRequest().GetAction()}
 		}
+
 		out = append(out, btn)
 	}
+
 	return out
 }
 
 // SendSystemMessage renders a system event template and delivers the result as a
 // plain text message to the external chat partner via the appropriate provider.
 // If the rendered text is empty (e.g. the gate has a blank template override),
-// the call is a no-op and returns success so the caller is not penalised.
+// the call is a no-op and returns success so the caller is not penalized.
 func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *impb.ProviderSendSystemMessageRequest) (*impb.ProviderSendMessageResponse, error) {
 	log := p.logger.With(
 		slog.String("method", "SendSystemMessage"),
@@ -422,10 +450,12 @@ func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *imp
 	sender, err := p.resolveSender(ctx, req.GetGateId())
 	if err != nil {
 		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
 	text := p.templates.Render(ctx, req.GetGateId(), req.GetEventType(), req.GetVars())
+
 	if text == "" {
 		return &impb.ProviderSendMessageResponse{CreatedAt: time.Now().Unix()}, nil
 	}
@@ -444,13 +474,17 @@ func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *imp
 	}
 
 	resp, err := sender.SendText(ctx, msg)
+
 	p.trackOutcome(ctx, messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId()), resp, err)
+
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send system message", slog.String("error", err.Error()))
+
 		return nil, toGRPCError(err)
 	}
 
 	log.InfoContext(ctx, "system message sent", slog.String("external_id", resp.ID))
+
 	return &impb.ProviderSendMessageResponse{
 		ExternalId: resp.ID,
 		CreatedAt:  time.Now().Unix(),
@@ -498,8 +532,10 @@ func (p *OutboundMessageHandler) SendLocation(ctx context.Context, req *impb.Pro
 	resp, err := ls.SendLocation(ctx, msg)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send location message", slog.String("error", err.Error()))
+
 		return nil, toGRPCError(err)
 	}
+
 	return &impb.ProviderSendMessageResponse{ExternalId: resp.ID, CreatedAt: time.Now().Unix()}, nil
 }
 
@@ -543,8 +579,10 @@ func (p *OutboundMessageHandler) SendContact(ctx context.Context, req *impb.Prov
 	resp, err := cs.SendContact(ctx, msg)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send contact message", slog.String("error", err.Error()))
+
 		return nil, toGRPCError(err)
 	}
+
 	return &impb.ProviderSendMessageResponse{ExternalId: resp.ID, CreatedAt: time.Now().Unix()}, nil
 }
 
@@ -562,6 +600,7 @@ func (p *OutboundMessageHandler) SendTyping(ctx context.Context, req *impb.Provi
 	sender, err := p.resolveSender(ctx, req.GetGateId())
 	if err != nil {
 		log.WarnContext(ctx, "failed to resolve sender", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -569,6 +608,7 @@ func (p *OutboundMessageHandler) SendTyping(ctx context.Context, req *impb.Provi
 	if !ok {
 		// Channel does not support typing — no-op success.
 		log.DebugContext(ctx, "provider does not support typing, skipping", slog.String("type", sender.Type()))
+
 		return &impb.ProviderSendTypingResponse{}, nil
 	}
 
@@ -579,6 +619,7 @@ func (p *OutboundMessageHandler) SendTyping(ctx context.Context, req *impb.Provi
 		TypingOn:   req.GetTypingOn(),
 	}); err != nil {
 		log.WarnContext(ctx, "failed to send typing", slog.String("error", err.Error()))
+
 		return nil, toGRPCError(err)
 	}
 
@@ -711,6 +752,11 @@ func toGRPCError(err error) error {
 		return status.Errorf(codes.Unauthenticated, "viber auth token invalid or revoked")
 	case errors.Is(err, vibmodel.ErrReceiverNotSubscribed):
 		return status.Errorf(codes.FailedPrecondition, "viber receiver not subscribed or unreachable")
+	case errors.Is(err, custommodel.ErrCallbackRejected):
+		return status.Errorf(codes.FailedPrecondition, "custom channel rejected the message: %v", err)
+	case errors.Is(err, custommodel.ErrChatUnknown):
+		return status.Errorf(codes.FailedPrecondition, "custom channel has no conversation for this recipient")
 	}
+
 	return err
 }

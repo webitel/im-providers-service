@@ -10,27 +10,29 @@ type SendResponse struct {
 }
 
 type SendLocationRequest struct {
-	From       Peer
-	To         Peer
-	Latitude   float64
-	Longitude  float64
-	Name       *string
-	Address    *string
-	ExternalID string
-	DomainID   int
+	From              Peer
+	To                Peer
+	Latitude          float64
+	Longitude         float64
+	Name              *string
+	Address           *string
+	ExternalID        string
+	ReplyToExternalID string
+	DomainID          int
 
 	ForwardOrigin *ForwardOrigin
 }
 
 type SendContactRequest struct {
-	From        Peer
-	To          Peer
-	Name        *string
-	Email       *string
-	PhoneNumber *string
-	Metadata    map[string]any
-	ExternalID  string
-	DomainID    int
+	From              Peer
+	To                Peer
+	Name              *string
+	Email             *string
+	PhoneNumber       *string
+	Metadata          map[string]any
+	ExternalID        string
+	ReplyToExternalID string
+	DomainID          int
 
 	ForwardOrigin *ForwardOrigin
 }
