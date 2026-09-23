@@ -3,6 +3,8 @@ package viberbm
 import (
 	"context"
 	"fmt"
+	"mime"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -58,6 +60,18 @@ func (p *viberBMProvider) SendDocument(ctx context.Context, req *sharedmodel.Mes
 		return nil, vibbmmodel.ErrMediaMissing
 	}
 
+	doc := req.Documents[0]
+	image := isImageMedia(doc.MimeType, doc.FileName)
+
+	var name string
+
+	if !image {
+		var err error
+		if name, err = documentName(doc); err != nil {
+			return nil, err
+		}
+	}
+
 	g, err := p.fetchGate(ctx, req.GateID)
 	if err != nil {
 		return nil, err
@@ -68,7 +82,15 @@ func (p *viberBMProvider) SendDocument(ctx context.Context, req *sharedmodel.Mes
 		return nil, err
 	}
 
-	res, err := p.api.SendFile(ctx, g.BaseURL, g.APIKey, g.SenderName, to, url, documentName(req), outboundMessageID(req.ID))
+	// Callers without a dedicated image RPC (gateway) deliver pictures as
+	// documents; Infobip FILE content rejects image extensions.
+	if image {
+		res, err := p.api.SendImage(ctx, g.BaseURL, g.APIKey, g.SenderName, to, url, req.Text, outboundMessageID(req.ID))
+
+		return toResponse(res, to, err)
+	}
+
+	res, err := p.api.SendFile(ctx, g.BaseURL, g.APIKey, g.SenderName, to, url, name, outboundMessageID(req.ID))
 
 	return toResponse(res, to, err)
 }
@@ -161,21 +183,60 @@ func toResponse(res *sendResult, to string, err error) (*sharedmodel.MessageResp
 	return resp, nil
 }
 
-func documentName(req *sharedmodel.Message) string {
-	name := ""
-	if len(req.Documents) > 0 && req.Documents[0] != nil {
-		name = req.Documents[0].FileName
+// fileExtensions is the set Infobip accepts for FILE content fileName; the API
+// rejects anything else with a 400 violation on messages[].content.fileName.
+var fileExtensions = map[string]struct{}{
+	".doc": {}, ".docx": {}, ".dot": {}, ".dotx": {},
+	".xls": {}, ".xlsx": {}, ".xlsm": {}, ".xltx": {},
+	".ods": {}, ".fods": {}, ".odt": {}, ".fodt": {}, ".odf": {},
+	".rtf": {}, ".txt": {}, ".info": {}, ".pdf": {}, ".xps": {},
+	".pdax": {}, ".eps": {}, ".csv": {},
+}
+
+// documentName builds a FILE fileName Infobip accepts: a supported, lowercased
+// extension (taken from the mime type when the name lacks one) and a length
+// cap that truncates the stem, never the extension.
+func documentName(doc *sharedmodel.Document) (string, error) {
+	var name, mimeType string
+	if doc != nil {
+		name, mimeType = strings.TrimSpace(doc.FileName), doc.MimeType
 	}
 
-	if name == "" {
-		name = "file"
+	stem, ext := name, strings.ToLower(filepath.Ext(name))
+	if _, ok := fileExtensions[ext]; ok {
+		stem = strings.TrimSuffix(name, filepath.Ext(name))
+	} else if ext = extensionByMime(mimeType); ext == "" {
+		return "", vibbmmodel.ErrFileTypeUnsupported
 	}
 
-	if runes := []rune(name); len(runes) > maxFileNameLen {
-		name = string(runes[:maxFileNameLen])
+	if stem == "" {
+		stem = "file"
 	}
 
-	return name
+	if runes, limit := []rune(stem), maxFileNameLen-len(ext); len(runes) > limit {
+		stem = string(runes[:limit])
+	}
+
+	return stem + ext, nil
+}
+
+func extensionByMime(mimeType string) string {
+	if mimeType == "" {
+		return ""
+	}
+
+	exts, err := mime.ExtensionsByType(mimeType)
+	if err != nil {
+		return ""
+	}
+
+	for _, ext := range exts {
+		if _, ok := fileExtensions[ext]; ok {
+			return ext
+		}
+	}
+
+	return ""
 }
 
 type urlGetter interface {
