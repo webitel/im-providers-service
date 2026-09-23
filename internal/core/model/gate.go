@@ -23,6 +23,7 @@ const (
 	TypeTelegramApp                 // telegram_app
 	TypeViber                       // viber
 	TypeCustom                      // custom
+	TypeViberBM                     // viber_bm
 )
 
 const (
@@ -125,6 +126,7 @@ func ParseGateType(s string) GateType {
 		"telegram_app": TypeTelegramApp,
 		"viber":        TypeViber,
 		"custom":       TypeCustom,
+		"viber_bm":     TypeViberBM,
 	}
 	if v, ok := m[val]; ok {
 		return v

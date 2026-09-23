@@ -27,6 +27,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/provider"
 	telegrambot "github.com/webitel/im-providers-service/internal/telegram/bot"
 	"github.com/webitel/im-providers-service/internal/viber"
+	"github.com/webitel/im-providers-service/internal/viberbm"
 	"github.com/webitel/im-providers-service/internal/whatsapp"
 	"github.com/webitel/im-providers-service/pkg/crypto"
 )
@@ -59,6 +60,7 @@ func AppOptions(cfg *config.Config) fx.Option {
 		instagram.Module,
 		whatsapp.Module,
 		viber.Module,
+		viberbm.Module,
 		telegrambot.Module,
 		custom.Module,
 		webhook.Module,

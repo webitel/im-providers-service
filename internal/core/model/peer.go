@@ -57,5 +57,5 @@ func (p Peer) GetRoutingParts() (sub, issuer string) {
 	if p.Iss != "" {
 		issuer = strings.ToLower(p.Iss)
 	}
-	return
+	return sub, issuer
 }
