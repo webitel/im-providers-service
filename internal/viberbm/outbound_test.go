@@ -2,6 +2,8 @@ package viberbm
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -171,52 +173,136 @@ func TestToResponse(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// documentName — truncation and fallback
+// documentName — Infobip fileName rules
 // ---------------------------------------------------------------------------
 
 func TestDocumentName(t *testing.T) {
 	cases := []struct {
-		name string
-		req  *sharedmodel.Message
-		want string
+		name    string
+		doc     *sharedmodel.Document
+		want    string
+		wantErr error
+	}{
+		{"short name unchanged", &sharedmodel.Document{FileName: "short.pdf"}, "short.pdf", nil},
+		{"extension lowercased", &sharedmodel.Document{FileName: "Report.PDF"}, "Report.pdf", nil},
+		{"exactly 25 runes unchanged", &sharedmodel.Document{FileName: "123456789012345678901.pdf"}, "123456789012345678901.pdf", nil},
+		{"long stem truncated, extension kept", &sharedmodel.Document{FileName: "quarterly-report-2026-final.pdf"}, "quarterly-report-2026.pdf", nil},
+		{"cyrillic stem truncated by runes", &sharedmodel.Document{FileName: "звітзвітзвітзвітзвітзвітзвіт.docx"}, "звітзвітзвітзвітзвіт.docx", nil},
+		{"missing extension taken from mime", &sharedmodel.Document{FileName: "report", MimeType: "application/pdf"}, "report.pdf", nil},
+		{"unsupported extension replaced from mime", &sharedmodel.Document{FileName: "report.bin", MimeType: "application/pdf"}, "report.bin.pdf", nil},
+		{"empty name falls back to file stem", &sharedmodel.Document{MimeType: "application/pdf"}, "file.pdf", nil},
+		{"unsupported type rejected", &sharedmodel.Document{FileName: "archive.zip", MimeType: "application/zip"}, "", vibbmmodel.ErrFileTypeUnsupported},
+		{"no extension and no mime rejected", &sharedmodel.Document{FileName: "report"}, "", vibbmmodel.ErrFileTypeUnsupported},
+		{"nil document rejected", nil, "", vibbmmodel.ErrFileTypeUnsupported},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := documentName(tc.doc)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("documentName err = %v, want %v", err, tc.wantErr)
+			}
+
+			if got != tc.want {
+				t.Errorf("documentName = %q, want %q", got, tc.want)
+			}
+
+			if len([]rune(got)) > maxFileNameLen {
+				t.Errorf("documentName = %q exceeds %d runes", got, maxFileNameLen)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SendDocument — content type routing
+// ---------------------------------------------------------------------------
+
+func TestSendDocument_Routing(t *testing.T) {
+	const okBody = `{"bulkId":"b","messages":[{"messageId":"m","status":{"groupId":1,"groupName":"PENDING","name":"PENDING_ENROUTE","description":""}}]}`
+
+	cases := []struct {
+		name         string
+		doc          *sharedmodel.Document
+		wantType     string
+		wantFileName string
+		wantText     string
+		wantErr      error
 	}{
 		{
-			name: "short name unchanged",
-			req:  &sharedmodel.Message{Documents: []*sharedmodel.Document{{FileName: "short.pdf"}}},
-			want: "short.pdf",
+			name:     "image mime sent as IMAGE with caption",
+			doc:      &sharedmodel.Document{URL: "https://example.com/p.jpg", FileName: "pexels.jpg", MimeType: "image/jpeg"},
+			wantType: contentTypeImage,
+			wantText: "caption",
 		},
 		{
-			name: "exactly 25 runes unchanged",
-			req:  &sharedmodel.Message{Documents: []*sharedmodel.Document{{FileName: "1234567890123456789012345"}}},
-			want: "1234567890123456789012345",
+			name:     "image detected by extension without mime",
+			doc:      &sharedmodel.Document{URL: "https://example.com/p.png", FileName: "photo.png"},
+			wantType: contentTypeImage,
+			wantText: "caption",
 		},
 		{
-			name: "26 runes truncated to 25",
-			req:  &sharedmodel.Message{Documents: []*sharedmodel.Document{{FileName: "12345678901234567890123456"}}},
-			want: "1234567890123456789012345",
+			name:         "pdf sent as FILE",
+			doc:          &sharedmodel.Document{URL: "https://example.com/r.pdf", FileName: "report.pdf", MimeType: "application/pdf"},
+			wantType:     contentTypeFile,
+			wantFileName: "report.pdf",
 		},
 		{
-			name: "empty name falls back to 'file'",
-			req:  &sharedmodel.Message{Documents: []*sharedmodel.Document{{FileName: ""}}},
-			want: "file",
-		},
-		{
-			name: "nil document falls back to 'file'",
-			req:  &sharedmodel.Message{Documents: []*sharedmodel.Document{nil}},
-			want: "file",
-		},
-		{
-			name: "empty documents slice falls back to 'file'",
-			req:  &sharedmodel.Message{Documents: nil},
-			want: "file",
+			name:    "unsupported file rejected before Infobip",
+			doc:     &sharedmodel.Document{URL: "https://example.com/a.zip", FileName: "archive.zip", MimeType: "application/zip"},
+			wantErr: vibbmmodel.ErrFileTypeUnsupported,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := documentName(tc.req)
-			if got != tc.want {
-				t.Errorf("documentName = %q, want %q", got, tc.want)
+			srv, cap := serveJSON(t, 200, okBody)
+
+			p := &viberBMProvider{
+				api:    apiClientForServer(srv),
+				logger: discardLogger(),
+				repo:   &signatureRepo{gate: &vibbmmodel.ViberBMGate{ID: "g1", DomainID: 1, BaseURL: srv.URL, APIKey: "key", SenderName: "Sender"}},
+			}
+
+			_, err := p.SendDocument(context.Background(), &sharedmodel.Message{
+				GateID:    "g1",
+				To:        sharedmodel.Peer{Sub: "38599000001"},
+				Text:      "caption",
+				Documents: []*sharedmodel.Document{tc.doc},
+			})
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("SendDocument err = %v, want %v", err, tc.wantErr)
+			}
+
+			if tc.wantErr != nil {
+				if cap.body != nil {
+					t.Error("request reached Infobip despite validation error")
+				}
+
+				return
+			}
+
+			var env envelope
+			if err := json.Unmarshal(cap.body, &env); err != nil {
+				t.Fatalf("parse body: %v", err)
+			}
+
+			content, _ := env.Messages[0].Content.(map[string]any)
+
+			if got := content["type"]; got != tc.wantType {
+				t.Errorf("content.type = %v, want %s", got, tc.wantType)
+			}
+
+			if got := content["mediaUrl"]; got != tc.doc.URL {
+				t.Errorf("mediaUrl = %v, want %s", got, tc.doc.URL)
+			}
+
+			if tc.wantFileName != "" && content["fileName"] != tc.wantFileName {
+				t.Errorf("fileName = %v, want %s", content["fileName"], tc.wantFileName)
+			}
+
+			if tc.wantText != "" && content["text"] != tc.wantText {
+				t.Errorf("text = %v, want %s", content["text"], tc.wantText)
 			}
 		})
 	}
