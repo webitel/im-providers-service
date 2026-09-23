@@ -16,11 +16,12 @@ func _() {
 	_ = x[TypeTelegramApp-5]
 	_ = x[TypeViber-6]
 	_ = x[TypeCustom-7]
+	_ = x[TypeViberBM-8]
 }
 
-const _GateType_name = "unknownfacebookinstagramwhatsapptelegram_bottelegram_appvibercustom"
+const _GateType_name = "unknownfacebookinstagramwhatsapptelegram_bottelegram_appvibercustomviber_bm"
 
-var _GateType_index = [...]uint8{0, 7, 15, 24, 32, 44, 56, 61, 67}
+var _GateType_index = [...]uint8{0, 7, 15, 24, 32, 44, 56, 61, 67, 75}
 
 func (i GateType) String() string {
 	idx := int(i) - 0
