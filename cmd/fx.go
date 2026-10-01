@@ -8,6 +8,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/fx"
 
+	"github.com/webitel/webitel-go-kit/infra/health"
+	healthfx "github.com/webitel/webitel-go-kit/infra/health/fx"
+	healthhttp "github.com/webitel/webitel-go-kit/infra/health/http"
+
 	"github.com/webitel/im-providers-service/config"
 	"github.com/webitel/im-providers-service/infra/auth/standard"
 	imauth "github.com/webitel/im-providers-service/infra/client/grpc/im-auth"
@@ -39,6 +43,7 @@ func NewApp(cfg *config.Config) *fx.App {
 func AppOptions(cfg *config.Config) fx.Option {
 	return fx.Options(
 		fx.Supply(cfg),
+		healthfx.Module(healthfx.Config{}),
 		fx.Provide(
 			ProvideLogger,
 			ProvideWatermillLogger,
@@ -67,12 +72,19 @@ func AppOptions(cfg *config.Config) fx.Option {
 		grpcsrv.Module,
 		httpsrv.Module,
 		sharedhandler.Module,
+
+		fx.Invoke(registerHealth),
+		healthfx.Shutdown(),
 	)
 }
 
 // ProvideRouter sets up the Chi router with dynamic path parameters.
-func ProvideRouter(wh *webhook.Handler, cfg *config.Config, logger *slog.Logger) http.Handler {
+func ProvideRouter(wh *webhook.Handler, cfg *config.Config, logger *slog.Logger, h *health.Registry) http.Handler {
 	r := chi.NewRouter()
+
+	r.Handle("/livez", healthhttp.LivenessHandler(h, healthhttp.WithLogger(logger)))
+	r.Handle("/readyz", healthhttp.ReadinessHandler(h, healthhttp.WithLogger(logger)))
+	r.Handle("/healthz", healthhttp.HealthHandler(h, healthhttp.WithLogger(logger)))
 
 	// Sanitize base path (e.g., "/wh")
 	path := "/" + strings.Trim(cfg.Service.WebhookPath, "/")

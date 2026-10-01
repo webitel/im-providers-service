@@ -207,6 +207,11 @@ func (s *Server) Port() int {
 	return s.port
 }
 
+// Listener returns the bound listener.
+func (s *Server) Listener() net.Listener {
+	return s.listener
+}
+
 // --- Network Helpers ---
 
 func publicAddr() string {
