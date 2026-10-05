@@ -30,15 +30,18 @@ func apiClientForServer(srv *httptest.Server) *apiClient {
 }
 
 // serveJSON starts a one-shot test server that returns statusCode with body.
-// The incoming request is captured into *capturedRequest.
+// The first incoming request is captured into *capturedRequest.
 func serveJSON(t *testing.T, statusCode int, body string) (*httptest.Server, *capturedRequest) {
 	t.Helper()
 
 	cap := &capturedRequest{}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cap.header = r.Header.Clone()
-		cap.body, _ = io.ReadAll(r.Body)
+		// Keep the first request: a FILE send is followed by a caption TEXT.
+		if cap.body == nil {
+			cap.header = r.Header.Clone()
+			cap.body, _ = io.ReadAll(r.Body)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)

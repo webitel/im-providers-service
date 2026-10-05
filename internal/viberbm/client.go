@@ -63,6 +63,15 @@ type fileContent struct {
 }
 
 //nolint:tagliatelle // InfoBip omni-channel wire format is camelCase
+type videoContent struct {
+	Type          string `json:"type"`
+	MediaURL      string `json:"mediaUrl"`
+	MediaDuration string `json:"mediaDuration"`
+	ThumbnailURL  string `json:"thumbnailUrl"`
+	Text          string `json:"text,omitempty"`
+}
+
+//nolint:tagliatelle // InfoBip omni-channel wire format is camelCase
 type templateContent struct {
 	Type       string            `json:"type"`
 	TemplateID string            `json:"templateId"`
@@ -128,6 +137,17 @@ func (c *apiClient) SendFile(ctx context.Context, base, apiKey, sender, to, file
 		Sender:       sender,
 		Destinations: []dest{{To: to}},
 		Content:      fileContent{Type: contentTypeFile, MediaURL: fileURL, FileName: fileName},
+		MessageID:    messageID,
+	})
+}
+
+func (c *apiClient) SendVideo(ctx context.Context, base, apiKey, sender, to string, v videoContent, messageID string) (*sendResult, error) {
+	v.Type = contentTypeVideo
+
+	return c.send(ctx, base, apiKey, outMessage{
+		Sender:       sender,
+		Destinations: []dest{{To: to}},
+		Content:      v,
 		MessageID:    messageID,
 	})
 }

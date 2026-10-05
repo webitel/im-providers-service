@@ -114,8 +114,10 @@ func (p *OutboundMessageHandler) SendText(ctx context.Context, req *impb.Provide
 
 	mc := messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId())
 
-	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	externalContactID, err := parseExternalUserID(req.GetExternalUserId())
 	if err != nil {
+		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -172,9 +174,10 @@ func (p *OutboundMessageHandler) SendImage(ctx context.Context, req *impb.Provid
 		return nil, err
 	}
 
-	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	externalContactID, err := parseExternalUserID(req.GetExternalUserId())
 	if err != nil {
 		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -230,9 +233,10 @@ func (p *OutboundMessageHandler) SendDocument(ctx context.Context, req *impb.Pro
 		return nil, err
 	}
 
-	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	externalContactID, err := parseExternalUserID(req.GetExternalUserId())
 	if err != nil {
 		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -298,9 +302,10 @@ func (p *OutboundMessageHandler) SendInteractive(ctx context.Context, req *impb.
 		return nil, status.Errorf(codes.Unimplemented, "provider %s does not support interactive messages", sender.Type())
 	}
 
-	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	externalContactID, err := parseExternalUserID(req.GetExternalUserId())
 	if err != nil {
 		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -460,9 +465,10 @@ func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *imp
 		return &impb.ProviderSendMessageResponse{CreatedAt: time.Now().Unix()}, nil
 	}
 
-	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	externalContactID, err := parseExternalUserID(req.GetExternalUserId())
 	if err != nil {
 		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -509,9 +515,10 @@ func (p *OutboundMessageHandler) SendLocation(ctx context.Context, req *impb.Pro
 		return nil, status.Errorf(codes.Unimplemented, "provider %s does not support location messages", sender.Type())
 	}
 
-	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	externalContactID, err := parseExternalUserID(req.GetExternalUserId())
 	if err != nil {
 		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -557,9 +564,10 @@ func (p *OutboundMessageHandler) SendContact(ctx context.Context, req *impb.Prov
 		return nil, status.Errorf(codes.Unimplemented, "provider %s does not support contact messages", sender.Type())
 	}
 
-	externalContactID, err := uuid.Parse(req.GetExternalUserId())
+	externalContactID, err := parseExternalUserID(req.GetExternalUserId())
 	if err != nil {
 		log.WarnContext(ctx, "invalid external_user_id", slog.String("error", err.Error()))
+
 		return nil, err
 	}
 
@@ -759,4 +767,15 @@ func toGRPCError(err error) error {
 	}
 
 	return err
+}
+
+// parseExternalUserID requires the internal contact UUID; a malformed value is
+// a caller error, not a server fault.
+func parseExternalUserID(id string) (uuid.UUID, error) {
+	parsed, err := uuid.Parse(id)
+	if err != nil {
+		return uuid.Nil, status.Errorf(codes.InvalidArgument, "external_user_id must be a contact UUID: %v", err)
+	}
+
+	return parsed, nil
 }

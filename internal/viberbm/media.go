@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	vibbmmodel "github.com/webitel/im-providers-service/internal/viberbm/model"
@@ -84,16 +83,5 @@ func (p *viberBMProvider) fetchMedia(ctx context.Context, apiKey, mediaURL strin
 }
 
 func isImageMedia(mimeType, fileName string) bool {
-	if strings.HasPrefix(strings.ToLower(mimeType), "image/") {
-		return true
-	}
-
-	lower := strings.ToLower(fileName)
-	for _, ext := range []string{".jpg", ".jpeg", ".png", ".gif", ".webp"} {
-		if strings.HasSuffix(lower, ext) {
-			return true
-		}
-	}
-
-	return false
+	return classifyMedia(mimeType, fileName) == mediaImage
 }
