@@ -51,7 +51,7 @@ type UpdateViberBM struct {
 }
 
 func (r UpdateViberBM) ApplyTo(g *ViberBMGate) {
-	if r.Name != nil {
+	if r.Name != nil && *r.Name != "" {
 		g.Name = *r.Name
 	}
 
