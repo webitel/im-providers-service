@@ -38,7 +38,6 @@ type viberBMProvider struct {
 	rdb           *redis.Client
 	linkClient    *http.Client
 	status        statusReporter
-	video         videoProber
 	links         fileLinker
 }
 
@@ -83,7 +82,6 @@ func New(
 		rdb:           rdb,
 		linkClient:    newGuardedClient(30 * time.Second),
 		status:        status,
-		video:         newFFmpegProber(),
 		links:         storageClient,
 	}, nil
 }
