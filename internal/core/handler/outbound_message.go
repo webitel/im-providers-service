@@ -22,6 +22,7 @@ import (
 	"github.com/webitel/im-providers-service/internal/provider"
 	"github.com/webitel/im-providers-service/internal/provider/format"
 	vibmodel "github.com/webitel/im-providers-service/internal/viber/model"
+	vibbmmodel "github.com/webitel/im-providers-service/internal/viberbm/model"
 )
 
 // Ensure OutboundMessageHandler implements the generated gRPC server interface.
@@ -762,6 +763,8 @@ func toGRPCError(err error) error {
 		return status.Errorf(codes.FailedPrecondition, "viber receiver not subscribed or unreachable")
 	case errors.Is(err, custommodel.ErrCallbackRejected):
 		return status.Errorf(codes.FailedPrecondition, "custom channel rejected the message: %v", err)
+	case errors.Is(err, vibbmmodel.ErrVideoPreviewUnavailable):
+		return status.Errorf(codes.FailedPrecondition, "video was uploaded without a storage thumbnail/duration")
 	case errors.Is(err, custommodel.ErrChatUnknown):
 		return status.Errorf(codes.FailedPrecondition, "custom channel has no conversation for this recipient")
 	}

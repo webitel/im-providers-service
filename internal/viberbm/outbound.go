@@ -1,19 +1,15 @@
 package viberbm
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"mime"
-	"net/url"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
 
 	contactv1 "github.com/webitel/im-providers-service/gen/go/contact/v1"
-	pbstorage "github.com/webitel/im-providers-service/gen/go/storage"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	vibbmmodel "github.com/webitel/im-providers-service/internal/viberbm/model"
 )
@@ -102,7 +98,7 @@ func (p *viberBMProvider) SendDocument(ctx context.Context, req *sharedmodel.Mes
 	case mediaImage:
 		res, err = p.api.SendImage(ctx, g.BaseURL, g.APIKey, g.SenderName, to, url, req.Text, outboundMessageID(req.ID))
 	case mediaVideo:
-		res, err = p.sendVideo(ctx, g, to, url, req)
+		res, err = p.sendVideo(ctx, g, to, doc, req)
 	case mediaFile, mediaAudio:
 		res, err = p.api.SendFile(ctx, g.BaseURL, g.APIKey, g.SenderName, to, url, name, outboundMessageID(req.ID))
 		if err == nil {
@@ -125,74 +121,6 @@ func (p *viberBMProvider) sendFileCaption(ctx context.Context, g *vibbmmodel.Vib
 	if _, err := p.api.SendText(ctx, g.BaseURL, g.APIKey, g.SenderName, to, req.Text, ""); err != nil {
 		p.logger.WarnContext(ctx, "viber_bm file caption: send failed", "gate_id", g.ID, "err", err)
 	}
-}
-
-func (p *viberBMProvider) sendVideo(ctx context.Context, g *vibbmmodel.ViberBMGate, to, url string, req *sharedmodel.Message) (*sendResult, error) {
-	meta, err := p.video.Probe(ctx, url)
-	if err != nil {
-		return nil, err
-	}
-
-	if meta.duration > maxVideoDuration {
-		return nil, vibbmmodel.ErrVideoTooLong
-	}
-
-	thumb, err := p.media.UploadFile(ctx, sharedmodel.UploadRequest{
-		DomainID: g.DomainID,
-		Name:     "thumbnail.jpg",
-		MimeType: "image/jpeg",
-	}, bytes.NewReader(meta.thumbnail))
-	if err != nil {
-		return nil, fmt.Errorf("viber_bm video thumbnail upload: %w", err)
-	}
-
-	thumbURL, err := p.publicFileURL(ctx, g.DomainID, thumb.ID)
-	if err != nil {
-		return nil, fmt.Errorf("viber_bm video thumbnail link: %w", err)
-	}
-
-	return p.api.SendVideo(ctx, g.BaseURL, g.APIKey, g.SenderName, to, videoContent{
-		MediaURL:      url,
-		MediaDuration: isoDuration(meta.duration),
-		ThumbnailURL:  thumbURL,
-		Text:          req.Text,
-	}, outboundMessageID(req.ID))
-}
-
-// publicFileURL mirrors thread-service link generation: storage answers with a
-// path relative to base_url, and Infobip needs an absolute http(s) URL.
-func (p *viberBMProvider) publicFileURL(ctx context.Context, domainID int64, fileID string) (string, error) {
-	id, err := strconv.ParseInt(fileID, 10, 64)
-	if err != nil {
-		return "", fmt.Errorf("invalid storage file id %q: %w", fileID, err)
-	}
-
-	res, err := p.links.GenerateFileLink(ctx, &pbstorage.GenerateFileLinkRequest{
-		DomainId: domainID,
-		FileId:   id,
-		Action:   "download",
-		Source:   "file",
-	})
-	if err != nil {
-		return "", err
-	}
-
-	base, err := url.Parse(res.GetBaseUrl())
-	if err != nil {
-		return "", fmt.Errorf("parse base url: %w", err)
-	}
-
-	rel, err := url.Parse(res.GetUrl())
-	if err != nil {
-		return "", fmt.Errorf("parse file url: %w", err)
-	}
-
-	full := base.ResolveReference(rel)
-	if (full.Scheme != "https" && full.Scheme != "http") || full.Host == "" {
-		return "", fmt.Errorf("storage link %q is not an absolute http(s) url", full.Redacted())
-	}
-
-	return full.String(), nil
 }
 
 // SendTemplate is the cold-start primitive (not part of provider.Sender):
