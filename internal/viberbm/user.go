@@ -24,25 +24,39 @@ func (p *viberBMProvider) syncContact(
 	// Gate-scoped key: an MSISDN is global, so without the gate prefix the same
 	// customer on a second gate would short-circuit and never get its Via link.
 	cacheUser := toExternalUser(gate.ID+":"+from, displayName)
+	log := p.logger.With("gate_id", gate.ID, "from", from)
 
 	if known, _ := p.userCache.IsKnown(ctx, cacheUser); known {
+		log.DebugContext(ctx, "viber_bm contact: cache hit, skipping gateway sync")
+
 		return &gatewayv1.Contact{Sub: from}, nil
 	}
 
 	authCtx := withGatewayIdentity(ctx, gate)
 
-	contact, err := p.ensureContact(authCtx, toExternalUser(from, displayName))
+	contact, created, err := p.ensureContact(authCtx, toExternalUser(from, displayName))
 	if err != nil {
+		log.ErrorContext(ctx, "viber_bm contact: create failed", "err", err)
+
 		return nil, err
 	}
 
+	if created {
+		log.InfoContext(ctx, "viber_bm contact: created", "contact_iss", contact.GetIss())
+	} else {
+		log.DebugContext(ctx, "viber_bm contact: already exists")
+	}
+
 	p.ensureVia(authCtx, &from, &contact.Iss, gate.ID)
-	_ = p.userCache.MarkKnown(ctx, cacheUser)
+
+	if err := p.userCache.MarkKnown(ctx, cacheUser); err != nil {
+		log.WarnContext(ctx, "viber_bm contact: cache mark failed", "err", err)
+	}
 
 	return contact, nil
 }
 
-func (p *viberBMProvider) ensureContact(ctx context.Context, user *sharedmodel.ExternalUser) (*gatewayv1.Contact, error) {
+func (p *viberBMProvider) ensureContact(ctx context.Context, user *sharedmodel.ExternalUser) (*gatewayv1.Contact, bool, error) {
 	contact, err := p.gatewayer.Create(ctx, &gatewayv1.CreateContactRequest{
 		IssId: p.Type(),
 		Type:  p.Type(),
@@ -54,13 +68,13 @@ func (p *viberBMProvider) ensureContact(ctx context.Context, user *sharedmodel.E
 	})
 	if err != nil {
 		if isAlreadyExists(err) {
-			return &gatewayv1.Contact{Sub: user.ID, Iss: p.Type()}, nil
+			return &gatewayv1.Contact{Sub: user.ID, Iss: p.Type()}, false, nil
 		}
 
-		return nil, fmt.Errorf("create contact: %w", err)
+		return nil, false, fmt.Errorf("create contact: %w", err)
 	}
 
-	return contact, nil
+	return contact, true, nil
 }
 
 // ensureVia links the gate to the contact as a "via" channel; errors non-fatal.
@@ -70,8 +84,13 @@ func (p *viberBMProvider) ensureVia(ctx context.Context, contactSub, contactIss 
 		Iss: contactIss,
 		Sub: contactSub,
 	})
-	if err != nil && !isAlreadyExists(err) {
-		p.logger.WarnContext(ctx, "create via: skipped", "gate_id", gateID, "err", err)
+	switch {
+	case err == nil:
+		p.logger.DebugContext(ctx, "viber_bm via: linked", "gate_id", gateID, "contact_sub", *contactSub)
+	case isAlreadyExists(err):
+		p.logger.DebugContext(ctx, "viber_bm via: already linked", "gate_id", gateID, "contact_sub", *contactSub)
+	default:
+		p.logger.WarnContext(ctx, "viber_bm via: create failed", "gate_id", gateID, "contact_sub", *contactSub, "err", err)
 	}
 }
 

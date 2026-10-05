@@ -13,8 +13,10 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	pbstorage "github.com/webitel/im-providers-service/gen/go/storage"
 	imcontact "github.com/webitel/im-providers-service/infra/client/grpc/im-contact"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
+	"github.com/webitel/im-providers-service/infra/client/grpc/storage"
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
 	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
@@ -36,6 +38,14 @@ type viberBMProvider struct {
 	rdb           *redis.Client
 	linkClient    *http.Client
 	status        statusReporter
+	video         videoProber
+	links         fileLinker
+}
+
+// fileLinker turns a stored file id into a link Infobip can fetch; the upload
+// response URL is relative to the storage host.
+type fileLinker interface {
+	GenerateFileLink(ctx context.Context, in *pbstorage.GenerateFileLinkRequest) (*pbstorage.GenerateFileLinkResponse, error)
 }
 
 // statusReporter is the delivery-status surface the webhook pipeline needs;
@@ -58,6 +68,7 @@ func New(
 	rdb *redis.Client,
 	api *apiClient,
 	status *sharedsvc.StatusReporter,
+	storageClient *storage.Client,
 ) (*viberBMProvider, error) {
 	return &viberBMProvider{
 		api:           api,
@@ -72,6 +83,8 @@ func New(
 		rdb:           rdb,
 		linkClient:    newGuardedClient(30 * time.Second),
 		status:        status,
+		video:         newFFmpegProber(),
+		links:         storageClient,
 	}, nil
 }
 
