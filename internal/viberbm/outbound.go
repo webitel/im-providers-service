@@ -105,9 +105,26 @@ func (p *viberBMProvider) SendDocument(ctx context.Context, req *sharedmodel.Mes
 		res, err = p.sendVideo(ctx, g, to, url, req)
 	case mediaFile, mediaAudio:
 		res, err = p.api.SendFile(ctx, g.BaseURL, g.APIKey, g.SenderName, to, url, name, outboundMessageID(req.ID))
+		if err == nil {
+			p.sendFileCaption(ctx, g, to, req)
+		}
 	}
 
 	return toResponse(res, to, err)
+}
+
+// sendFileCaption delivers the caption as a follow-up TEXT because Infobip FILE
+// content has no text field. Best effort: the file is already delivered, so a
+// failure here is logged rather than failing the whole send.
+func (p *viberBMProvider) sendFileCaption(ctx context.Context, g *vibbmmodel.ViberBMGate, to string, req *sharedmodel.Message) {
+	if strings.TrimSpace(req.Text) == "" {
+		return
+	}
+
+	// No messageId: the file already used ours, and Infobip requires it unique.
+	if _, err := p.api.SendText(ctx, g.BaseURL, g.APIKey, g.SenderName, to, req.Text, ""); err != nil {
+		p.logger.WarnContext(ctx, "viber_bm file caption: send failed", "gate_id", g.ID, "err", err)
+	}
 }
 
 func (p *viberBMProvider) sendVideo(ctx context.Context, g *vibbmmodel.ViberBMGate, to, url string, req *sharedmodel.Message) (*sendResult, error) {
