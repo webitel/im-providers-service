@@ -68,13 +68,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.WithValue(r.Context(), provider.WebhookURIKey, uri)
 
-	if sv, ok := p.(provider.SignatureValidator); ok {
-		sig := r.Header.Get("X-Hub-Signature-256")
-		if err := sv.ValidateSignature(ctx, sig, body); err != nil {
-			h.logger.Warn("signature validation failed", "provider", pType, "uri", uri, "err", err)
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
+	var sigErr error
+
+	switch sv := p.(type) {
+	case provider.HeaderSignatureValidator:
+		sigErr = sv.ValidateSignature(ctx, r.Header, body)
+	case provider.SignatureValidator:
+		sigErr = sv.ValidateSignature(ctx, r.Header.Get("X-Hub-Signature-256"), body)
+	}
+
+	if sigErr != nil {
+		h.logger.Warn("signature validation failed", "provider", pType, "uri", uri, "err", sigErr)
+		http.Error(w, "forbidden", http.StatusForbidden)
+
+		return
 	}
 
 	if err := p.HandleWebhook(ctx, body); err != nil {

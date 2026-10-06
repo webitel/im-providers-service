@@ -17,6 +17,7 @@ import (
 	corestore "github.com/webitel/im-providers-service/internal/core/store"
 	"github.com/webitel/im-providers-service/internal/facebook"
 	"github.com/webitel/im-providers-service/internal/provider"
+	vibbmmodel "github.com/webitel/im-providers-service/internal/viberbm/model"
 )
 
 // Ensure OutboundMessageHandler implements the generated gRPC server interface.
@@ -348,6 +349,10 @@ func (p *OutboundMessageHandler) SendSystemMessage(ctx context.Context, req *imp
 func toGRPCError(err error) error {
 	if errors.Is(err, facebook.ErrTokenInvalid) {
 		return status.Errorf(codes.Unauthenticated, "page token invalid or revoked: re-authorize via StartMetaOAuth")
+	}
+
+	if errors.Is(err, vibbmmodel.ErrVideoPreviewUnavailable) {
+		return status.Errorf(codes.FailedPrecondition, "video was uploaded without a storage thumbnail/duration")
 	}
 	return err
 }
