@@ -3,12 +3,14 @@ package viberbm
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"testing"
 	"time"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
 	"github.com/webitel/im-providers-service/internal/provider"
 	vibbmmodel "github.com/webitel/im-providers-service/internal/viberbm/model"
 )
@@ -136,13 +138,50 @@ func providerForReceipts(status *fakeStatusReporter) *viberBMProvider {
 // userCache must be non-nil because syncContact calls IsKnown before any
 // gateway round-trip; fakeUserCache always reports unknown so the call
 // proceeds without a real Redis or gateway connection.
-func providerForMessages(msgs *fakeMessenger) *viberBMProvider {
+func providerForMessages(msgs sharedsvc.Messenger) *viberBMProvider {
 	return &viberBMProvider{
 		logger:    discardLogger(),
 		status:    &fakeStatusReporter{},
 		messenger: msgs,
 		userCache: fakeUserCache{},
+		dedup:     &fakeDedup{seen: map[string]bool{}},
 	}
+}
+
+// fakeDedup is an in-memory messageDedup that records released marks.
+type fakeDedup struct {
+	seen      map[string]bool
+	forgotten []string
+}
+
+func (d *fakeDedup) Seen(_ context.Context, mid string) bool {
+	if mid == "" {
+		return false
+	}
+
+	if d.seen[mid] {
+		return true
+	}
+
+	d.seen[mid] = true
+
+	return false
+}
+
+func (d *fakeDedup) Forget(_ context.Context, mid string) {
+	delete(d.seen, mid)
+	d.forgotten = append(d.forgotten, mid)
+}
+
+// failingMessenger rejects every forward, like an unavailable core.
+type failingMessenger struct {
+	fakeMessenger
+}
+
+var errCoreDown = errors.New("core unavailable")
+
+func (m *failingMessenger) SendText(context.Context, *sharedmodel.SendTextRequest) (*sharedmodel.SendTextResponse, error) {
+	return nil, errCoreDown
 }
 
 // ---------------------------------------------------------------------------
@@ -675,4 +714,87 @@ func TestToExternalUser(t *testing.T) {
 			t.Errorf("FirstName should fall back to MSISDN, got %q", u.FirstName)
 		}
 	})
+}
+
+// ---------------------------------------------------------------------------
+// processMessage — dedup mark is released when the forward fails
+// ---------------------------------------------------------------------------
+
+func TestProcessMessage_ForwardFailureReleasesDedup(t *testing.T) {
+	p := providerForMessages(&failingMessenger{})
+	dedup, _ := p.dedup.(*fakeDedup)
+
+	gate := gateWith("g1", "ViberBM", "")
+	res := &inboundResult{
+		From:      "385991000001",
+		MessageID: "mid-1",
+		Message:   &inboundMessage{Type: "TEXT", Text: "hello"},
+	}
+
+	err := p.processMessage(context.Background(), gate, res)
+	if !errors.Is(err, errCoreDown) {
+		t.Fatalf("processMessage err = %v, want core failure so InfoBip retries", err)
+	}
+
+	if len(dedup.forgotten) != 1 || dedup.forgotten[0] != "mid-1" {
+		t.Fatalf("forgotten = %v, want [mid-1]", dedup.forgotten)
+	}
+
+	// The redelivery must be forwarded again, not skipped as a duplicate.
+	ok := providerForMessages(&fakeMessenger{})
+	ok.dedup = dedup
+
+	if err := ok.processMessage(context.Background(), gate, res); err != nil {
+		t.Fatalf("redelivery: %v", err)
+	}
+
+	if len(ok.messenger.(*fakeMessenger).textReqs) != 1 {
+		t.Fatal("redelivery was skipped as a duplicate")
+	}
+}
+
+func TestProcessMessage_DuplicateIsSkippedAndKeepsMark(t *testing.T) {
+	msgs := &fakeMessenger{}
+	p := providerForMessages(msgs)
+	dedup, _ := p.dedup.(*fakeDedup)
+
+	gate := gateWith("g1", "ViberBM", "")
+	res := &inboundResult{
+		From:      "385991000001",
+		MessageID: "mid-2",
+		Message:   &inboundMessage{Type: "TEXT", Text: "hello"},
+	}
+
+	for range 2 {
+		if err := p.processMessage(context.Background(), gate, res); err != nil {
+			t.Fatalf("processMessage: %v", err)
+		}
+	}
+
+	if len(msgs.textReqs) != 1 {
+		t.Fatalf("forwards = %d, want 1", len(msgs.textReqs))
+	}
+
+	if len(dedup.forgotten) != 0 {
+		t.Fatalf("forgotten = %v, want none on success", dedup.forgotten)
+	}
+}
+
+func TestProcessMessage_MediaWithoutURLKeepsMark(t *testing.T) {
+	p := providerForMessages(&fakeMessenger{})
+	dedup, _ := p.dedup.(*fakeDedup)
+
+	res := &inboundResult{
+		From:      "385991000001",
+		MessageID: "mid-3",
+		Message:   &inboundMessage{Type: "IMAGE"},
+	}
+
+	if err := p.processMessage(context.Background(), gateWith("g1", "ViberBM", ""), res); err != nil {
+		t.Fatalf("processMessage: %v", err)
+	}
+
+	if len(dedup.forgotten) != 0 {
+		t.Fatalf("a permanent drop must keep the mark, forgotten = %v", dedup.forgotten)
+	}
 }

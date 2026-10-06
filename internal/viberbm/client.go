@@ -22,7 +22,7 @@ type apiClient struct {
 
 func newAPIClient(l *slog.Logger) *apiClient {
 	return &apiClient{
-		http:   &http.Client{Timeout: 15 * time.Second},
+		http:   newGuardedClient(15 * time.Second),
 		logger: l.With("component", "viber_bm.api"),
 	}
 }
