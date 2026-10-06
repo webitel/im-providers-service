@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	vibbmmodel "github.com/webitel/im-providers-service/internal/viberbm/model"
@@ -18,19 +20,22 @@ type syncedMedia struct {
 
 // downloadInboundMedia fetches an InfoBip media URL and uploads it to storage.
 // Authorization on the GET is undocumented, so it tries authenticated first and
-// falls back unauthenticated on 401/403.
+// falls back unauthenticated on 401/403. The API key is only sent to the gate's
+// own InfoBip host: the URL comes from the webhook payload and may be forged.
 // https://www.infobip.com/docs/api/channels/viber/viber-business-messages/inbound-message/receive-viber-business-message
 func (p *viberBMProvider) downloadInboundMedia(ctx context.Context, gate *vibbmmodel.ViberBMGate, mediaURL, fileName string) (*syncedMedia, error) {
 	if err := validateFetchURL(mediaURL); err != nil {
 		return nil, err
 	}
 
-	resp, err := p.fetchMedia(ctx, gate.APIKey, mediaURL, true)
+	authenticated := sameHost(mediaURL, gate.BaseURL)
+
+	resp, err := p.fetchMedia(ctx, gate.APIKey, mediaURL, authenticated)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+	if authenticated && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) {
 		_ = resp.Body.Close()
 
 		resp, err = p.fetchMedia(ctx, gate.APIKey, mediaURL, false)
@@ -80,6 +85,13 @@ func (p *viberBMProvider) fetchMedia(ctx context.Context, apiKey, mediaURL strin
 	}
 
 	return p.linkClient.Do(req)
+}
+
+func sameHost(a, b string) bool {
+	ua, errA := url.Parse(a)
+	ub, errB := url.Parse(b)
+
+	return errA == nil && errB == nil && ua.Hostname() != "" && strings.EqualFold(ua.Hostname(), ub.Hostname())
 }
 
 func isImageMedia(mimeType, fileName string) bool {
