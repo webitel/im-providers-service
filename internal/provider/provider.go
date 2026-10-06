@@ -4,6 +4,7 @@ package provider
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -51,4 +52,10 @@ type Verifier interface {
 // webhook requests via a cryptographic signature header (e.g. X-Hub-Signature-256).
 type SignatureValidator interface {
 	ValidateSignature(ctx context.Context, header string, body []byte) error
+}
+
+// HeaderSignatureValidator is for providers that authenticate forwards with a
+// header other than X-Hub-Signature-256 (e.g. Viber BM's Authorization).
+type HeaderSignatureValidator interface {
+	ValidateSignature(ctx context.Context, headers http.Header, body []byte) error
 }
