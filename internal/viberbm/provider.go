@@ -29,13 +29,12 @@ type viberBMProvider struct {
 	api           *apiClient
 	logger        *slog.Logger
 	messenger     sharedsvc.Messenger
-	gateCache     sharedstore.GateCache
 	userCache     sharedstore.ExternalUserCache
 	repo          vibbmstore.ViberBMStore
 	gatewayer     *imgateway.Client
 	media         sharedsvc.MediaManager
 	contactClient *imcontact.Client
-	rdb           *redis.Client
+	dedup         messageDedup
 	linkClient    *http.Client
 	status        statusReporter
 	links         fileLinker
@@ -58,7 +57,6 @@ type statusReporter interface {
 func New(
 	m sharedsvc.Messenger,
 	l *slog.Logger,
-	gc sharedstore.GateCache,
 	uc sharedstore.ExternalUserCache,
 	repo vibbmstore.ViberBMStore,
 	gatewayer *imgateway.Client,
@@ -73,13 +71,12 @@ func New(
 		api:           api,
 		logger:        l.With("provider", "viber_bm"),
 		messenger:     m,
-		gateCache:     gc,
 		userCache:     uc,
 		repo:          repo,
 		gatewayer:     gatewayer,
 		media:         media,
 		contactClient: contactClient,
-		rdb:           rdb,
+		dedup:         redisDedup{rdb: rdb},
 		linkClient:    newGuardedClient(30 * time.Second),
 		status:        status,
 		links:         storageClient,
@@ -107,27 +104,10 @@ func (p *viberBMProvider) Capabilities() sharedmodel.ProviderCapabilities {
 
 // resolveGate returns the gate owning the webhook uri. The uri (unique per gate)
 // identifies it — not `to`, which is the sender name only on MO and the customer
-// MSISDN on DLR/Seen, so keying on it would drop every receipt. Disabled gates
-// short-circuit from the LRU cache to skip a DB round-trip.
+// MSISDN on DLR/Seen, so keying on it would drop every receipt. Not cached: a
+// per-process LRU kept a re-enabled gate disabled on other replicas.
 func (p *viberBMProvider) resolveGate(ctx context.Context, uri string) (*vibbmmodel.ViberBMGate, error) {
-	if cached, ok := p.gateCache.Get(uri); ok && !cached.Enabled {
-		return &vibbmmodel.ViberBMGate{Enabled: false}, nil
-	}
-
-	g, err := p.repo.SelectByURI(ctx, uri)
-	if err != nil {
-		return nil, err
-	}
-
-	p.gateCache.Set(uri, sharedstore.GateState{
-		GateID:  g.ID,
-		Enabled: g.Enabled,
-		Issuer:  g.Peer.Iss,
-		Sub:     g.Peer.Sub,
-		Domain:  g.DomainID,
-	})
-
-	return g, nil
+	return p.repo.SelectByURI(ctx, uri)
 }
 
 func (p *viberBMProvider) fetchGate(ctx context.Context, gateID string) (*vibbmmodel.ViberBMGate, error) {

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
 	vibbmmodel "github.com/webitel/im-providers-service/internal/viberbm/model"
 	vibbmstore "github.com/webitel/im-providers-service/internal/viberbm/store"
 )
@@ -18,11 +19,11 @@ var _ ViberBMManager = (*ViberBMService)(nil)
 // cold-start template-send primitive.
 type ViberBMManager interface {
 	CreateGate(ctx context.Context, req vibbmmodel.CreateViberBM) (*vibbmmodel.ViberBMGate, error)
-	GetGate(ctx context.Context, id string) (*vibbmmodel.ViberBMGate, error)
-	UpdateGate(ctx context.Context, req vibbmmodel.UpdateViberBM) (*vibbmmodel.ViberBMGate, error)
-	DeleteGate(ctx context.Context, id string) (*vibbmmodel.ViberBMGate, error)
+	GetGate(ctx context.Context, dc int64, id string) (*vibbmmodel.ViberBMGate, error)
+	UpdateGate(ctx context.Context, dc int64, req vibbmmodel.UpdateViberBM) (*vibbmmodel.ViberBMGate, error)
+	DeleteGate(ctx context.Context, dc int64, id string) (*vibbmmodel.ViberBMGate, error)
 	ListGates(ctx context.Context, dc int64, q string, page, size int) ([]*vibbmmodel.ViberBMGate, bool, error)
-	SendTemplate(ctx context.Context, gateID, to, templateID, language string, params map[string]string) (*sharedmodel.MessageResponse, error)
+	SendTemplate(ctx context.Context, dc int64, gateID, to, templateID, language string, params map[string]string) (*sharedmodel.MessageResponse, error)
 }
 
 // TemplateSender is the cold-start send surface, satisfied by the provider
@@ -78,12 +79,16 @@ func (s *ViberBMService) CreateGate(ctx context.Context, req vibbmmodel.CreateVi
 	return gate, nil
 }
 
-func (s *ViberBMService) GetGate(ctx context.Context, id string) (*vibbmmodel.ViberBMGate, error) {
-	return s.store.Select(ctx, id)
+func (s *ViberBMService) GetGate(ctx context.Context, dc int64, id string) (*vibbmmodel.ViberBMGate, error) {
+	return s.ownedGate(ctx, dc, id)
 }
 
-func (s *ViberBMService) UpdateGate(ctx context.Context, req vibbmmodel.UpdateViberBM) (*vibbmmodel.ViberBMGate, error) {
-	gate, err := s.store.Select(ctx, req.ID)
+func (s *ViberBMService) UpdateGate(ctx context.Context, dc int64, req vibbmmodel.UpdateViberBM) (*vibbmmodel.ViberBMGate, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	gate, err := s.ownedGate(ctx, dc, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +106,8 @@ func (s *ViberBMService) UpdateGate(ctx context.Context, req vibbmmodel.UpdateVi
 	return gate, nil
 }
 
-func (s *ViberBMService) DeleteGate(ctx context.Context, id string) (*vibbmmodel.ViberBMGate, error) {
-	gate, err := s.store.Select(ctx, id)
+func (s *ViberBMService) DeleteGate(ctx context.Context, dc int64, id string) (*vibbmmodel.ViberBMGate, error) {
+	gate, err := s.ownedGate(ctx, dc, id)
 	if err != nil {
 		return nil, err
 	}
@@ -122,8 +127,27 @@ func (s *ViberBMService) ListGates(ctx context.Context, dc int64, q string, page
 	return s.store.List(ctx, dc, q, page, size)
 }
 
-func (s *ViberBMService) SendTemplate(ctx context.Context, gateID, to, templateID, language string, params map[string]string) (*sharedmodel.MessageResponse, error) {
+func (s *ViberBMService) SendTemplate(ctx context.Context, dc int64, gateID, to, templateID, language string, params map[string]string) (*sharedmodel.MessageResponse, error) {
+	if _, err := s.ownedGate(ctx, dc, gateID); err != nil {
+		return nil, err
+	}
+
 	return s.sender.SendTemplate(ctx, gateID, to, templateID, language, params)
+}
+
+// ownedGate reports another domain's gate as not found rather than forbidden,
+// so a caller cannot probe which gate ids exist.
+func (s *ViberBMService) ownedGate(ctx context.Context, dc int64, id string) (*vibbmmodel.ViberBMGate, error) {
+	gate, err := s.store.Select(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if gate.DomainID != dc {
+		return nil, sharedstore.ErrNotFound
+	}
+
+	return gate, nil
 }
 
 func genWebhookURI() (string, error) {
