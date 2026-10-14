@@ -52,7 +52,12 @@ func (h *ViberBMHandler) CreateViberBm(ctx context.Context, req *impb.ProviderCr
 }
 
 func (h *ViberBMHandler) GetViberBm(ctx context.Context, req *impb.ProviderGetViberBmGateRequest) (*impb.ProviderGetViberBmGateResponse, error) {
-	gate, err := h.srv.GetGate(ctx, req.GetId())
+	identity, ok := auth.GetIdentityFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing identity in context")
+	}
+
+	gate, err := h.srv.GetGate(ctx, identity.GetDomainID(), req.GetId())
 	if err != nil {
 		return nil, toStatus(err, "get gate")
 	}
@@ -61,6 +66,11 @@ func (h *ViberBMHandler) GetViberBm(ctx context.Context, req *impb.ProviderGetVi
 }
 
 func (h *ViberBMHandler) UpdateViberBm(ctx context.Context, req *impb.ProviderUpdateViberBmGateRequest) (*impb.ProviderUpdateViberBmGateResponse, error) {
+	identity, ok := auth.GetIdentityFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing identity in context")
+	}
+
 	name := req.GetName()
 	baseURL := req.GetBaseUrl()
 	senderName := req.GetSenderName()
@@ -81,7 +91,7 @@ func (h *ViberBMHandler) UpdateViberBm(ctx context.Context, req *impb.ProviderUp
 		upd.Peer = &sharedmodel.Peer{Sub: p.GetSub(), Iss: p.GetIss()}
 	}
 
-	gate, err := h.srv.UpdateGate(ctx, upd)
+	gate, err := h.srv.UpdateGate(ctx, identity.GetDomainID(), upd)
 	if err != nil {
 		return nil, toStatus(err, "update gate")
 	}
@@ -90,7 +100,12 @@ func (h *ViberBMHandler) UpdateViberBm(ctx context.Context, req *impb.ProviderUp
 }
 
 func (h *ViberBMHandler) DeleteViberBm(ctx context.Context, req *impb.ProviderDeleteViberBmGateRequest) (*impb.ProviderDeleteViberBmGateResponse, error) {
-	gate, err := h.srv.DeleteGate(ctx, req.GetId())
+	identity, ok := auth.GetIdentityFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing identity in context")
+	}
+
+	gate, err := h.srv.DeleteGate(ctx, identity.GetDomainID(), req.GetId())
 	if err != nil {
 		return nil, toStatus(err, "delete gate")
 	}
@@ -118,7 +133,12 @@ func (h *ViberBMHandler) ListViberBm(ctx context.Context, req *impb.ProviderList
 }
 
 func (h *ViberBMHandler) SendViberBmTemplate(ctx context.Context, req *impb.SendViberBmTemplateRequest) (*impb.SendViberBmTemplateResponse, error) {
-	res, err := h.srv.SendTemplate(ctx, req.GetGateId(), req.GetTo(), req.GetTemplateId(), req.GetLanguage(), req.GetParameters())
+	identity, ok := auth.GetIdentityFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing identity in context")
+	}
+
+	res, err := h.srv.SendTemplate(ctx, identity.GetDomainID(), req.GetGateId(), req.GetTo(), req.GetTemplateId(), req.GetLanguage(), req.GetParameters())
 	if err != nil {
 		return nil, toStatus(err, "send template")
 	}

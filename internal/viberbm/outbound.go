@@ -61,15 +61,23 @@ func (p *viberBMProvider) SendDocument(ctx context.Context, req *sharedmodel.Mes
 	}
 
 	doc := req.Documents[0]
-	image := isImageMedia(doc.MimeType, doc.FileName)
+	kind := classifyMedia(doc.MimeType, doc.FileName)
 
 	var name string
 
-	if !image {
+	switch kind {
+	case mediaAudio:
+		return nil, vibbmmodel.ErrAudioUnsupported
+	case mediaVideo:
+		if !isSupportedVideo(doc.MimeType, doc.FileName) {
+			return nil, vibbmmodel.ErrFileTypeUnsupported
+		}
+	case mediaFile:
 		var err error
 		if name, err = documentName(doc); err != nil {
 			return nil, err
 		}
+	case mediaImage:
 	}
 
 	g, err := p.fetchGate(ctx, req.GateID)
@@ -82,17 +90,37 @@ func (p *viberBMProvider) SendDocument(ctx context.Context, req *sharedmodel.Mes
 		return nil, err
 	}
 
-	// Callers without a dedicated image RPC (gateway) deliver pictures as
-	// documents; Infobip FILE content rejects image extensions.
-	if image {
-		res, err := p.api.SendImage(ctx, g.BaseURL, g.APIKey, g.SenderName, to, url, req.Text, outboundMessageID(req.ID))
+	var res *sendResult
 
-		return toResponse(res, to, err)
+	// Callers without dedicated image/video RPCs (gateway) deliver all media as
+	// documents; Infobip FILE content rejects image and video extensions.
+	switch kind {
+	case mediaImage:
+		res, err = p.api.SendImage(ctx, g.BaseURL, g.APIKey, g.SenderName, to, url, req.Text, outboundMessageID(req.ID))
+	case mediaVideo:
+		res, err = p.sendVideo(ctx, g, to, doc, req)
+	case mediaFile, mediaAudio:
+		res, err = p.api.SendFile(ctx, g.BaseURL, g.APIKey, g.SenderName, to, url, name, outboundMessageID(req.ID))
+		if err == nil {
+			p.sendFileCaption(ctx, g, to, req)
+		}
 	}
 
-	res, err := p.api.SendFile(ctx, g.BaseURL, g.APIKey, g.SenderName, to, url, name, outboundMessageID(req.ID))
-
 	return toResponse(res, to, err)
+}
+
+// sendFileCaption delivers the caption as a follow-up TEXT because Infobip FILE
+// content has no text field. Best effort: the file is already delivered, so a
+// failure here is logged rather than failing the whole send.
+func (p *viberBMProvider) sendFileCaption(ctx context.Context, g *vibbmmodel.ViberBMGate, to string, req *sharedmodel.Message) {
+	if strings.TrimSpace(req.Text) == "" {
+		return
+	}
+
+	// No messageId: the file already used ours, and Infobip requires it unique.
+	if _, err := p.api.SendText(ctx, g.BaseURL, g.APIKey, g.SenderName, to, req.Text, ""); err != nil {
+		p.logger.WarnContext(ctx, "viber_bm file caption: send failed", "gate_id", g.ID, "err", err)
+	}
 }
 
 // SendTemplate is the cold-start primitive (not part of provider.Sender):

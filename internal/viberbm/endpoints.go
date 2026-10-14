@@ -10,6 +10,7 @@ const (
 	contentTypeText     = "TEXT"
 	contentTypeImage    = "IMAGE"
 	contentTypeFile     = "FILE"
+	contentTypeVideo    = "VIDEO"
 	contentTypeTemplate = "TEMPLATE"
 )
 

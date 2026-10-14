@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
@@ -21,15 +20,11 @@ var _ vibbmstore.ViberBMStore = (*viberBMStore)(nil)
 type viberBMStore struct {
 	pool   *pgxpool.Pool
 	crypto crypto.Encryptor
-	cache  sharedstore.GateCache
 }
 
-func NewViberBMStore(pool *pgxpool.Pool, crypt crypto.Encryptor, cache sharedstore.GateCache) vibbmstore.ViberBMStore {
-	return &viberBMStore{pool: pool, crypto: crypt, cache: cache}
+func NewViberBMStore(pool *pgxpool.Pool, crypt crypto.Encryptor) vibbmstore.ViberBMStore {
+	return &viberBMStore{pool: pool, crypto: crypt}
 }
-
-// gateKey mirrors the provider's LRU key: uri + ":" + senderName.
-func gateKey(uri, senderName string) string { return uri + ":" + senderName }
 
 const selectColumns = `
 	g.id,
@@ -188,15 +183,7 @@ func (s *viberBMStore) Update(ctx context.Context, g *vibbmmodel.ViberBMGate) er
 		return fmt.Errorf("crypto: %w", err)
 	}
 
-	var oldSenderName string
-
-	err = pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx,
-			"SELECT sender_name FROM im_provider.gate_viber_bm WHERE gate_id = $1", g.ID,
-		).Scan(&oldSenderName); err != nil {
-			return err
-		}
-
+	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
 		const uGate = `UPDATE im_provider.gates SET name = $1, enabled = $2, updated_at = NOW() WHERE id = $3 RETURNING updated_at`
 		if err := tx.QueryRow(ctx, uGate, g.Name, g.Enabled, g.ID).Scan(&g.UpdatedAt); err != nil {
 			return err
@@ -216,45 +203,16 @@ func (s *viberBMStore) Update(ctx context.Context, g *vibbmmodel.ViberBMGate) er
 
 		return err
 	})
-	if err == nil && g.WebhookURI != "" {
-		s.cache.Delete(gateKey(g.WebhookURI, oldSenderName))
-		s.cache.Delete(gateKey(g.WebhookURI, g.SenderName))
-	}
-
-	return err
 }
 
 func (s *viberBMStore) Unbind(ctx context.Context, gateID string) error {
-	var (
-		webhookURI string
-		senderName string
-	)
-
-	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
-		scanErr := tx.QueryRow(ctx,
-			"SELECT webhook_uri, sender_name FROM im_provider.gate_viber_bm WHERE gate_id = $1", gateID,
-		).Scan(&webhookURI, &senderName)
-		if scanErr != nil && !errors.Is(scanErr, pgx.ErrNoRows) {
-			return scanErr
-		}
-
-		res, execErr := tx.Exec(ctx, "DELETE FROM im_provider.gates WHERE id = $1", gateID)
-		if execErr != nil {
-			return fmt.Errorf("postgres: delete gate: %w", execErr)
-		}
-
-		if res.RowsAffected() == 0 {
-			return sharedstore.ErrNotFound
-		}
-
-		return nil
-	})
+	res, err := s.pool.Exec(ctx, "DELETE FROM im_provider.gates WHERE id = $1", gateID)
 	if err != nil {
-		return err
+		return fmt.Errorf("postgres: delete gate: %w", err)
 	}
 
-	if webhookURI != "" {
-		s.cache.Delete(gateKey(webhookURI, senderName))
+	if res.RowsAffected() == 0 {
+		return sharedstore.ErrNotFound
 	}
 
 	return nil

@@ -150,7 +150,7 @@ func (p *viberBMProvider) processMessage(ctx context.Context, gate *vibbmmodel.V
 		return fmt.Errorf("sync contact [from=%s]: %w", res.From, err)
 	}
 
-	if messageSeen(ctx, p.rdb, res.MessageID) {
+	if p.dedup.Seen(ctx, res.MessageID) {
 		p.logger.DebugContext(ctx, "duplicate viber_bm event skipped", "message_id", res.MessageID)
 
 		return nil
@@ -164,32 +164,39 @@ func (p *viberBMProvider) processMessage(ctx context.Context, gate *vibbmmodel.V
 		to:   sharedmodel.Peer{Sub: gate.Peer.Sub, Iss: gate.Peer.Iss},
 	}
 
+	var err error
+
 	msg := res.Message
 	switch strings.ToUpper(msg.Type) {
 	case contentTypeText:
-		if _, err := p.coreMessengerFor(gate).SendText(ctx, &sharedmodel.SendTextRequest{
+		_, err = p.coreMessengerFor(gate).SendText(ctx, &sharedmodel.SendTextRequest{
 			DomainID:   gate.DomainID,
 			From:       peers.from,
 			To:         peers.to,
 			Body:       msg.Text,
 			ExternalID: res.MessageID,
-		}); err != nil {
-			p.logger.ErrorContext(ctx, "viber_bm send text failed", "message_id", res.MessageID, "err", err)
-		}
+		})
 	default:
-		p.routeMedia(ctx, gate, peers, res)
+		err = p.routeMedia(ctx, gate, peers, res)
+	}
+
+	if err != nil {
+		p.dedup.Forget(ctx, res.MessageID)
+
+		return fmt.Errorf("forward %s: %w", strings.ToLower(msg.Type), err)
 	}
 
 	return nil
 }
 
 // routeMedia downloads inbound media and forwards it as image or document.
-func (p *viberBMProvider) routeMedia(ctx context.Context, gate *vibbmmodel.ViberBMGate, peers peerPair, res *inboundResult) {
+func (p *viberBMProvider) routeMedia(ctx context.Context, gate *vibbmmodel.ViberBMGate, peers peerPair, res *inboundResult) error {
 	msg := res.Message
 	if msg.URL == "" {
+		// Permanent: a redelivery would carry the same empty url.
 		p.logger.WarnContext(ctx, "viber_bm inbound media without url", "type", msg.Type, "message_id", res.MessageID)
 
-		return
+		return nil
 	}
 
 	name := msg.FileName
@@ -197,16 +204,14 @@ func (p *viberBMProvider) routeMedia(ctx context.Context, gate *vibbmmodel.Viber
 		name = fmt.Sprintf("viber_bm_%d", time.Now().Unix())
 	}
 
+	// The InfoBip CDN URL can embed a signed token, so it is never logged.
 	media, err := p.downloadInboundMedia(ctx, gate, msg.URL, name)
 	if err != nil {
-		// The InfoBip CDN URL can embed a signed token, so it is not logged.
-		p.logger.ErrorContext(ctx, "viber_bm media sync failed", "message_id", res.MessageID, "err", err)
-
-		return
+		return fmt.Errorf("media sync: %w", err)
 	}
 
 	if media.isImage {
-		if _, err := p.coreMessengerFor(gate).SendImage(ctx, &sharedmodel.SendImageRequest{
+		_, err = p.coreMessengerFor(gate).SendImage(ctx, &sharedmodel.SendImageRequest{
 			DomainID: gate.DomainID,
 			From:     peers.from,
 			To:       peers.to,
@@ -220,14 +225,12 @@ func (p *viberBMProvider) routeMedia(ctx context.Context, gate *vibbmmodel.Viber
 				}},
 			},
 			ExternalID: res.MessageID,
-		}); err != nil {
-			p.logger.ErrorContext(ctx, "viber_bm send image failed", "message_id", res.MessageID, "err", err)
-		}
+		})
 
-		return
+		return err
 	}
 
-	if _, err := p.coreMessengerFor(gate).SendDocument(ctx, &sharedmodel.SendDocumentRequest{
+	_, err = p.coreMessengerFor(gate).SendDocument(ctx, &sharedmodel.SendDocumentRequest{
 		DomainID: gate.DomainID,
 		From:     peers.from,
 		To:       peers.to,
@@ -241,9 +244,9 @@ func (p *viberBMProvider) routeMedia(ctx context.Context, gate *vibbmmodel.Viber
 			}},
 		},
 		ExternalID: res.MessageID,
-	}); err != nil {
-		p.logger.ErrorContext(ctx, "viber_bm send document failed", "message_id", res.MessageID, "err", err)
-	}
+	})
+
+	return err
 }
 
 // processReceipt maps an InfoBip DLR to a delivery/failure report, correlated

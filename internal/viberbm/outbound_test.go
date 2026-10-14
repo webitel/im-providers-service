@@ -385,16 +385,37 @@ func TestIsImageMedia(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// dedup — messageSeen with nil Redis client (empty mid fast-path)
+// dedup — redisDedup with nil Redis client (empty mid fast-path)
 // ---------------------------------------------------------------------------
 
-// TestMessageSeen_EmptyMID verifies the contract: empty messageId is never
-// treated as a duplicate regardless of Redis state (no network call made).
-func TestMessageSeen_EmptyMID(t *testing.T) {
-	// rdb is intentionally nil; the function must return false before any
-	// Redis call when mid == "".
-	got := messageSeen(context.Background(), nil, "")
-	if got {
-		t.Error("messageSeen with empty mid must return false (not a duplicate)")
+// TestRedisDedup_EmptyMID verifies the contract: empty messageId is never
+// treated as a duplicate and never touches Redis.
+func TestRedisDedup_EmptyMID(t *testing.T) {
+	d := redisDedup{}
+
+	if d.Seen(context.Background(), "") {
+		t.Error("Seen with empty mid must return false (not a duplicate)")
+	}
+
+	d.Forget(context.Background(), "")
+}
+
+func TestSameHost(t *testing.T) {
+	cases := []struct {
+		media, base string
+		want        bool
+	}{
+		{"https://xyz.api.infobip.com/viber/1/media/a", "https://xyz.api.infobip.com", true},
+		{"https://XYZ.api.infobip.com/a", "https://xyz.api.infobip.com/", true},
+		{"https://xyz.api.infobip.com:443/a", "https://xyz.api.infobip.com", true},
+		{"https://attacker.example/a", "https://xyz.api.infobip.com", false},
+		{"https://xyz.api.infobip.com.attacker.example/a", "https://xyz.api.infobip.com", false},
+		{"https://xyz.api.infobip.com/a", "", false},
+	}
+
+	for _, tc := range cases {
+		if got := sameHost(tc.media, tc.base); got != tc.want {
+			t.Errorf("sameHost(%q, %q) = %v, want %v", tc.media, tc.base, got, tc.want)
+		}
 	}
 }

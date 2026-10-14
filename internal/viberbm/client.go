@@ -22,7 +22,7 @@ type apiClient struct {
 
 func newAPIClient(l *slog.Logger) *apiClient {
 	return &apiClient{
-		http:   &http.Client{Timeout: 15 * time.Second},
+		http:   newGuardedClient(15 * time.Second),
 		logger: l.With("component", "viber_bm.api"),
 	}
 }
@@ -60,6 +60,15 @@ type fileContent struct {
 	Type     string `json:"type"`
 	MediaURL string `json:"mediaUrl"`
 	FileName string `json:"fileName"`
+}
+
+//nolint:tagliatelle // InfoBip omni-channel wire format is camelCase
+type videoContent struct {
+	Type          string `json:"type"`
+	MediaURL      string `json:"mediaUrl"`
+	MediaDuration string `json:"mediaDuration"`
+	ThumbnailURL  string `json:"thumbnailUrl"`
+	Text          string `json:"text,omitempty"`
 }
 
 //nolint:tagliatelle // InfoBip omni-channel wire format is camelCase
@@ -128,6 +137,17 @@ func (c *apiClient) SendFile(ctx context.Context, base, apiKey, sender, to, file
 		Sender:       sender,
 		Destinations: []dest{{To: to}},
 		Content:      fileContent{Type: contentTypeFile, MediaURL: fileURL, FileName: fileName},
+		MessageID:    messageID,
+	})
+}
+
+func (c *apiClient) SendVideo(ctx context.Context, base, apiKey, sender, to string, v videoContent, messageID string) (*sendResult, error) {
+	v.Type = contentTypeVideo
+
+	return c.send(ctx, base, apiKey, outMessage{
+		Sender:       sender,
+		Destinations: []dest{{To: to}},
+		Content:      v,
 		MessageID:    messageID,
 	})
 }
