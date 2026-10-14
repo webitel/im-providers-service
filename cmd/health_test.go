@@ -98,6 +98,36 @@ func TestHealth_Lifecycle(t *testing.T) {
 	}
 }
 
+func TestHealth_HTTPBindFailureAbortsStart(t *testing.T) {
+	taken, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("occupy port: %v", err)
+	}
+
+	t.Cleanup(func() {
+		if err := taken.Close(); err != nil {
+			t.Errorf("release port: %v", err)
+		}
+	})
+
+	cfg := &config.Config{}
+	cfg.Service.HTTPAddr = taken.Addr().String()
+
+	app := fx.New(
+		fx.NopLogger,
+		fx.Supply(cfg, slog.New(slog.NewTextHandler(io.Discard, nil))),
+		fx.Provide(func() http.Handler { return http.NotFoundHandler() }),
+		httpsrv.Module,
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := app.Start(ctx); err == nil {
+		t.Fatal("app started although the HTTP address is already in use")
+	}
+}
+
 func waitReadyz(t *testing.T, url string) {
 	t.Helper()
 
