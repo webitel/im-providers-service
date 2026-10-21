@@ -125,6 +125,39 @@ func (c *apiClient) GetUserProfile(ctx context.Context, psid, token string) (*Us
 	return &profile, json.NewDecoder(resp.Body).Decode(&profile)
 }
 
+// GetPageName fetches the display name of a Facebook Page.
+func (c *apiClient) GetPageName(ctx context.Context, token, pageID string) (string, error) {
+	rawURL, err := buildProfileQuery(c.apiURL, pageID, "name")
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("fb page: status %d: %s", resp.StatusCode, b)
+	}
+
+	var page struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&page); err != nil {
+		return "", fmt.Errorf("fb page: decode: %w", err)
+	}
+	return page.Name, nil
+}
+
 // buildProfileQuery constructs a Graph API node URL with field selection.
 func buildProfileQuery(apiURL, psid string, fields ...string) (string, error) {
 	u, err := url.Parse(strings.TrimSuffix(apiURL, "/") + "/" + psid)

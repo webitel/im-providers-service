@@ -65,6 +65,7 @@ func (p *viberBMProvider) ensureContact(ctx context.Context, user *sharedmodel.E
 		Name:     user.FirstName,
 		Username: user.ID,
 		Subject:  user.ID,
+		Phone:    user.ID,
 	})
 	if err != nil {
 		if isAlreadyExists(err) {

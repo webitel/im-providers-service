@@ -17,6 +17,8 @@ var (
 type GateStore interface {
 	// List returns a paginated list of all gates across all providers.
 	List(ctx context.Context, f sharedmodel.ListFilter) ([]*sharedmodel.GateSummary, bool, error)
+	// Get returns a single gate summary of the domain; ErrNotFound if absent.
+	Get(ctx context.Context, domainID int64, id string) (*sharedmodel.GateSummary, error)
 	// Delete removes the base gate and its specific configuration (via cascade).
 	Delete(ctx context.Context, id string) error
 	// GetTypeByID returns the provider type for a gate by its UUID.

@@ -13,10 +13,15 @@ import (
 
 type mockGateService struct {
 	listFn func(ctx context.Context, f sharedmodel.ListFilter) ([]*sharedmodel.GateSummary, bool, error)
+	getFn  func(ctx context.Context, domainID int64, id string) (*sharedmodel.GateSummary, error)
 }
 
 func (m *mockGateService) ListGates(ctx context.Context, f sharedmodel.ListFilter) ([]*sharedmodel.GateSummary, bool, error) {
 	return m.listFn(ctx, f)
+}
+
+func (m *mockGateService) GetGate(ctx context.Context, domainID int64, id string) (*sharedmodel.GateSummary, error) {
+	return m.getFn(ctx, domainID, id)
 }
 
 func stubGateSummary(id string, t sharedmodel.GateType) *sharedmodel.GateSummary {
@@ -51,7 +56,8 @@ func TestListGates_Success(t *testing.T) {
 	h := NewGateHandler(noopLogger, svc, nil)
 
 	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{
-		Page: 1,
+		DomainId: 1,
+		Page:     1,
 		Size: 10,
 	})
 	if err != nil {
@@ -79,7 +85,7 @@ func TestListGates_DefaultSize(t *testing.T) {
 	}
 	h := NewGateHandler(noopLogger, svc, nil)
 
-	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{})
+	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{DomainId: 1})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -97,7 +103,7 @@ func TestListGates_ServiceError(t *testing.T) {
 	}
 	h := NewGateHandler(noopLogger, svc, nil)
 
-	_, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{Size: 10})
+	_, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{DomainId: 1, Size: 10})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -119,7 +125,7 @@ func TestListGates_NilProviderAppID(t *testing.T) {
 	}
 	h := NewGateHandler(noopLogger, svc, nil)
 
-	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{Size: 10})
+	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{DomainId: 1, Size: 10})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -141,6 +147,7 @@ func TestToProtoType(t *testing.T) {
 		{sharedmodel.TypeTelegramApp, impb.ProviderType_PROVIDER_TYPE_TELEGRAM_APP},
 		{sharedmodel.TypeViber, impb.ProviderType_PROVIDER_TYPE_VIBER},
 		{sharedmodel.TypeCustom, impb.ProviderType_PROVIDER_TYPE_CUSTOM},
+		{sharedmodel.TypeViberBM, impb.ProviderType_PROVIDER_TYPE_VIBER_BM},
 		{sharedmodel.GateType(99), impb.ProviderType_PROVIDER_TYPE_UNSPECIFIED},
 	}
 	for _, c := range cases {
@@ -211,7 +218,7 @@ func TestListGates_ExposesProviderCapabilities(t *testing.T) {
 
 	h := NewGateHandler(noopLogger, svc, []provider.Provider{fb})
 
-	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{Page: 1, Size: 10})
+	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{DomainId: 1, Page: 1, Size: 10})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

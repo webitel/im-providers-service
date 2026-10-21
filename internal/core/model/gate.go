@@ -43,15 +43,20 @@ type GateSummary struct {
 	ProviderAppID *string    `db:"provider_app_id"`
 	CreatedAt     time.Time  `db:"created_at"`
 	UpdatedAt     time.Time  `db:"updated_at"`
+	DomainID      int64      `db:"dc"`
+	// Address is the public channel address: the WhatsApp business phone
+	// number, the Facebook page name, the Viber BM sender name.
+	Address string `db:"address"`
 }
 
 // Search and pagination parameters.
 type ListFilter struct {
-	Page   int
-	Size   int
-	Types  []GateType
-	Status GateStatus
-	Q      string
+	DomainID int64
+	Page     int
+	Size     int
+	Types    []GateType
+	Status   GateStatus
+	Q        string
 }
 
 // --- Universal Scanner for GateType ---

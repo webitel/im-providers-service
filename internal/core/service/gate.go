@@ -12,6 +12,7 @@ var _ GateManager = (*GateService)(nil)
 
 type GateManager interface {
 	ListGates(ctx context.Context, f sharedmodel.ListFilter) ([]*sharedmodel.GateSummary, bool, error)
+	GetGate(ctx context.Context, domainID int64, id string) (*sharedmodel.GateSummary, error)
 }
 
 type GateService struct {
@@ -29,4 +30,9 @@ func NewGateService(repo sharedstore.GateStore, log *slog.Logger) *GateService {
 // ListGates coordinates gate retrieval between the store and transport layers.
 func (g *GateService) ListGates(ctx context.Context, f sharedmodel.ListFilter) ([]*sharedmodel.GateSummary, bool, error) {
 	return g.repo.List(ctx, f)
+}
+
+// GetGate returns a single gate of the domain.
+func (g *GateService) GetGate(ctx context.Context, domainID int64, id string) (*sharedmodel.GateSummary, error) {
+	return g.repo.Get(ctx, domainID, id)
 }

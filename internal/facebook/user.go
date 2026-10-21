@@ -3,6 +3,7 @@ package facebook
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -44,13 +45,7 @@ func (p *facebookProvider) syncContact(
 // ensureContact creates the internal contact or returns a stub when the
 // contact already exists (idempotent by design on the gateway side).
 func (p *facebookProvider) ensureContact(ctx context.Context, user *sharedmodel.ExternalUser) (*gatewayv1.Contact, error) {
-	contact, err := p.gatewayer.Create(ctx, &gatewayv1.CreateContactRequest{
-		IssId:    p.Type(),
-		Type:     p.Type(),
-		Name:     user.FirstName,
-		Username: user.LastName,
-		Subject:  user.ID,
-	})
+	contact, err := p.gatewayer.Create(ctx, newContactRequest(p.Type(), user))
 	if err != nil {
 		if isAlreadyExists(err) {
 			return &gatewayv1.Contact{Sub: user.ID, Iss: p.Type()}, nil
@@ -58,6 +53,18 @@ func (p *facebookProvider) ensureContact(ctx context.Context, user *sharedmodel.
 		return nil, fmt.Errorf("create contact: %w", err)
 	}
 	return contact, nil
+}
+
+// newContactRequest builds the contact of a Facebook user. Name carries the
+// full profile name; Username must be unique per issuer, so it is the PSID.
+func newContactRequest(issuer string, user *sharedmodel.ExternalUser) *gatewayv1.CreateContactRequest {
+	return &gatewayv1.CreateContactRequest{
+		IssId:    issuer,
+		Type:     issuer,
+		Name:     strings.TrimSpace(user.FullName()),
+		Username: user.ID,
+		Subject:  user.ID,
+	}
 }
 
 // ensureVia links the gate to the internal contact as a "via" channel.
