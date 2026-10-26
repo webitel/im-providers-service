@@ -3,32 +3,26 @@ package instagram
 import (
 	"context"
 
-	"google.golang.org/grpc/metadata"
-
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
+	"github.com/webitel/im-providers-service/internal/core/via"
 	igmodel "github.com/webitel/im-providers-service/internal/instagram/model"
 )
 
-// viaHeader identifies which gate a message forwarded to im-gateway-service
-// belongs to, so the same external contact sub can be disambiguated across
-// multiple Instagram Business Accounts. Mirrors facebook's and whatsapp's x-webitel-via.
-const viaHeader = "x-webitel-via" //nolint:unused // will be used in viaCoreMessanger
-
 // viaCoreMessanger decorates a sharedsvc.Messenger, bound to a single gate, so
-// every forwarded call automatically carries the x-webitel-via header.
+// every forwarded call automatically carries the via headers (see package via).
 type viaCoreMessanger struct { //nolint:unused // will be used in NewViaCoreMessanger
 	sharedsvc.Messenger
 
-	gateID string
+	gate via.Gate
 }
 
-func newViaCoreMessanger(messenger sharedsvc.Messenger, gateID string) *viaCoreMessanger { //nolint:unused // called by coreMessengerFor
-	return &viaCoreMessanger{Messenger: messenger, gateID: gateID}
+func newViaCoreMessanger(messenger sharedsvc.Messenger, gate via.Gate) *viaCoreMessanger { //nolint:unused // called by coreMessengerFor
+	return &viaCoreMessanger{Messenger: messenger, gate: gate}
 }
 
 func (m *viaCoreMessanger) withVia(ctx context.Context) context.Context { //nolint:unused // called by SendText et al
-	return metadata.AppendToOutgoingContext(ctx, viaHeader, m.gateID)
+	return via.AppendToOutgoingContext(ctx, m.gate)
 }
 
 func (m *viaCoreMessanger) SendText(ctx context.Context, in *sharedmodel.SendTextRequest) (*sharedmodel.SendTextResponse, error) { //nolint:unused // implements Messenger interface
@@ -56,7 +50,7 @@ func (m *viaCoreMessanger) SendInteractiveCallback(ctx context.Context, in *shar
 }
 
 // coreMessengerFor returns a Messenger bound to gate, automatically attaching
-// the x-webitel-via header on every call.
+// the via headers on every call.
 func (p *instagramProvider) coreMessengerFor(gate *igmodel.InstagramGate) sharedsvc.Messenger { //nolint:unused // will be called in webhook handlers
-	return newViaCoreMessanger(p.messenger, gate.ID)
+	return newViaCoreMessanger(p.messenger, via.Gate{ID: gate.ID, Type: p.Type(), Name: gate.Name})
 }

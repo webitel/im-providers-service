@@ -22,6 +22,7 @@ func (contact *Contact) GetID() uuid.UUID { return contact.ID }
 type WhatsappBusinessAccount struct {
 	ID                   uuid.UUID  `json:"id" db:"id"`
 	DC                   int        `json:"dc" db:"dc"`
+	Name                 string     `json:"name" db:"name"`
 	PhoneNumber          string     `json:"phone_number" db:"phone_number"`
 	PhoneNumberID        string     `json:"phone_number_id" db:"phone_number_id"`
 	AccessTokenEncrypted []byte     `json:"access_token_encrypted" db:"access_token_encrypted"`
@@ -52,6 +53,7 @@ func (whatsappBusinessAccount *WhatsappBusinessAccount) DeepClone() WhatsappBusi
 		BusinessID:           whatsappBusinessAccount.BusinessID,
 		Bot:                  whatsappBusinessAccount.Bot,
 		DC:                   whatsappBusinessAccount.DC,
+		Name:                 whatsappBusinessAccount.Name,
 	}
 
 	return account

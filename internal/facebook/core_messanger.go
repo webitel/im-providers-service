@@ -3,32 +3,26 @@ package facebook
 import (
 	"context"
 
-	"google.golang.org/grpc/metadata"
-
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
+	"github.com/webitel/im-providers-service/internal/core/via"
 	fbmodel "github.com/webitel/im-providers-service/internal/facebook/model"
 )
 
-// viaHeader identifies which gate a message forwarded to im-gateway-service
-// belongs to, so the same external contact sub can be disambiguated across
-// multiple Facebook pages. Mirrors whatsapp's and telegram's x-webitel-via.
-const viaHeader = "x-webitel-via"
-
 // viaCoreMessanger decorates a sharedsvc.Messenger, bound to a single gate, so
-// every forwarded call automatically carries the x-webitel-via header.
+// every forwarded call automatically carries the via headers (see package via).
 type viaCoreMessanger struct {
 	sharedsvc.Messenger
 
-	gateID string
+	gate via.Gate
 }
 
-func newViaCoreMessanger(messenger sharedsvc.Messenger, gateID string) *viaCoreMessanger {
-	return &viaCoreMessanger{Messenger: messenger, gateID: gateID}
+func newViaCoreMessanger(messenger sharedsvc.Messenger, gate via.Gate) *viaCoreMessanger {
+	return &viaCoreMessanger{Messenger: messenger, gate: gate}
 }
 
 func (m *viaCoreMessanger) withVia(ctx context.Context) context.Context {
-	return metadata.AppendToOutgoingContext(ctx, viaHeader, m.gateID)
+	return via.AppendToOutgoingContext(ctx, m.gate)
 }
 
 func (m *viaCoreMessanger) SendText(ctx context.Context, in *sharedmodel.SendTextRequest) (*sharedmodel.SendTextResponse, error) {
@@ -56,7 +50,7 @@ func (m *viaCoreMessanger) SendInteractiveCallback(ctx context.Context, in *shar
 }
 
 // coreMessengerFor returns a Messenger bound to gate, automatically attaching
-// the x-webitel-via header on every call.
+// the via headers on every call.
 func (p *facebookProvider) coreMessengerFor(gate *fbmodel.FacebookGate) sharedsvc.Messenger {
-	return newViaCoreMessanger(p.messenger, gate.ID)
+	return newViaCoreMessanger(p.messenger, via.Gate{ID: gate.ID, Type: p.Type(), Name: gate.Name})
 }

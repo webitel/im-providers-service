@@ -9,6 +9,7 @@ import (
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
+	"github.com/webitel/im-providers-service/internal/core/via"
 	vibmodel "github.com/webitel/im-providers-service/internal/viber/model"
 )
 
@@ -228,15 +229,14 @@ func (p *viberProvider) handleMessage(ctx context.Context, evt *inboundEvent) er
 		to:   sharedmodel.Peer{Sub: gate.Peer.Sub, Iss: gate.Peer.Iss},
 	}
 
-	sendCtx := withProviderVia(ctx, gate.DomainID, peers.from.Sub, gate.ID)
+	sendCtx := withProviderVia(ctx, gate.DomainID, peers.from.Sub, via.Gate{ID: gate.ID, Type: p.Type(), Name: gate.Name})
 	p.routeMessage(sendCtx, gate, peers, evt.Message, token)
 	return nil
 }
 
-func withProviderVia(ctx context.Context, dc int64, customerSub, gateID string) context.Context {
-	return metadata.NewOutgoingContext(ctx, metadata.Pairs(
+func withProviderVia(ctx context.Context, dc int64, customerSub string, gate via.Gate) context.Context {
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(append([]string{
 		"x-webitel-type", "provider",
 		"x-webitel-provider", fmt.Sprintf("%d.%s", dc, customerSub),
-		"x-webitel-via", gateID,
-	))
+	}, gate.Pairs()...)...))
 }

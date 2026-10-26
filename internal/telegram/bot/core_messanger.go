@@ -3,17 +3,10 @@ package bot
 import (
 	"context"
 
-	"github.com/google/uuid"
-	"google.golang.org/grpc/metadata"
-
 	coremodel "github.com/webitel/im-providers-service/internal/core/model"
+	"github.com/webitel/im-providers-service/internal/core/via"
 	"github.com/webitel/im-providers-service/internal/telegram/bot/model"
 )
-
-// viaHeader identifies which gate a message forwarded to im-gateway-service
-// belongs to, so the same external contact sub can be disambiguated across
-// multiple Telegram bots.
-const viaHeader = "x-webitel-via"
 
 // CoreMessanger is the subset of sharedsvc.Messenger the Telegram provider
 // forwards inbound webhook updates through.
@@ -27,20 +20,20 @@ type CoreMessanger interface {
 }
 
 // viaCoreMessanger decorates a CoreMessanger, bound to a single gate, so every
-// forwarded call automatically carries the x-webitel-via header — mirroring
+// forwarded call automatically carries the via headers (see package via) — mirroring
 // whatsapp's decoratedCoreMessanger.
 type viaCoreMessanger struct {
 	CoreMessanger
 
-	gateID string
+	gate via.Gate
 }
 
-func newViaCoreMessanger(messenger CoreMessanger, gateID uuid.UUID) *viaCoreMessanger {
-	return &viaCoreMessanger{CoreMessanger: messenger, gateID: gateID.String()}
+func newViaCoreMessanger(messenger CoreMessanger, gate via.Gate) *viaCoreMessanger {
+	return &viaCoreMessanger{CoreMessanger: messenger, gate: gate}
 }
 
 func (m *viaCoreMessanger) withVia(ctx context.Context) context.Context {
-	return metadata.AppendToOutgoingContext(ctx, viaHeader, m.gateID)
+	return via.AppendToOutgoingContext(ctx, m.gate)
 }
 
 func (m *viaCoreMessanger) SendText(ctx context.Context, in *coremodel.SendTextRequest) (*coremodel.SendTextResponse, error) {
@@ -68,7 +61,7 @@ func (m *viaCoreMessanger) SendInteractiveCallback(ctx context.Context, in *core
 }
 
 // coreMessengerFor returns a CoreMessanger bound to gate, automatically
-// attaching the x-webitel-via header on every call.
+// attaching the via headers on every call.
 func (p *Provider) coreMessengerFor(gate *model.Gate) CoreMessanger {
-	return newViaCoreMessanger(p.coreMessageClient, gate.ID)
+	return newViaCoreMessanger(p.coreMessageClient, via.Gate{ID: gate.ID.String(), Type: p.Type(), Name: gate.Name})
 }
