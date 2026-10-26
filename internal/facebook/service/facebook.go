@@ -29,6 +29,8 @@ type FacebookManager interface {
 type MessengerProfileAPI interface {
 	SetMessengerProfile(ctx context.Context, token string, profile any) error
 	DeleteMessengerProfile(ctx context.Context, token string, fields []string) error
+	// GetPageName returns the display name of the Facebook Page.
+	GetPageName(ctx context.Context, token, pageID string) (string, error)
 }
 
 // messengerProfilePayload mirrors facebook.messengerProfile but lives in this package
@@ -86,6 +88,7 @@ func (f *FacebookService) CreateGate(ctx context.Context, req fbmodel.CreateFace
 		Peer:      req.Peer,
 		Enabled:   true,
 	}
+	gate.PageName = f.resolvePageName(ctx, gate)
 
 	if err := f.repo.Insert(ctx, req.Dc, gate); err != nil {
 		f.log.Error("failed to create facebook gate", "page_id", req.PageID, "err", err)
@@ -107,6 +110,13 @@ func (f *FacebookService) UpdateGate(ctx context.Context, req fbmodel.UpdateFace
 	}
 
 	req.ApplyTo(gate)
+
+	// A new token may come with a re-linked page; refresh the stored name.
+	if req.PageToken != nil {
+		if name := f.resolvePageName(ctx, gate); name != "" {
+			gate.PageName = name
+		}
+	}
 
 	if err := f.repo.Update(ctx, gate); err != nil {
 		f.log.Error("failed to update facebook gate", "id", req.ID, "err", err)
@@ -240,4 +250,18 @@ func menuItemsToActions(items []fbmodel.MenuItem, _ bool) []menuAction {
 		}
 	}
 	return actions
+}
+
+// resolvePageName fetches the page display name shown as the channel address.
+// Best-effort: a Graph API failure must not block gate management, so it is
+// logged and an empty name is returned.
+func (f *FacebookService) resolvePageName(ctx context.Context, gate *fbmodel.FacebookGate) string {
+	name, err := f.graphAPI.GetPageName(ctx, gate.PageToken, gate.PageID)
+	if err != nil {
+		f.log.WarnContext(ctx, "failed to fetch facebook page name", "page_id", gate.PageID, "err", err)
+
+		return ""
+	}
+
+	return name
 }

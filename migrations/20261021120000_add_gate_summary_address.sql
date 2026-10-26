@@ -1,0 +1,73 @@
+-- +goose Up
+-- +goose StatementBegin
+
+-- Facebook Page display name, shown as the channel address.
+ALTER TABLE im_provider.facebook ADD COLUMN IF NOT EXISTS page_name TEXT NOT NULL DEFAULT '';
+
+-- gate_summary is read with SELECT * into a strict struct by already deployed
+-- builds, so its column set is a contract: keep it exactly as defined by
+-- 20260909100001. New columns go into gate_summary_ext instead.
+DROP VIEW IF EXISTS im_provider.gate_summary;
+
+CREATE VIEW im_provider.gate_summary AS
+SELECT
+    g.id,
+    g.name,
+    g.type,
+    CASE WHEN g.enabled THEN 'active' ELSE 'disabled' END AS status,
+    COALESCE(fb.page_id, vb.bot_uri, vb.bot_id, ig.business_account_id, vbm.sender_name, b.sub, 'N/A') AS contact,
+    COALESCE(ma.id::text, ma2.id::text) AS provider_app_id,
+    g.created_at,
+    g.updated_at
+FROM im_provider.gates g
+LEFT JOIN im_provider.facebook fb ON g.id = fb.gate_id
+LEFT JOIN im_provider.meta_apps ma ON fb.meta_app_id = ma.id
+LEFT JOIN im_provider.gate_viber vb ON g.id = vb.gate_id
+LEFT JOIN im_provider.instagram ig ON g.id = ig.gate_id
+LEFT JOIN im_provider.meta_apps ma2 ON ig.meta_app_id = ma2.id
+LEFT JOIN im_provider.gate_viber_bm vbm ON g.id = vbm.gate_id
+LEFT JOIN im_provider.bots b ON g.id = b.gate_id AND g.type = 'telegram';
+
+-- Extended summary: the owning domain (for domain-scoped listing and lookup)
+-- and the public channel address of every gate. Also restores the custom-gate
+-- join dropped by 20260909100001.
+CREATE OR REPLACE VIEW im_provider.gate_summary_ext AS
+SELECT
+    g.id,
+    g.name,
+    g.type,
+    CASE WHEN g.enabled THEN 'active' ELSE 'disabled' END AS status,
+    COALESCE(fb.page_id, vb.bot_uri, vb.bot_id, ig.business_account_id, cu.callback_url, vbm.sender_name, b.sub, 'N/A') AS contact,
+    COALESCE(ma.id::text, ma2.id::text) AS provider_app_id,
+    g.created_at,
+    g.updated_at,
+    g.dc,
+    COALESCE(
+        CASE g.type
+            WHEN 'facebook' THEN COALESCE(NULLIF(fb.page_name, ''), fb.page_id)
+            WHEN 'whatsapp' THEN waba.phone_number
+            WHEN 'viber_bm' THEN vbm.sender_name
+        END,
+        ''
+    ) AS address
+FROM im_provider.gates g
+LEFT JOIN im_provider.facebook fb ON g.id = fb.gate_id
+LEFT JOIN im_provider.meta_apps ma ON fb.meta_app_id = ma.id
+LEFT JOIN im_provider.gate_viber vb ON g.id = vb.gate_id
+LEFT JOIN im_provider.instagram ig ON g.id = ig.gate_id
+LEFT JOIN im_provider.meta_apps ma2 ON ig.meta_app_id = ma2.id
+LEFT JOIN im_provider.gate_custom cu ON g.id = cu.gate_id
+LEFT JOIN im_provider.gate_viber_bm vbm ON g.id = vbm.gate_id
+LEFT JOIN im_provider.gate_waba waba ON g.id = waba.id
+LEFT JOIN im_provider.bots b ON g.id = b.gate_id AND g.type = 'telegram';
+
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+
+DROP VIEW IF EXISTS im_provider.gate_summary_ext;
+
+ALTER TABLE im_provider.facebook DROP COLUMN IF EXISTS page_name;
+
+-- +goose StatementEnd

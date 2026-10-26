@@ -68,6 +68,10 @@ func (noopMessengerProfileAPI) SetMessengerProfile(_ context.Context, _ string, 
 	return nil
 }
 
+func (noopMessengerProfileAPI) GetPageName(_ context.Context, _, _ string) (string, error) {
+	return "", nil
+}
+
 func (noopMessengerProfileAPI) DeleteMessengerProfile(_ context.Context, _ string, _ []string) error {
 	return nil
 }

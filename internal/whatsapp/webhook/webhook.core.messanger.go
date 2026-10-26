@@ -59,11 +59,14 @@ func (decoratedCoreMessanger *decoratedCoreMessanger) resolveInternalContactIden
 		return err
 	}
 
+	// Username must be unique per issuer, so it is the wa_id (the phone
+	// number), not the non-unique profile name (which is the display Name).
 	_, err = decoratedCoreMessanger.gatewayClient.Create(outgoingContext, &gateway.CreateContactRequest{
 		IssId:    from.Iss,
 		Type:     newContactsSource,
 		Name:     from.Name,
-		Username: from.Name, //TODO
+		Username: from.Sub,
+		Phone:    from.Sub,
 		Metadata: map[string]string{},
 		Subject:  from.Sub,
 		DomainId: int32(dc),

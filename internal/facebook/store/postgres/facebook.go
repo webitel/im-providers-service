@@ -49,8 +49,8 @@ func (s *facebookStore) Insert(ctx context.Context, dc int64, g *fbmodel.Faceboo
 		SELECT $4, $5, id FROM new_gate
 		RETURNING id
 	)
-	INSERT INTO im_provider.facebook (gate_id, meta_app_id, page_id, page_token)
-	SELECT id, $6, $7, $8 FROM new_gate
+	INSERT INTO im_provider.facebook (gate_id, meta_app_id, page_id, page_token, page_name)
+	SELECT id, $6, $7, $8, $9 FROM new_gate
 	RETURNING
 		gate_id,
 		(SELECT name FROM new_gate),
@@ -58,7 +58,7 @@ func (s *facebookStore) Insert(ctx context.Context, dc int64, g *fbmodel.Faceboo
 		(SELECT updated_at FROM new_gate)`
 
 	err = s.pool.QueryRow(ctx, query,
-		dc, g.Name, g.Enabled, g.Peer.Sub, g.Peer.Iss, g.MetaAppID, g.PageID, token,
+		dc, g.Name, g.Enabled, g.Peer.Sub, g.Peer.Iss, g.MetaAppID, g.PageID, token, g.PageName,
 	).Scan(&g.ID, &g.Name, &g.CreatedAt, &g.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("postgres: insert facebook gateway: %w", err)
@@ -73,7 +73,7 @@ func (s *facebookStore) Select(ctx context.Context, id string) (*fbmodel.Faceboo
 	SELECT
 		g.id, g.name, g.enabled, g.created_at, g.updated_at,
 		b.sub AS "peer.sub", b.iss AS "peer.iss",
-		fb.meta_app_id, fb.page_id, fb.page_token
+		fb.meta_app_id, fb.page_id, fb.page_token, fb.page_name
 	FROM im_provider.gates g
 	JOIN im_provider.bots b ON g.id = b.gate_id
 	JOIN im_provider.facebook fb ON g.id = fb.gate_id
@@ -108,7 +108,8 @@ func (s *facebookStore) SelectByPageAndURI(ctx context.Context, pageID, uri stri
 		b.iss AS "peer.iss",
 		fb.meta_app_id,
 		fb.page_id,
-		fb.page_token
+		fb.page_token,
+		fb.page_name
 	FROM im_provider.gates g
 	JOIN im_provider.bots b ON g.id = b.gate_id
 	JOIN im_provider.facebook fb ON g.id = fb.gate_id
@@ -150,9 +151,10 @@ func (s *facebookStore) Update(ctx context.Context, g *fbmodel.FacebookGate) err
 
 		const uConfig = `
 			UPDATE im_provider.facebook
-			SET meta_app_id = $1, page_id = $2, page_token = $3
-			WHERE gate_id = $4`
-		_, err := tx.Exec(ctx, uConfig, g.MetaAppID, g.PageID, token, g.ID)
+			SET meta_app_id = $1, page_id = $2, page_token = $3, page_name = $4
+			WHERE gate_id = $5`
+
+		_, err := tx.Exec(ctx, uConfig, g.MetaAppID, g.PageID, token, g.PageName, g.ID)
 		return err
 	})
 
@@ -191,7 +193,10 @@ func (s *facebookStore) Unbind(ctx context.Context, gateID string) error {
 }
 
 func (s *facebookStore) mapVirtualFields(g *fbmodel.FacebookGate) {
-	g.PageName = g.Name
+	// Gates created before page names were stored fall back to the gate name.
+	if g.PageName == "" {
+		g.PageName = g.Name
+	}
 	if g.Enabled {
 		g.Status = sharedmodel.StatusActive
 	} else {
