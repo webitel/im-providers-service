@@ -3,30 +3,25 @@ package viberbm
 import (
 	"context"
 
-	"google.golang.org/grpc/metadata"
-
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedsvc "github.com/webitel/im-providers-service/internal/core/service"
+	"github.com/webitel/im-providers-service/internal/core/via"
 	vibbmmodel "github.com/webitel/im-providers-service/internal/viberbm/model"
 )
 
-// viaHeader disambiguates the same contact sub across gates on im-gateway.
-// Mirrors facebook/whatsapp/telegram x-webitel-via.
-const viaHeader = "x-webitel-via"
-
-// viaCoreMessanger binds a Messenger to one gate, stamping x-webitel-via.
+// viaCoreMessanger binds a Messenger to one gate, stamping the via headers.
 type viaCoreMessanger struct {
 	sharedsvc.Messenger
 
-	gateID string
+	gate via.Gate
 }
 
-func newViaCoreMessanger(messenger sharedsvc.Messenger, gateID string) *viaCoreMessanger {
-	return &viaCoreMessanger{Messenger: messenger, gateID: gateID}
+func newViaCoreMessanger(messenger sharedsvc.Messenger, gate via.Gate) *viaCoreMessanger {
+	return &viaCoreMessanger{Messenger: messenger, gate: gate}
 }
 
 func (m *viaCoreMessanger) withVia(ctx context.Context) context.Context {
-	return metadata.AppendToOutgoingContext(ctx, viaHeader, m.gateID)
+	return via.AppendToOutgoingContext(ctx, m.gate)
 }
 
 func (m *viaCoreMessanger) SendText(ctx context.Context, in *sharedmodel.SendTextRequest) (*sharedmodel.SendTextResponse, error) {
@@ -42,5 +37,5 @@ func (m *viaCoreMessanger) SendDocument(ctx context.Context, in *sharedmodel.Sen
 }
 
 func (p *viberBMProvider) coreMessengerFor(gate *vibbmmodel.ViberBMGate) sharedsvc.Messenger {
-	return newViaCoreMessanger(p.messenger, gate.ID)
+	return newViaCoreMessanger(p.messenger, via.Gate{ID: gate.ID, Type: p.Type(), Name: gate.Name})
 }

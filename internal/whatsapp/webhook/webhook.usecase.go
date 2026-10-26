@@ -240,6 +240,7 @@ func extractPeerFromWhatsAppBusinessAccount(whatsAppBusinessAccount *common.What
 		Sub:  whatsAppBusinessAccount.Bot.GetSub(),
 		Iss:  whatsAppBusinessAccount.Bot.GetIss(),
 		ID:   whatsAppBusinessAccount.ID,
+		Name: whatsAppBusinessAccount.Name,
 	}
 }
 

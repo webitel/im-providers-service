@@ -7,6 +7,7 @@ import (
 	"github.com/webitel/im-providers-service/gen/go/gateway/v1"
 	imgateway "github.com/webitel/im-providers-service/infra/client/grpc/im-gateway"
 	"github.com/webitel/im-providers-service/internal/core/model"
+	"github.com/webitel/im-providers-service/internal/core/via"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -50,7 +51,9 @@ func (decoratedCoreMessanger *decoratedCoreMessanger) prepareOutgoingSendCoreReq
 		return ctx, err
 	}
 
-	return metadata.NewOutgoingContext(outgoingContext, metadata.Pairs("x-webitel-via", to.ID.String())), nil
+	gate := via.Gate{ID: to.ID.String(), Type: model.TypeWhatsApp.String(), Name: to.Name}
+
+	return metadata.NewOutgoingContext(outgoingContext, metadata.Pairs(gate.Pairs()...)), nil
 }
 
 func (decoratedCoreMessanger *decoratedCoreMessanger) resolveInternalContactIdentity(ctx context.Context, to, from model.Peer, dc int) error {

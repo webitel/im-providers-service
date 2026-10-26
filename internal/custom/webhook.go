@@ -12,6 +12,7 @@ import (
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	sharedstore "github.com/webitel/im-providers-service/internal/core/store"
+	"github.com/webitel/im-providers-service/internal/core/via"
 	custommodel "github.com/webitel/im-providers-service/internal/custom/model"
 )
 
@@ -117,7 +118,7 @@ func (p *customProvider) handleMessage(ctx context.Context, msg *wireMessage) er
 		in.variables = threadVariables(msg)
 	}
 
-	sendCtx := withProviderVia(ctx, gate.DomainID, sub, gate.ID)
+	sendCtx := withProviderVia(ctx, gate.DomainID, sub, via.Gate{ID: gate.ID, Type: p.Type(), Name: gate.Name})
 	p.routeMessage(sendCtx, in)
 
 	return nil
@@ -228,10 +229,9 @@ func (p *customProvider) handleBroadcastResult(ctx context.Context, in *wireBroa
 	return nil
 }
 
-func withProviderVia(ctx context.Context, dc int64, customerSub, gateID string) context.Context {
-	return metadata.NewOutgoingContext(ctx, metadata.Pairs(
+func withProviderVia(ctx context.Context, dc int64, customerSub string, gate via.Gate) context.Context {
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(append([]string{
 		"x-webitel-type", "provider",
 		"x-webitel-provider", fmt.Sprintf("%d.%s", dc, customerSub),
-		"x-webitel-via", gateID,
-	))
+	}, gate.Pairs()...)...))
 }

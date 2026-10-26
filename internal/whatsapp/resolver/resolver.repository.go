@@ -53,6 +53,7 @@ var resolveWhatsAppBusinessAccountSQLQuery = postgresx.CompactSQL(`
 	select
 		"gw"."id" as "id",
 		"g"."dc" as "dc",
+		"g"."name" as "name",
 		"gw"."phone_number" as "phone_number",
 		"gw"."phone_number_id" as "phone_number_id",
 		"gw"."access_token" as "access_token_encrypted",
