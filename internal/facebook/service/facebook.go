@@ -259,7 +259,9 @@ func (f *FacebookService) resolvePageName(ctx context.Context, gate *fbmodel.Fac
 	name, err := f.graphAPI.GetPageName(ctx, gate.PageToken, gate.PageID)
 	if err != nil {
 		f.log.WarnContext(ctx, "failed to fetch facebook page name", "page_id", gate.PageID, "err", err)
+
 		return ""
 	}
+
 	return name
 }

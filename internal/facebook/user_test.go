@@ -28,6 +28,7 @@ func TestNewContactRequest(t *testing.T) {
 			if req.GetUsername() != "psid-1" || req.GetSubject() != "psid-1" {
 				t.Errorf("Username/Subject = %q/%q, want psid-1", req.GetUsername(), req.GetSubject())
 			}
+
 			if req.GetIssId() != "facebook" || req.GetType() != "facebook" {
 				t.Errorf("IssId/Type = %q/%q, want facebook", req.GetIssId(), req.GetType())
 			}

@@ -153,6 +153,7 @@ func (s *facebookStore) Update(ctx context.Context, g *fbmodel.FacebookGate) err
 			UPDATE im_provider.facebook
 			SET meta_app_id = $1, page_id = $2, page_token = $3, page_name = $4
 			WHERE gate_id = $5`
+
 		_, err := tx.Exec(ctx, uConfig, g.MetaAppID, g.PageID, token, g.PageName, g.ID)
 		return err
 	})

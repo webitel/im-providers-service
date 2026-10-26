@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -104,6 +105,12 @@ func (g *GateHandler) GetGate(ctx context.Context, req *impb.GetGateRequest) (*i
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
+	// Reject before the store: a malformed id would otherwise fail the uuid
+	// cast in Postgres and surface as Internal.
+	if _, err := uuid.Parse(req.GetId()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "id must be a UUID")
+	}
+
 	domainID, err := resolveDomainID(ctx, req.GetDomainId())
 	if err != nil {
 		return nil, err
@@ -113,6 +120,7 @@ func (g *GateHandler) GetGate(ctx context.Context, req *impb.GetGateRequest) (*i
 	if errors.Is(err, sharedstore.ErrNotFound) {
 		return nil, status.Errorf(codes.NotFound, "gate not found: %s", req.GetId())
 	}
+
 	if err != nil {
 		g.logger.ErrorContext(ctx, "grpc: get gate failed", "gate_id", req.GetId(), "err", err)
 
@@ -183,6 +191,8 @@ func fromProtoStatus(s impb.ProviderStatus) sharedmodel.GateStatus {
 		return sharedmodel.StatusDisabled
 	case impb.ProviderStatus_PROVIDER_STATUS_ERROR:
 		return sharedmodel.StatusError
+	case impb.ProviderStatus_PROVIDER_STATUS_UNSPECIFIED:
+		return sharedmodel.StatusUnknown
 	default:
 		return sharedmodel.StatusUnknown
 	}

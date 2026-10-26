@@ -58,7 +58,7 @@ func TestListGates_Success(t *testing.T) {
 	resp, err := h.ListGates(context.Background(), &impb.ProviderListGatesRequest{
 		DomainId: 1,
 		Page:     1,
-		Size: 10,
+		Size:     10,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

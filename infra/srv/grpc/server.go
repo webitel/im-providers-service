@@ -131,6 +131,7 @@ func New(addr string, opts ...Option) (*Server, error) {
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			intrcp.UnaryServerErrorInterceptor(),
+			interceptors.NewUnaryStatusCodeInterceptor(),
 			selector.UnaryServerInterceptor(
 				interceptors.NewUnaryAuthInterceptor(conf.Auther),
 				selector.MatchFunc(func(_ context.Context, callMeta grpcmiddleware.CallMeta) bool {

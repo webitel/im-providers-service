@@ -136,6 +136,7 @@ func (c *apiClient) GetPageName(ctx context.Context, token, pageID string) (stri
 	if err != nil {
 		return "", err
 	}
+
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := c.client.Do(req)
@@ -146,6 +147,7 @@ func (c *apiClient) GetPageName(ctx context.Context, token, pageID string) (stri
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
+
 		return "", fmt.Errorf("fb page: status %d: %s", resp.StatusCode, b)
 	}
 
@@ -155,6 +157,7 @@ func (c *apiClient) GetPageName(ctx context.Context, token, pageID string) (stri
 	if err := json.NewDecoder(resp.Body).Decode(&page); err != nil {
 		return "", fmt.Errorf("fb page: decode: %w", err)
 	}
+
 	return page.Name, nil
 }
 

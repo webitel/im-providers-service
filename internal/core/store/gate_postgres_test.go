@@ -17,7 +17,7 @@ func TestBuildListQuery(t *testing.T) {
 		{
 			name:      "domain only",
 			filter:    sharedmodel.ListFilter{DomainID: 1},
-			wantQuery: `SELECT * FROM im_provider.gate_summary WHERE dc = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+			wantQuery: `SELECT id, name, type, status, contact, provider_app_id, created_at, updated_at, dc, address FROM im_provider.gate_summary_ext WHERE dc = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
 			wantArgs:  []any{int64(1), 21, 0},
 		},
 		{
@@ -28,7 +28,7 @@ func TestBuildListQuery(t *testing.T) {
 				Status:   sharedmodel.StatusActive,
 				Q:        "shop",
 			},
-			wantQuery: `SELECT * FROM im_provider.gate_summary WHERE dc = $1 AND type = ANY($2) AND status = $3 AND name ILIKE $4 ORDER BY created_at DESC LIMIT $5 OFFSET $6`,
+			wantQuery: `SELECT id, name, type, status, contact, provider_app_id, created_at, updated_at, dc, address FROM im_provider.gate_summary_ext WHERE dc = $1 AND type = ANY($2) AND status = $3 AND name ILIKE $4 ORDER BY created_at DESC LIMIT $5 OFFSET $6`,
 			wantArgs:  []any{int64(1), []string{"whatsapp", "viber_bm"}, "active", "%shop%", 21, 0},
 		},
 	}
@@ -39,9 +39,28 @@ func TestBuildListQuery(t *testing.T) {
 			if query != tt.wantQuery {
 				t.Errorf("query =\n%s\nwant\n%s", query, tt.wantQuery)
 			}
+
 			if !reflect.DeepEqual(args, tt.wantArgs) {
 				t.Errorf("args = %#v, want %#v", args, tt.wantArgs)
 			}
 		})
+	}
+}
+
+func TestPageOffset(t *testing.T) {
+	tests := []struct {
+		page, limit, want int
+	}{
+		{0, 20, 0},
+		{1, 20, 0},
+		{2, 20, 20},
+		{3, 50, 100},
+		{-1, 20, 0},
+	}
+
+	for _, tt := range tests {
+		if got := pageOffset(tt.page, tt.limit); got != tt.want {
+			t.Errorf("pageOffset(%d, %d) = %d, want %d", tt.page, tt.limit, got, tt.want)
+		}
 	}
 }
