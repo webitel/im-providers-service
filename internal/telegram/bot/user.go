@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/webitel/im-providers-service/gen/go/contact/v1"
@@ -64,6 +65,10 @@ func (p *Provider) toExternalUser(user *model.User) *coremodel.ExternalUser {
 		res.LastName = *user.LastName
 	}
 
+	if user.Username != nil {
+		res.Username = *user.Username
+	}
+
 	return res
 }
 
@@ -73,13 +78,7 @@ func withGatewayIdentity(ctx context.Context, gate *model.Gate) context.Context 
 }
 
 func (p *Provider) ensureContact(ctx context.Context, user *coremodel.ExternalUser) (*gatewayv1.Contact, error) {
-	contact, err := p.gatewayClient.Create(ctx, &gatewayv1.CreateContactRequest{
-		IssId:    p.Type(),
-		Type:     p.Type(),
-		Name:     user.FirstName,
-		Username: user.LastName,
-		Subject:  user.ID,
-	})
+	contact, err := p.gatewayClient.Create(ctx, newContactRequest(p.Type(), user))
 	if err != nil {
 		if isAlreadyExists(err) {
 			return &gatewayv1.Contact{Sub: user.ID, Iss: p.Type()}, nil
@@ -87,6 +86,24 @@ func (p *Provider) ensureContact(ctx context.Context, user *coremodel.ExternalUs
 		return nil, fmt.Errorf("create contact: %w", err)
 	}
 	return contact, nil
+}
+
+// newContactRequest builds the contact of a Telegram user. Name carries the
+// full name; Username is the @username handle, or the user id when the user
+// has none (the contact username must not be empty).
+func newContactRequest(issuer string, user *coremodel.ExternalUser) *gatewayv1.CreateContactRequest {
+	username := user.Username
+	if username == "" {
+		username = user.ID
+	}
+
+	return &gatewayv1.CreateContactRequest{
+		IssId:    issuer,
+		Type:     issuer,
+		Name:     strings.TrimSpace(user.FullName()),
+		Username: username,
+		Subject:  user.ID,
+	}
 }
 
 func (p *Provider) ensureVia(ctx context.Context, contactSub, contactIss *string, gateID uuid.UUID) error {

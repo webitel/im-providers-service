@@ -9,6 +9,9 @@ type ExternalUser struct {
 	ID        string
 	FirstName string
 	LastName  string
+	// Username is the messenger handle (e.g. a Telegram @username, without
+	// the "@"); empty when the provider has none.
+	Username string
 }
 
 // FullName returns the combined name for logging and upserting
@@ -22,10 +25,11 @@ func (u *ExternalUser) Hash() string {
 	return fmt.Sprintf("%x", sha256.Sum256(
 		fmt.Appendf(
 			nil,
-			"%s:%s:%s",
+			"%s:%s:%s:%s",
 			u.ID,
 			u.FirstName,
 			u.LastName,
+			u.Username,
 		)))
 }
 
