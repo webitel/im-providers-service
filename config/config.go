@@ -111,6 +111,10 @@ func LoadConfig() (*Config, error) {
 	loader.RegisterFlags(pflag.CommandLine)
 	registerServiceFlags()
 	registerPostgresFlags()
+	// postgres.dsn is registered manually, so NewLoader does not mark it.
+	loader.
+		MarkSecret("postgres.dsn", "service.secret_key").
+		MarkSecretPath(appconfig.GRPCConnSecretPaths("service.conn")...)
 	pflag.Parse()
 
 	cfg := &Config{}
@@ -148,6 +152,7 @@ func LoadMigrateConfig() (*Config, error) {
 	})
 	loader.RegisterFlags(pflag.CommandLine)
 	registerPostgresFlags()
+	loader.MarkSecret("postgres.dsn")
 	pflag.Parse()
 
 	cfg := &Config{}
