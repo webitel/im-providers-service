@@ -110,7 +110,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
-require github.com/webitel/webitel-go-kit/appconfig v0.0.0-20260602143553-df89d5e34680
+require github.com/webitel/webitel-go-kit/appconfig v0.1.1-0.20261110114623-1cd41cd688ca
 
 require (
 	github.com/cenkalti/backoff/v3 v3.2.2
