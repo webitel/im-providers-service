@@ -63,6 +63,7 @@ func New(
 		coreMessageClient: coreMessageClient,
 		tgMessageClient:   tgclient.NewClient(),
 		gatewayClient:     gatewayer,
+		mediaManager:      media,
 		contactClient:     contacter,
 	}
 }
@@ -256,7 +257,7 @@ func (p *Provider) SendInteractive(ctx context.Context, req *coremodel.Message) 
 
 	msg, err := p.tgMessageClient.SendText(ctx, gate.Token, request)
 	if err != nil {
-		return nil, err
+		return nil, tagSendError(err)
 	}
 	return &coremodel.MessageResponse{
 		ID: strconv.FormatInt(msg.MessageID, 10),
@@ -346,6 +347,10 @@ func (p *Provider) SendDocument(ctx context.Context, req *coremodel.Message) (*c
 	if len(req.Documents) == 0 {
 		return nil, errors.InvalidArgument("no documents")
 	}
+
+	if err := checkDocumentSizes(req.Documents); err != nil {
+		return nil, err
+	}
 	gate, err := p.fetchGate(ctx, req.GateID)
 	if err != nil {
 		return nil, err
@@ -382,7 +387,7 @@ func (p *Provider) SendDocument(ctx context.Context, req *coremodel.Message) (*c
 		}
 		msg, err := p.tgMessageClient.SendDocument(ctx, gate.Token, request)
 		if err != nil {
-			return nil, err
+			return nil, tagSendError(err)
 		}
 		if firstMessageID == "" {
 			firstMessageID = strconv.FormatInt(msg.MessageID, 10)
@@ -396,6 +401,10 @@ func (p *Provider) SendDocument(ctx context.Context, req *coremodel.Message) (*c
 func (p *Provider) SendImage(ctx context.Context, req *coremodel.Message) (*coremodel.MessageResponse, error) {
 	if len(req.Images) == 0 {
 		return nil, errors.InvalidArgument("no images")
+	}
+
+	if err := checkImageSizes(req.Images); err != nil {
+		return nil, err
 	}
 	gate, err := p.fetchGate(ctx, req.GateID)
 	if err != nil {
@@ -431,7 +440,7 @@ func (p *Provider) SendImage(ctx context.Context, req *coremodel.Message) (*core
 		}
 		msg, err := p.tgMessageClient.SendPhoto(ctx, gate.Token, request)
 		if err != nil {
-			return nil, err
+			return nil, tagSendError(err)
 		}
 		if firstMessageID == "" {
 			firstMessageID = strconv.FormatInt(msg.MessageID, 10)
@@ -477,7 +486,7 @@ func (p *Provider) SendText(ctx context.Context, req *coremodel.Message) (*corem
 
 	msg, err := p.tgMessageClient.SendText(ctx, gate.Token, request)
 	if err != nil {
-		return nil, err
+		return nil, tagSendError(err)
 	}
 	return &coremodel.MessageResponse{
 		ID: strconv.FormatInt(msg.MessageID, 10),

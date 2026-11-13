@@ -262,7 +262,9 @@ func (p *viberBMProvider) processReceipt(ctx context.Context, gate *vibbmmodel.V
 	case "DELIVERED":
 		p.status.DeliveredByProviderIDs(ctx, gate.ID, []string{res.MessageID}, at)
 	case "REJECTED", "EXPIRED", "UNDELIVERABLE":
-		p.status.FailedByProviderID(ctx, gate.ID, res.MessageID, at, res.Status.Name, res.Status.Description)
+		p.status.FailedByProviderID(ctx, gate.ID, res.MessageID, at,
+			statusErrorCode(res.Status.GroupName, res.Status.Name, res.Status.Description),
+			statusErrorMessage(res.Status.Name, res.Status.Description))
 	default:
 		// PENDING and other transient states are ignored; a terminal DLR follows.
 	}

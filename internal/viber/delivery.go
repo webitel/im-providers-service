@@ -2,6 +2,7 @@ package viber
 
 import (
 	"context"
+	"time"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 )
@@ -26,8 +27,16 @@ func (p *viberProvider) reportDelivery(ctx context.Context, evt *inboundEvent, s
 		return err
 	}
 
-	if status == deliveryFailed && evt.UserID != "" {
-		p.setSubscription(ctx, gate.ID, evt.UserID, false)
+	if status == deliveryFailed {
+		if evt.UserID != "" {
+			p.setSubscription(ctx, gate.ID, evt.UserID, false)
+		}
+
+		// The send ref is saved under the message token on a successful send,
+		// so the failure resolves to the agent's message in im-thread. This is
+		// the only failure record: UpdateMessageDelivery below just stamps
+		// failed_at/failed_reason on message_external_ids and emits nothing.
+		p.status.FailedByProviderID(ctx, gate.ID, token, callbackTime(evt.Timestamp), failedCallbackCode(evt.Desc), evt.Desc)
 	}
 
 	sub := ""
@@ -54,4 +63,14 @@ func (p *viberProvider) reportDelivery(ctx context.Context, evt *inboundEvent, s
 	}
 
 	return nil
+}
+
+// callbackTime converts the callback epoch-milliseconds timestamp, falling
+// back to now when Viber omits it.
+func callbackTime(ms int64) time.Time {
+	if ms <= 0 {
+		return time.Now()
+	}
+
+	return time.UnixMilli(ms)
 }

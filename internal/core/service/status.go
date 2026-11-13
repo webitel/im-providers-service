@@ -24,6 +24,11 @@ type ThreadStatusClient interface {
 // statusVia is the confirmation source reported to im-thread-service.
 const statusVia = "provider"
 
+// sendFailureTimeout bounds the MarkFailed RPC of a synchronous send failure.
+// It runs detached from the request context: a provider retry loop may have
+// burned the caller's deadline already, and the failure must still land.
+const sendFailureTimeout = 5 * time.Second
+
 // watermarkDeliveryLimit bounds how many recent refs a single watermark
 // delivery receipt may confirm; earlier messages are covered by the
 // monotonic upsert of later receipts.
@@ -63,6 +68,8 @@ func (s *StatusReporter) SaveRef(ctx context.Context, ref *sharedmodel.MessageRe
 }
 
 // SendFailure reports a synchronous provider send error as FAILED.
+// Failure messages are stored and shown to every chat member, so both
+// failure paths scrub credentials echoed by provider or transport errors.
 // The ids arrive as strings straight from the gRPC request; missing or
 // invalid message context disables tracking silently (older callers).
 func (s *StatusReporter) SendFailure(ctx context.Context, in SendFailureReport) {
@@ -89,10 +96,13 @@ func (s *StatusReporter) SendFailure(ctx context.Context, in SendFailureReport) 
 		Via:          statusVia,
 		DomainId:     in.DomainID,
 		ErrorCode:    in.ErrorCode,
-		ErrorMessage: in.ErrorMessage,
+		ErrorMessage: sharedmodel.RedactSecrets(in.ErrorMessage),
 	}
 
-	if _, err := s.thread.MarkFailed(ctx, &threadv1.MarkFailedRequest{
+	reportCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), sendFailureTimeout)
+	defer cancel()
+
+	if _, err := s.thread.MarkFailed(reportCtx, &threadv1.MarkFailedRequest{
 		Receipts: []*threadv1.FailureReceipt{receipt},
 	}); err != nil {
 		s.logger.ErrorContext(ctx, "failed to report send failure", "error", err, "message_id", in.MessageID)
@@ -211,6 +221,8 @@ func (s *StatusReporter) markRead(ctx context.Context, ref *sharedmodel.MessageR
 
 // FailedByProviderID reports a failed webhook status referencing a concrete
 // provider message id (WhatsApp "failed" status with error details).
+// errorCode must already be normalized (sharedmodel.SendErr*); the raw
+// provider code belongs in errorMessage.
 func (s *StatusReporter) FailedByProviderID(ctx context.Context, gateID, providerMessageID string, at time.Time, errorCode, errorMessage string) {
 	refs, err := s.refs.GetByProviderMessageIDs(ctx, gateID, []string{providerMessageID})
 	if err != nil {
@@ -232,7 +244,7 @@ func (s *StatusReporter) FailedByProviderID(ctx context.Context, gateID, provide
 		Via:          statusVia,
 		DomainId:     int32(ref.DomainID),
 		ErrorCode:    errorCode,
-		ErrorMessage: errorMessage,
+		ErrorMessage: sharedmodel.RedactSecrets(errorMessage),
 	}
 
 	if _, err := s.thread.MarkFailed(ctx, &threadv1.MarkFailedRequest{

@@ -199,7 +199,7 @@ func (p *customProvider) deliver(
 	}
 
 	if errors.Is(err, custommodel.ErrCallbackRejected) || gate.RetryAttempts <= 0 {
-		return nil, err
+		return nil, tagSendError(err)
 	}
 
 	p.logger.WarnContext(ctx, "callback delivery failed, queued for retry",
@@ -218,7 +218,7 @@ func (p *customProvider) deliver(
 			"err", queueErr,
 		)
 
-		return nil, err
+		return nil, tagSendError(err)
 	}
 
 	return accepted, nil

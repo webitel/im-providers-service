@@ -1,0 +1,3 @@
+# The synced root rule "core" (core dumps) also matches this source
+# directory, which silently drops new files under internal/core from git.
+!core/

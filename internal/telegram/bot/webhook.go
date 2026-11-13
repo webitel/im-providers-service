@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"mime"
+	"path"
 	"strconv"
 
 	coremodel "github.com/webitel/im-providers-service/internal/core/model"
@@ -111,14 +113,15 @@ func (p *Provider) handleDocument(ctx context.Context, gate *model.Gate, msg *mo
 		return err
 	}
 
-	docURL, err := p.tgMessageClient.GenerateFileURL(ctx, gate.Token, msg.Document.FileID)
+	externalDoc := msg.Document
+
+	media, err := p.syncFile(ctx, gate, externalDoc.FileID, deref(externalDoc.FileName), deref(externalDoc.MimeType), externalDoc.FileSize)
 	if err != nil {
 		return err
 	}
 
 	var (
 		text        = msg.Text
-		externalDoc = msg.Document
 		coreMessage = &coremodel.SendDocumentRequest{
 			DomainID: gate.DC,
 			From:     *from,
@@ -126,10 +129,10 @@ func (p *Provider) handleDocument(ctx context.Context, gate *model.Gate, msg *mo
 			Document: coremodel.DocumentRequest{
 				Documents: []*coremodel.Document{
 					{
-						FileName: *externalDoc.FileName,
-						MimeType: *externalDoc.MimeType,
-						Size:     *externalDoc.FileSize,
-						URL:      docURL.String(),
+						ID:       media.id,
+						FileName: media.name,
+						MimeType: media.mimeType,
+						Size:     media.size,
 					},
 				},
 			},
@@ -182,16 +185,21 @@ func (p *Provider) handlePhoto(ctx context.Context, gate *model.Gate, msg *model
 
 	coreMessage.ForwardOrigin = mapForwardOrigin(msg.ForwardOrigin)
 
-	for _, image := range msg.Photo {
-		docURL, err := p.tgMessageClient.GenerateFileURL(ctx, gate.Token, image.FileID)
-		if err != nil {
-			return err
-		}
-		coreMessage.Image.Images = append(coreMessage.Image.Images, &coremodel.Image{
-			URL:  docURL.String(),
-			Size: *image.FileSize,
-		})
+	// msg.Photo lists the available sizes of one photo, not several photos.
+	// https://core.telegram.org/bots/api#message
+	photo := largestPhotoSize(msg.Photo)
+
+	media, err := p.syncFile(ctx, gate, photo.FileID, "", photoMimeType, photo.FileSize)
+	if err != nil {
+		return err
 	}
+
+	coreMessage.Image.Images = append(coreMessage.Image.Images, &coremodel.Image{
+		ID:       media.id,
+		FileName: media.name,
+		MimeType: media.mimeType,
+		Size:     media.size,
+	})
 
 	_, err = p.coreMessengerFor(gate).SendImage(ctx, coreMessage)
 	if err != nil {
@@ -263,6 +271,80 @@ func (p *Provider) handleContact(ctx context.Context, gate *model.Gate, msg *mod
 	}
 
 	return nil
+}
+
+// Telegram re-encodes every photo it delivers as JPEG.
+const photoMimeType = "image/jpeg"
+
+type syncedFile struct {
+	id       string
+	name     string
+	mimeType string
+	size     int64
+}
+
+// syncFile copies an inbound Telegram file into storage. The Bot API download
+// URL carries the bot token, so the file is fetched here and core only ever
+// receives the storage file id.
+func (p *Provider) syncFile(ctx context.Context, gate *model.Gate, fileID, name, mimeType string, size *int64) (*syncedFile, error) {
+	body, file, err := p.tgMessageClient.DownloadFile(ctx, gate.Token, fileID)
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+
+	if name == "" && file.FilePath != nil {
+		name = path.Base(*file.FilePath)
+	}
+
+	if name == "" {
+		name = fileID
+	}
+
+	if mimeType == "" {
+		mimeType = mime.TypeByExtension(path.Ext(name))
+	}
+
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
+	uploaded, err := p.mediaManager.UploadFile(ctx, coremodel.UploadRequest{
+		DomainID: gate.DC,
+		Name:     name,
+		MimeType: mimeType,
+	}, body)
+	if err != nil {
+		return nil, err
+	}
+
+	synced := &syncedFile{id: uploaded.ID, name: name, mimeType: mimeType, size: uploaded.Size}
+	if size != nil && *size > 0 {
+		synced.size = *size
+	} else if synced.size <= 0 && file.FileSize != nil {
+		synced.size = *file.FileSize
+	}
+
+	return synced, nil
+}
+
+func largestPhotoSize(sizes []model.PhotoSize) model.PhotoSize {
+	largest := sizes[0]
+	for _, s := range sizes[1:] {
+		if s.Width*s.Height > largest.Width*largest.Height {
+			largest = s
+		}
+	}
+
+	return largest
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+
+	return *s
 }
 
 func mapForwardOrigin(origin *model.MessageOrigin) *coremodel.ForwardOrigin {

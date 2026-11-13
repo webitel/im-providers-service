@@ -19,6 +19,9 @@ type fakeThreadClient struct {
 	delivered []*threadv1.MarkDeliveredRequest
 	read      []*threadv1.MarkReadRequest
 	failed    []*threadv1.MarkFailedRequest
+
+	failedCtxErr error
+	failedHasDDL bool
 }
 
 func (f *fakeThreadClient) MarkDelivered(_ context.Context, in *threadv1.MarkDeliveredRequest, _ ...grpc.CallOption) (*threadv1.MarkStatusResponse, error) {
@@ -33,8 +36,10 @@ func (f *fakeThreadClient) MarkRead(_ context.Context, in *threadv1.MarkReadRequ
 	return &threadv1.MarkStatusResponse{}, nil
 }
 
-func (f *fakeThreadClient) MarkFailed(_ context.Context, in *threadv1.MarkFailedRequest, _ ...grpc.CallOption) (*threadv1.MarkStatusResponse, error) {
+func (f *fakeThreadClient) MarkFailed(ctx context.Context, in *threadv1.MarkFailedRequest, _ ...grpc.CallOption) (*threadv1.MarkStatusResponse, error) {
 	f.failed = append(f.failed, in)
+	f.failedCtxErr = ctx.Err()
+	_, f.failedHasDDL = ctx.Deadline()
 
 	return &threadv1.MarkStatusResponse{}, nil
 }
@@ -148,7 +153,7 @@ func TestSendFailure_ReportsFailureReceipt(t *testing.T) {
 		ThreadID:     uuid.New().String(),
 		MemberID:     uuid.New().String(),
 		DomainID:     3,
-		ErrorCode:    "InvalidArgument",
+		ErrorCode:    sharedmodel.SendErrRecipientUnavailable,
 		ErrorMessage: "recipient rejected",
 	}
 
@@ -174,6 +179,62 @@ func TestSendFailure_ReportsFailureReceipt(t *testing.T) {
 
 	if got.FailedAt <= 0 {
 		t.Errorf("expected failed_at to be stamped, got %d", got.FailedAt)
+	}
+}
+
+func TestFailureReports_RedactCredentials(t *testing.T) {
+	const (
+		leaky = `Post "https://api.telegram.org/bot123456:test-token-telegram/sendDocument": dial tcp: i/o timeout`
+		want  = `Post "https://api.telegram.org/bot<redacted>/sendDocument": dial tcp: i/o timeout`
+	)
+
+	thread := &fakeThreadClient{}
+	reporter := newTestReporter(&fakeRefStore{refs: []*sharedmodel.MessageRef{ref("mid.1")}}, thread)
+
+	reporter.SendFailure(context.Background(), SendFailureReport{
+		MessageID:    uuid.New().String(),
+		ThreadID:     uuid.New().String(),
+		MemberID:     uuid.New().String(),
+		ErrorCode:    sharedmodel.SendErrChannelUnavailable,
+		ErrorMessage: leaky,
+	})
+	reporter.FailedByProviderID(context.Background(), "gate-1", "mid.1", time.Now(), sharedmodel.SendErrSendFailed, leaky)
+
+	if len(thread.failed) != 2 {
+		t.Fatalf("expected two MarkFailed calls, got %d", len(thread.failed))
+	}
+
+	for i, req := range thread.failed {
+		if got := req.GetReceipts()[0].GetErrorMessage(); got != want {
+			t.Errorf("report %d: error message = %q, want %q", i, got, want)
+		}
+	}
+}
+
+func TestSendFailure_SurvivesCanceledCallerContext(t *testing.T) {
+	thread := &fakeThreadClient{}
+	in := SendFailureReport{
+		MessageID: uuid.New().String(),
+		ThreadID:  uuid.New().String(),
+		MemberID:  uuid.New().String(),
+		ErrorCode: sharedmodel.SendErrChannelUnavailable,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	newTestReporter(&fakeRefStore{}, thread).SendFailure(ctx, in)
+
+	if len(thread.failed) != 1 {
+		t.Fatalf("expected one MarkFailed call, got %d", len(thread.failed))
+	}
+
+	if thread.failedCtxErr != nil {
+		t.Errorf("MarkFailed got a dead context: %v", thread.failedCtxErr)
+	}
+
+	if !thread.failedHasDDL {
+		t.Error("MarkFailed context must carry its own deadline")
 	}
 }
 

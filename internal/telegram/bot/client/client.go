@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 // https://core.telegram.org/bots/api#making-requests
@@ -46,6 +49,11 @@ func NewClient() *Client {
 	}
 }
 
+// NewClientWithHTTP builds a client over a caller-supplied transport.
+func NewClientWithHTTP(hc *http.Client) *Client {
+	return &Client{httpClient: hc}
+}
+
 type Client struct {
 	httpClient *http.Client
 }
@@ -54,16 +62,15 @@ type Client struct {
 // "result" field of the response envelope into out (when non-nil).
 // https://core.telegram.org/bots/api#making-requests
 func (c *Client) callMethod(ctx context.Context, methodName, token string, body []byte, out any) error {
-	url := ConstructURL(token, methodName)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ConstructURL(token, methodName), bytes.NewBuffer(body))
 	if err != nil {
-		return err
+		return redactToken(err, token)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return redactToken(err, token)
 	}
 	defer resp.Body.Close()
 
@@ -98,4 +105,26 @@ type OutgoingKeyboarder interface {
 
 func ConstructURL(token, method string) string {
 	return fmt.Sprintf(baseTelegramURL, token, method)
+}
+
+// redactedToken stands in for the bot token in errors.
+const redactedToken = "<redacted>"
+
+// redactToken scrubs the bot token from err. The Bot API carries the token in
+// the URL path, and *url.Error echoes that URL, so a raw transport error would
+// leak the token into logs, gRPC answers and im-thread failure receipts.
+func redactToken(err error, token string) error {
+	if err == nil || token == "" || !strings.Contains(err.Error(), token) {
+		return err
+	}
+
+	// Keep the *url.Error type where only its URL leaks: callers classify
+	// timeouts and context errors through it.
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) && urlErr.Error() == err.Error() && urlErr.Err != nil &&
+		!strings.Contains(urlErr.Err.Error(), token) {
+		return &url.Error{Op: urlErr.Op, URL: strings.ReplaceAll(urlErr.URL, token, redactedToken), Err: urlErr.Err}
+	}
+
+	return errors.New(strings.ReplaceAll(err.Error(), token, redactedToken))
 }

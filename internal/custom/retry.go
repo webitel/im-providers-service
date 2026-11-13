@@ -205,7 +205,7 @@ func (q *retryQueue) exhausted(ctx context.Context, task custommodel.OutboxTask,
 		return
 	}
 
-	q.status.FailedByProviderID(ctx, task.Gate.ID, task.MessageID, time.Now(), "callback_undelivered", message)
+	q.status.FailedByProviderID(ctx, task.Gate.ID, task.MessageID, time.Now(), undeliveredCode(cause), message)
 }
 
 func backoff(attempt int32) time.Duration {

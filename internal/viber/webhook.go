@@ -24,6 +24,7 @@ type inboundEvent struct {
 	Desc         string          `json:"desc"`
 	User         *inboundSender  `json:"user"`
 	Subscribed   bool            `json:"subscribed"`
+	Timestamp    int64           `json:"timestamp"`
 }
 
 func (e *inboundEvent) actor() *inboundSender {

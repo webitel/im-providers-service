@@ -188,7 +188,7 @@ func (p *customProvider) handleStatus(ctx context.Context, in *wireStatus) error
 	case "read", "seen":
 		p.status.ReadByProviderID(ctx, gate.ID, in.MessageID, at)
 	case "failed":
-		p.status.FailedByProviderID(ctx, gate.ID, in.MessageID, at, "external_failed", in.Reason)
+		p.status.FailedByProviderID(ctx, gate.ID, in.MessageID, at, sharedmodel.SendErrSendFailed, in.Reason)
 	default:
 		return errors.InvalidArgument(fmt.Sprintf("custom: unknown status %q", in.Status),
 			errors.WithID("custom.webhook.handle_status"))
@@ -223,7 +223,7 @@ func (p *customProvider) handleBroadcastResult(ctx context.Context, in *wireBroa
 			"err", recipient.Error,
 		)
 
-		p.status.FailedByProviderID(ctx, gate.ID, in.EventID, time.Now(), "broadcast_failed", recipient.Error)
+		p.status.FailedByProviderID(ctx, gate.ID, in.EventID, time.Now(), sharedmodel.SendErrSendFailed, recipient.Error)
 	}
 
 	return nil

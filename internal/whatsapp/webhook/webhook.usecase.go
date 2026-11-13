@@ -129,9 +129,12 @@ func statusTimestamp(raw string) time.Time {
 	return time.Unix(seconds, 0)
 }
 
+// firstStatusError returns the normalized code of the first status error and
+// a message that keeps the raw WhatsApp code, which the code field no longer
+// carries.
 func firstStatusError(errs []Error) (code, message string) {
 	if len(errs) == 0 {
-		return "", ""
+		return model.SendErrSendFailed, ""
 	}
 
 	first := errs[0]
@@ -140,7 +143,12 @@ func firstStatusError(errs []Error) (code, message string) {
 		message = first.ErrorData.Details
 	}
 
-	return strconv.Itoa(first.Code), message
+	code = common.SendErrorCode(first.Code, first.ErrorData.Details)
+	if code == "" {
+		code = model.SendErrSendFailed
+	}
+
+	return code, strconv.Itoa(first.Code) + ": " + message
 }
 
 func (webhook *webhook) resolveWhatsappBusinessAccount(ctx context.Context, phoneNumberID string) (*common.WhatsappBusinessAccount, error) {

@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	"github.com/webitel/im-providers-service/internal/whatsapp/client"
+	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 	"github.com/webitel/im-providers-service/internal/whatsapp/messaging/components"
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -82,6 +84,14 @@ func (messageSendError MessageSendError) ToGRPCError() error {
 	)
 }
 
+// toSendError tags the gRPC-coded error with the normalized send code.
+func (messageSendError MessageSendError) toSendError(id string) error {
+	return sharedmodel.NewSendError(
+		common.SendErrorCode(messageSendError.Code, messageSendError.ErrorData.Details),
+		errors.Wrap(messageSendError.ToGRPCError(), errors.WithID(id)),
+	)
+}
+
 type StatusResponse struct {
 	Success bool              `json:"success"`
 	Error   *MessageSendError `json:"error,omitempty"`
@@ -132,7 +142,7 @@ func (messageManager *MessageManager) Send(ctx context.Context, message BaseMess
 	}
 
 	if sendResponse.Error != nil {
-		return &sendResponse, errors.Wrap(sendResponse.Error.ToGRPCError(), errors.WithID("message.manager.send"))
+		return &sendResponse, sendResponse.Error.toSendError("message.manager.send")
 	}
 
 	return &sendResponse, nil
@@ -167,7 +177,7 @@ func (messageManager *MessageManager) Reply(ctx context.Context, message BaseMes
 	}
 
 	if sendResponse.Error != nil {
-		return &sendResponse, errors.Wrap(sendResponse.Error.ToGRPCError(), errors.WithID("message.manager.reply"))
+		return &sendResponse, sendResponse.Error.toSendError("message.manager.reply")
 	}
 
 	return &sendResponse, nil

@@ -25,6 +25,10 @@ func (p *facebookProvider) SendText(ctx context.Context, req *sharedmodel.Messag
 }
 
 func (p *facebookProvider) SendImage(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
+	if err := checkFirstSize("messenger image", req.Images); err != nil {
+		return nil, err
+	}
+
 	g, err := p.fetchGate(ctx, req.GateID)
 	if err != nil {
 		return nil, err
@@ -37,6 +41,10 @@ func (p *facebookProvider) SendImage(ctx context.Context, req *sharedmodel.Messa
 }
 
 func (p *facebookProvider) SendDocument(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
+	if err := checkFirstSize("messenger file", req.Documents); err != nil {
+		return nil, err
+	}
+
 	g, err := p.fetchGate(ctx, req.GateID)
 	if err != nil {
 		return nil, err
@@ -107,8 +115,12 @@ func (p *facebookProvider) resolvePSID(ctx context.Context, gate *fbmodel.Facebo
 // outbound handler can persist it for watermark-based webhook receipts.
 func withRecipient(resp *sharedmodel.MessageResponse, err error) func(psid string) (*sharedmodel.MessageResponse, error) {
 	return func(psid string) (*sharedmodel.MessageResponse, error) {
-		if err != nil || resp == nil {
-			return resp, err
+		if err != nil {
+			return nil, tagSendError(err)
+		}
+
+		if resp == nil {
+			return nil, nil
 		}
 
 		if resp.MD == nil {

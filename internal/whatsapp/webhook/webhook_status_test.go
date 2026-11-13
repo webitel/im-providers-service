@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/webitel/im-providers-service/internal/core/model"
 	"github.com/webitel/im-providers-service/internal/whatsapp/common"
 )
 
@@ -89,7 +90,7 @@ func TestHandleStatuses_RoutesByStatusKind(t *testing.T) {
 	}
 
 	failed := reporter.calls[2]
-	if failed.kind != "failed" || failed.id != "wamid.f" || failed.code != "131047" || failed.message != "Re-engagement message" {
+	if failed.kind != "failed" || failed.id != "wamid.f" || failed.code != model.SendErrRecipientUnavailable || failed.message != "131047: Re-engagement message" {
 		t.Errorf("failed mismatch: %+v", failed)
 	}
 }
@@ -139,23 +140,29 @@ func TestStatusTimestamp(t *testing.T) {
 }
 
 func TestFirstStatusError(t *testing.T) {
-	code, message := firstStatusError(nil)
-	if code != "" || message != "" {
-		t.Errorf("empty errors: got %q/%q", code, message)
+	detailed := Error{Code: 131053, Message: "Media upload error"}
+	detailed.ErrorData.Details = "Media file size too big. Max file size we currently support: 100MB"
+
+	cases := []struct {
+		name     string
+		errs     []Error
+		wantCode string
+		wantMsg  string
+	}{
+		{"no errors", nil, model.SendErrSendFailed, ""},
+		{"details win over message", []Error{detailed}, model.SendErrFileTooLarge, "131053: " + detailed.ErrorData.Details},
+		{"plain message", []Error{{Code: 470, Message: "message undeliverable"}}, model.SendErrSendFailed, "470: message undeliverable"},
+		{"first error wins", []Error{{Code: 131047, Message: "Re-engagement message"}, {Code: 470}}, model.SendErrRecipientUnavailable, "131047: Re-engagement message"},
+		{"rate limited", []Error{{Code: 130429, Message: "Rate limit hit"}}, model.SendErrChannelUnavailable, "130429: Rate limit hit"},
+		{"unknown code", []Error{{Code: 135000, Message: "Generic user error"}}, model.SendErrSendFailed, "135000: Generic user error"},
 	}
 
-	plain := Error{Code: 470, Message: "message undeliverable"}
-
-	code, message = firstStatusError([]Error{plain})
-	if code != "470" || message != "message undeliverable" {
-		t.Errorf("plain error: got %q/%q", code, message)
-	}
-
-	detailed := plain
-	detailed.ErrorData.Details = "user has not opted in"
-
-	code, message = firstStatusError([]Error{detailed, plain})
-	if code != "470" || message != "user has not opted in" {
-		t.Errorf("details must override message: got %q/%q", code, message)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			code, msg := firstStatusError(tc.errs)
+			if code != tc.wantCode || msg != tc.wantMsg {
+				t.Errorf("firstStatusError = (%q, %q), want (%q, %q)", code, msg, tc.wantCode, tc.wantMsg)
+			}
+		})
 	}
 }

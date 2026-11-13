@@ -36,6 +36,13 @@ type viberProvider struct {
 	receiverCache cache.Cache[string, string]
 	httpClient    *http.Client
 	linkClient    *http.Client
+	status        failureReporter
+}
+
+// failureReporter is the delivery-status surface for "failed" callbacks;
+// satisfied by core/service.StatusReporter.
+type failureReporter interface {
+	FailedByProviderID(ctx context.Context, gateID, providerMessageID string, at time.Time, errorCode, errorMessage string)
 }
 
 func New(
@@ -50,6 +57,7 @@ func New(
 	rdb *redis.Client,
 	api *client,
 	templates *sharedsvc.TemplateRenderer,
+	status *sharedsvc.StatusReporter,
 ) (provider.Provider, error) {
 	receiverCache, err := cache.New[string, string]().
 		L1(cache.RistrettoConfig{MaxCost: 1000, NumCounters: 10000}).
@@ -72,6 +80,7 @@ func New(
 		receiverCache: receiverCache,
 		httpClient:    &http.Client{Timeout: 30 * time.Second},
 		linkClient:    newGuardedClient(30 * time.Second),
+		status:        status,
 	}, nil
 }
 
