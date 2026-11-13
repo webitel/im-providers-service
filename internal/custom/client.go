@@ -11,6 +11,7 @@ import (
 
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 
+	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 	custommodel "github.com/webitel/im-providers-service/internal/custom/model"
 )
 
@@ -39,7 +40,7 @@ func (c *client) post(ctx context.Context, gate *custommodel.CustomGate, payload
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, gate.CallbackURL, bytes.NewReader(payload))
 	if err != nil {
-		return errors.Append(custommodel.ErrCallbackRejected, "build request: "+err.Error(),
+		return errors.Append(custommodel.ErrCallbackRejected, "build request: "+sharedmodel.RedactSecrets(err.Error()),
 			errors.WithCause(err), errors.WithID(postErrID))
 	}
 
@@ -48,14 +49,24 @@ func (c *client) post(ctx context.Context, gate *custommodel.CustomGate, payload
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return errors.Append(custommodel.ErrCallbackFailed, err.Error(),
+		// *url.Error echoes the callback URL, which may embed credentials.
+		return errors.Append(custommodel.ErrCallbackFailed, sharedmodel.RedactSecrets(err.Error()),
 			errors.WithCause(err), errors.WithID(postErrID))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return errors.Append(custommodel.ErrCallbackFailed, "status "+resp.Status,
-			errors.WithID(postErrID))
+		reason := errorReason(resp.Body)
+
+		msg := "status " + resp.Status
+		if reason != "" {
+			msg += ": " + reason
+		}
+
+		// Still ErrCallbackFailed, so the outbox keeps retrying it as before;
+		// only the reported code tells permanent 4xx from transient answers.
+		return sharedmodel.NewSendError(callbackStatusCode(resp.StatusCode, reason),
+			errors.Append(custommodel.ErrCallbackFailed, msg, errors.WithID(postErrID)))
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
@@ -76,11 +87,27 @@ func (c *client) post(ctx context.Context, gate *custommodel.CustomGate, payload
 	}
 
 	if !bool(decoded.Success) && decoded.Error != "" {
-		return errors.Append(custommodel.ErrCallbackRejected, decoded.Error,
-			errors.WithID(postErrID))
+		return sharedmodel.NewSendError(reasonCode(decoded.Error),
+			errors.Append(custommodel.ErrCallbackRejected, decoded.Error, errors.WithID(postErrID)))
 	}
 
 	return nil
+}
+
+// errorReason reads the contract's "error" field from a non-2xx answer, ""
+// when the body is empty or not the contract's JSON.
+func errorReason(body io.Reader) string {
+	raw, err := io.ReadAll(io.LimitReader(body, maxResponseBytes))
+	if err != nil || len(bytes.TrimSpace(raw)) == 0 {
+		return ""
+	}
+
+	var decoded wireResponse
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		return ""
+	}
+
+	return decoded.Error
 }
 
 func nowMilli() int64 {

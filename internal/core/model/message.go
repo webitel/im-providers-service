@@ -246,3 +246,4 @@ func (d *Document) GetID() string       { return d.ID }
 func (d *Document) GetURL() string      { return d.URL }
 func (d *Document) GetMimeType() string { return d.MimeType }
 func (d *Document) GetName() string     { return d.FileName }
+func (d *Document) GetSize() int64      { return d.Size }

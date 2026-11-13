@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
 )
 
 // apiClient is a thin JSON client over the InfoBip Viber BM API; every call is
@@ -106,6 +108,16 @@ type requestError struct {
 		MessageID string `json:"messageId"`
 		Text      string `json:"text"`
 	} `json:"serviceException"`
+}
+
+// httpError is a non-2xx answer from the InfoBip send API.
+type httpError struct {
+	StatusCode int
+	Text       string
+}
+
+func (e *httpError) Error() string {
+	return fmt.Sprintf("viber_bm: http %d: %s", e.StatusCode, e.Text)
 }
 
 type sendResult struct {
@@ -205,11 +217,11 @@ func (c *apiClient) send(ctx context.Context, base, apiKey string, msg outMessag
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		if out.Error != nil && out.Error.ServiceException.Text != "" {
-			return nil, fmt.Errorf("viber_bm: http %d: %s", resp.StatusCode, out.Error.ServiceException.Text)
+			return nil, tagSendError(&httpError{StatusCode: resp.StatusCode, Text: out.Error.ServiceException.Text})
 		}
 
 		// Validation errors don't always fit the serviceException envelope.
-		return nil, fmt.Errorf("viber_bm: http %d: %s", resp.StatusCode, truncateBody(body))
+		return nil, tagSendError(&httpError{StatusCode: resp.StatusCode, Text: truncateBody(body)})
 	}
 
 	if len(out.Messages) == 0 {
@@ -220,7 +232,8 @@ func (c *apiClient) send(ctx context.Context, base, apiKey string, msg outMessag
 	if strings.EqualFold(m.Status.GroupName, "REJECTED") {
 		c.logger.WarnContext(ctx, "viber_bm send rejected", "group", m.Status.GroupName, "description", m.Status.Description)
 
-		return nil, fmt.Errorf("viber_bm: message rejected: %s", m.Status.Description)
+		return nil, sharedmodel.NewSendError(statusErrorCode(m.Status.GroupName, m.Status.Name, m.Status.Description),
+			fmt.Errorf("viber_bm: message rejected: %s", m.Status.Description))
 	}
 
 	return &sendResult{BulkID: out.BulkID, MessageID: m.MessageID, GroupName: m.Status.GroupName}, nil

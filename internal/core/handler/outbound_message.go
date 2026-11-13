@@ -83,15 +83,17 @@ func (p *OutboundMessageHandler) resolveSender(ctx context.Context, gateID strin
 		gateType = t
 	}
 
+	// The request is well-formed in both cases below; the gate's stored
+	// state is what makes it unservable.
 	if gateType == sharedmodel.TypeUnknown {
-		return nil, status.Errorf(codes.InvalidArgument, "unknown gate type for gate: %s", gateID)
+		return nil, status.Errorf(codes.FailedPrecondition, "unknown gate type for gate: %s", gateID)
 	}
 
 	key := gateType.String()
 
 	prov, err := p.registry.Get(key)
 	if err != nil {
-		return nil, status.Errorf(codes.Unimplemented, "provider not registered: %s", key)
+		return nil, status.Errorf(codes.FailedPrecondition, "provider not registered: %s", key)
 	}
 
 	return prov, nil
@@ -538,6 +540,8 @@ func (p *OutboundMessageHandler) SendLocation(ctx context.Context, req *impb.Pro
 	}
 
 	resp, err := ls.SendLocation(ctx, msg)
+	p.trackOutcome(ctx, messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId()), resp, err)
+
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send location message", slog.String("error", err.Error()))
 
@@ -586,6 +590,8 @@ func (p *OutboundMessageHandler) SendContact(ctx context.Context, req *impb.Prov
 	}
 
 	resp, err := cs.SendContact(ctx, msg)
+	p.trackOutcome(ctx, messageContextOf(req.GetGateId(), req.GetExternalUserId(), req.GetMessageId(), req.GetThreadId(), req.GetDomainId()), resp, err)
+
 	if err != nil {
 		log.ErrorContext(ctx, "failed to send contact message", slog.String("error", err.Error()))
 
@@ -700,6 +706,15 @@ func messageContextOf(gateID, externalUserID, messageID, threadID string, domain
 // trackOutcome persists the provider message ref on success and reports a
 // FAILED status on synchronous send errors. Requests without message context
 // (older callers) are not tracked.
+//
+// Contract with im-thread: only errors from the channel send itself are
+// reported here. Rejections before it (gate/sender resolution, malformed
+// external_user_id, content kind the channel lacks) are returned as gRPC
+// errors only, and im-thread records those from the failed RPC; reporting them
+// here too would double the failure. Their codes are therefore meaningful:
+// NotFound (no gate), FailedPrecondition (gate type unknown or its provider
+// not registered), InvalidArgument (malformed request), Unimplemented (the
+// channel does not support the content kind), Internal (lookup failure).
 func (p *OutboundMessageHandler) trackOutcome(ctx context.Context, mc messageContext, resp *sharedmodel.MessageResponse, sendErr error) {
 	if mc.messageID == "" || mc.threadID == "" {
 		return
@@ -711,7 +726,7 @@ func (p *OutboundMessageHandler) trackOutcome(ctx context.Context, mc messageCon
 			ThreadID:     mc.threadID,
 			MemberID:     mc.externalUserID,
 			DomainID:     mc.domainID,
-			ErrorCode:    status.Code(sendErr).String(),
+			ErrorCode:    sharedmodel.ClassifySendError(sendErr),
 			ErrorMessage: sendErr.Error(),
 		})
 
@@ -754,6 +769,10 @@ func (p *OutboundMessageHandler) trackOutcome(ctx context.Context, mc messageCon
 }
 
 func toGRPCError(err error) error {
+	return redactGRPCError(mapGRPCError(err))
+}
+
+func mapGRPCError(err error) error {
 	switch {
 	case errors.Is(err, facebook.ErrTokenInvalid):
 		return status.Errorf(codes.Unauthenticated, "page token invalid or revoked: re-authorize via StartMetaOAuth")
@@ -767,6 +786,17 @@ func toGRPCError(err error) error {
 		return status.Errorf(codes.FailedPrecondition, "video was uploaded without a storage thumbnail/duration")
 	case errors.Is(err, custommodel.ErrChatUnknown):
 		return status.Errorf(codes.FailedPrecondition, "custom channel has no conversation for this recipient")
+	}
+
+	return err
+}
+
+// redactGRPCError scrubs credentials that transport errors echo (request
+// URLs with tokens) before the message leaves the service, keeping the code.
+func redactGRPCError(err error) error {
+	msg := err.Error()
+	if clean := sharedmodel.RedactSecrets(msg); clean != msg {
+		return status.Error(sharedmodel.GRPCCode(err), clean)
 	}
 
 	return err

@@ -374,6 +374,8 @@ func TestProcessReceipt(t *testing.T) {
 		res           *inboundResult
 		wantDelivered bool
 		wantFailed    bool
+		wantCode      string
+		wantMessage   string
 		wantNone      bool
 	}{
 		{
@@ -392,7 +394,9 @@ func TestProcessReceipt(t *testing.T) {
 				DoneAt:    doneAt,
 				Status:    &inboundStatus{GroupName: "REJECTED", Name: "REJECTED_OPERATOR", Description: "operator rejected"},
 			},
-			wantFailed: true,
+			wantFailed:  true,
+			wantCode:    sharedmodel.SendErrSendFailed,
+			wantMessage: "REJECTED_OPERATOR: operator rejected",
 		},
 		{
 			name: "EXPIRED triggers FailedByProviderID",
@@ -401,7 +405,9 @@ func TestProcessReceipt(t *testing.T) {
 				DoneAt:    doneAt,
 				Status:    &inboundStatus{GroupName: "EXPIRED", Name: "EXPIRED", Description: "timed out"},
 			},
-			wantFailed: true,
+			wantFailed:  true,
+			wantCode:    sharedmodel.SendErrRecipientUnavailable,
+			wantMessage: "EXPIRED: timed out",
 		},
 		{
 			name: "UNDELIVERABLE triggers FailedByProviderID",
@@ -410,7 +416,9 @@ func TestProcessReceipt(t *testing.T) {
 				DoneAt:    doneAt,
 				Status:    &inboundStatus{GroupName: "UNDELIVERABLE", Name: "UNREACHABLE", Description: "user unreachable"},
 			},
-			wantFailed: true,
+			wantFailed:  true,
+			wantCode:    sharedmodel.SendErrSendFailed,
+			wantMessage: "UNREACHABLE: user unreachable",
 		},
 		{
 			name: "lowercase delivered is case-insensitive",
@@ -473,8 +481,12 @@ func TestProcessReceipt(t *testing.T) {
 					t.Errorf("failedID = %q, want %q", status.failedID, tc.res.MessageID)
 				}
 
-				if status.failedCode != tc.res.Status.Name {
-					t.Errorf("failedCode = %q, want %q", status.failedCode, tc.res.Status.Name)
+				if status.failedCode != tc.wantCode {
+					t.Errorf("failedCode = %q, want %q", status.failedCode, tc.wantCode)
+				}
+
+				if status.failedMessage != tc.wantMessage {
+					t.Errorf("failedMessage = %q, want %q", status.failedMessage, tc.wantMessage)
 				}
 
 				if len(status.deliveredIDs) != 0 {

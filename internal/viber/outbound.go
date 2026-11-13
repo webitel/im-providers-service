@@ -72,8 +72,8 @@ func (p *viberProvider) dispatchMedia(ctx context.Context, req *sharedmodel.Mess
 
 	p.probeMedia(ctx, att.url, &att.mime, &att.size)
 
-	if att.size > maxFileBytes {
-		return nil, fmt.Errorf("viber: attachment %d bytes exceeds the platform limit of %d", att.size, int64(maxFileBytes))
+	if err := sharedmodel.CheckFileSize("viber attachment", att.size, maxFileBytes); err != nil {
+		return nil, err
 	}
 
 	kind := classify(att.mime, att.name)
@@ -216,7 +216,7 @@ func (p *viberProvider) prepare(ctx context.Context, gateID, toSub string) (*vib
 	}
 
 	if p.unreachable(ctx, g.ID, receiver) {
-		return nil, "", vibmodel.ErrReceiverNotSubscribed
+		return nil, "", tagSendError(vibmodel.ErrReceiverNotSubscribed)
 	}
 
 	return g, receiver, nil

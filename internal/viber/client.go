@@ -28,6 +28,8 @@ const (
 	statusReceiverNotRegistered = 5
 	statusReceiverNotSubscribed = 6
 	statusReceiverBlocked       = 7
+	statusNoSuitableDevice      = 11
+	statusTooManyRequests       = 12
 )
 
 // minAPIVersionKeyboards is required for modern keyboard actions (location-picker, share-phone).
@@ -41,6 +43,17 @@ type apiError struct {
 
 func (e *apiError) Error() string {
 	return fmt.Sprintf("viber: api status %d: %s", e.Status, e.Message)
+}
+
+// httpError is a non-200 transport answer from the Viber API.
+type httpError struct {
+	Path       string
+	StatusCode int
+	Body       string
+}
+
+func (e *httpError) Error() string {
+	return fmt.Sprintf("viber %s: http %d: %s", e.Path, e.StatusCode, e.Body)
 }
 
 type client struct {
@@ -83,7 +96,7 @@ func (c *client) post(ctx context.Context, token, path string, reqBody, out any)
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("viber %s: http %d: %s", path, resp.StatusCode, body)
+		return &httpError{Path: path, StatusCode: resp.StatusCode, Body: string(body)}
 	}
 
 	var env statusEnvelope
@@ -190,7 +203,7 @@ func (c *client) send(ctx context.Context, token string, msg sendMessageRequest)
 	}
 	var out sendResponse
 	if err := c.post(ctx, token, "/send_message", msg, &out); err != nil {
-		return nil, err
+		return nil, tagSendError(err)
 	}
 	return &sharedmodel.MessageResponse{ID: out.MessageToken.String()}, nil
 }

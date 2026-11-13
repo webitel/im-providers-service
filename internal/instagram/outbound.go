@@ -36,6 +36,10 @@ func (p *instagramProvider) SendText(ctx context.Context, req *sharedmodel.Messa
 }
 
 func (p *instagramProvider) SendImage(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
+	if err := checkImageSize(req.Images); err != nil {
+		return nil, err
+	}
+
 	g, err := p.fetchGate(ctx, req.GateID)
 	if err != nil {
 		return nil, err
@@ -50,7 +54,8 @@ func (p *instagramProvider) SendImage(ctx context.Context, req *sharedmodel.Mess
 }
 
 func (p *instagramProvider) SendDocument(_ context.Context, _ *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
-	return nil, errors.New("instagram: document upload not supported by Instagram Direct Messaging API")
+	return nil, sharedmodel.NewSendError(sharedmodel.SendErrUnsupportedMedia,
+		errors.New("instagram: document upload not supported by Instagram Direct Messaging API"))
 }
 
 func (p *instagramProvider) SendInteractive(ctx context.Context, req *sharedmodel.Message) (*sharedmodel.MessageResponse, error) {
@@ -104,8 +109,12 @@ func (p *instagramProvider) resolveIGSID(ctx context.Context, gate *igmodel.Inst
 // outbound handler can persist it for receipt correlation.
 func withRecipient(resp *sharedmodel.MessageResponse, err error) func(igsid string) (*sharedmodel.MessageResponse, error) {
 	return func(igsid string) (*sharedmodel.MessageResponse, error) {
-		if err != nil || resp == nil {
-			return resp, err
+		if err != nil {
+			return nil, tagSendError(err)
+		}
+
+		if resp == nil {
+			return nil, nil
 		}
 
 		if resp.MD == nil {

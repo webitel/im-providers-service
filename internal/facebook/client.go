@@ -14,6 +14,7 @@ import (
 	"time"
 
 	sharedmodel "github.com/webitel/im-providers-service/internal/core/model"
+	"github.com/webitel/im-providers-service/internal/provider/graphapi"
 )
 
 // GraphBaseURL is the versioned Graph API endpoint.
@@ -414,7 +415,10 @@ func (c *apiClient) SendInteractive(ctx context.Context, token, psid, body strin
 		if isTokenInvalidError(respBody) {
 			return nil, ErrTokenInvalid
 		}
-		return nil, fmt.Errorf("fb send interactive: status %d: %s", resp.StatusCode, respBody)
+		// Deliberately not an *APIError: that would change the retry policy
+		// of interactive sends, so only the normalized code is attached.
+		return nil, sharedmodel.NewSendError(graphapi.SendErrorCode(resp.StatusCode, respBody),
+			fmt.Errorf("fb send interactive: status %d: %s", resp.StatusCode, respBody))
 	}
 
 	var res struct {

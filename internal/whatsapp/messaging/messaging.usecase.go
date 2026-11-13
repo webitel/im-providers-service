@@ -174,6 +174,10 @@ func (messaging *Messaging) SendText(ctx context.Context, req *model.Message) (*
 }
 
 func (messaging *Messaging) SendImage(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
+	if err := checkImageSize(req.Images); err != nil {
+		return nil, err
+	}
+
 	sendingInfo, err := messaging.prepareOutboundMessageInfo(ctx, req)
 	if err != nil {
 		return nil, err
@@ -206,6 +210,10 @@ func (messaging *Messaging) SendImage(ctx context.Context, req *model.Message) (
 }
 
 func (messaging *Messaging) SendDocument(ctx context.Context, req *model.Message) (*model.MessageResponse, error) {
+	if err := checkDocumentSize(req.Documents); err != nil {
+		return nil, err
+	}
+
 	sendingInfo, err := messaging.prepareOutboundMessageInfo(ctx, req)
 	if err != nil {
 		return nil, err

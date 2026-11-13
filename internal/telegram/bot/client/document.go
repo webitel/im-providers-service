@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
+	"io"
+	"net/http"
 
 	"github.com/webitel/webitel-go-kit/pkg/errors"
 
@@ -55,22 +56,40 @@ func (c *Client) SendDocument(ctx context.Context, token string, req *DocumentRe
 	return &result, nil
 }
 
-// GenerateFileURL resolves a file_id to a downloadable URL via getFile.
+// DownloadFile resolves file_id via getFile and opens the file body. The
+// download URL embeds the bot token, so it never leaves this client: callers
+// get the body only, and transport errors are redacted.
 // https://core.telegram.org/bots/api#getfile
-func (c *Client) GenerateFileURL(ctx context.Context, token, fileID string) (*url.URL, error) {
+func (c *Client) DownloadFile(ctx context.Context, token, fileID string) (io.ReadCloser, *File, error) {
 	body, err := json.Marshal(GetDocumentRequest{FileID: fileID})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var file File
 	if err := c.callMethod(ctx, getFileMethod, token, body, &file); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if file.FilePath == nil {
-		return nil, errors.Internal("file path required to build file url is not returned from telegram")
+		return nil, nil, errors.Internal("file path required to download file is not returned from telegram")
 	}
 
-	return url.Parse(fmt.Sprintf(documentURLTemplate, token, *file.FilePath))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf(documentURLTemplate, token, *file.FilePath), nil)
+	if err != nil {
+		return nil, nil, redactToken(err, token)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, nil, redactToken(err, token)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+
+		return nil, nil, fmt.Errorf("telegram: download file: status %s", resp.Status)
+	}
+
+	return resp.Body, &file, nil
 }

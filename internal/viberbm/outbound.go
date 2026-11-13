@@ -67,15 +67,15 @@ func (p *viberBMProvider) SendDocument(ctx context.Context, req *sharedmodel.Mes
 
 	switch kind {
 	case mediaAudio:
-		return nil, vibbmmodel.ErrAudioUnsupported
+		return nil, tagSendError(vibbmmodel.ErrAudioUnsupported)
 	case mediaVideo:
 		if !isSupportedVideo(doc.MimeType, doc.FileName) {
-			return nil, vibbmmodel.ErrFileTypeUnsupported
+			return nil, tagSendError(vibbmmodel.ErrFileTypeUnsupported)
 		}
 	case mediaFile:
 		var err error
 		if name, err = documentName(doc); err != nil {
-			return nil, err
+			return nil, tagSendError(err)
 		}
 	case mediaImage:
 	}
@@ -194,7 +194,7 @@ func outboundMessageID(id uuid.UUID) string {
 // metadata for the outbound handler to persist for receipts.
 func toResponse(res *sendResult, to string, err error) (*sharedmodel.MessageResponse, error) {
 	if err != nil || res == nil {
-		return nil, err
+		return nil, tagSendError(err)
 	}
 
 	resp := &sharedmodel.MessageResponse{

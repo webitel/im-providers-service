@@ -47,6 +47,18 @@ var ErrTextTooLong = errors.New("instagram: message text exceeds 1000 characters
 // ErrMediaTypeNotSupported is returned when media type is not image/png/jpeg.
 var ErrMediaTypeNotSupported = errors.New("instagram: only image/png/jpeg media types supported")
 
+// APIError carries a non-2xx Graph API response for send-error mapping. It
+// intentionally has no retry semantics: the resilient layer retries it like
+// any other error.
+type APIError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("status %d: %s", e.StatusCode, e.Body)
+}
+
 type apiClient struct {
 	client *http.Client
 	logger *slog.Logger
@@ -208,7 +220,7 @@ func (c *apiClient) send(ctx context.Context, token string, body outboundPayload
 			return nil, ErrTokenInvalid
 		}
 
-		return nil, fmt.Errorf("ig send: status %d: %s", resp.StatusCode, respBody)
+		return nil, fmt.Errorf("ig send: %w", &APIError{StatusCode: resp.StatusCode, Body: string(respBody)})
 	}
 
 	var res struct {
@@ -388,7 +400,7 @@ func (c *apiClient) SendInteractive(ctx context.Context, token, igsid, body stri
 			return nil, ErrTokenInvalid
 		}
 
-		return nil, fmt.Errorf("ig send interactive: status %d: %s", resp.StatusCode, respBody)
+		return nil, fmt.Errorf("ig send interactive: %w", &APIError{StatusCode: resp.StatusCode, Body: string(respBody)})
 	}
 
 	var res struct {
