@@ -55,12 +55,10 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 		return nil
 	}
 
-	profile, err := p.api.GetUserProfile(ctx, psid, gate.PageToken)
-	if err != nil {
-		return fmt.Errorf("fetch profile [psid=%s]: %w", psid, err)
-	}
+	profile := p.userProfile(ctx, gate, psid)
 
 	if _, err := p.syncContact(ctx, gate, psid, profile); err != nil {
+		releaseMessage(ctx, p.rdb, mid)
 		return fmt.Errorf("sync contact [psid=%s]: %w", psid, err)
 	}
 
@@ -90,6 +88,24 @@ func (p *facebookProvider) processMessage(ctx context.Context, gate *fbmodel.Fac
 		p.routePostback(ctx, gate, peers, msg.Postback)
 	}
 	return nil
+}
+
+// userProfile fetches the sender's profile, falling back to a PSID-only
+// profile when Graph API refuses it. The profile only names the contact, so
+// it must never cost the message itself: without Advanced Access to "Business
+// Asset User Profile Access" Meta answers (#100) subcode 2018247 for every
+// user who has no role on the app.
+func (p *facebookProvider) userProfile(ctx context.Context, gate *fbmodel.FacebookGate, psid string) *UserProfile {
+	profile, err := p.api.GetUserProfile(ctx, psid, gate.PageToken)
+	if err != nil || profile == nil {
+		p.logger.WarnContext(ctx, "facebook profile unavailable, contact created without name",
+			"gate_id", gate.ID,
+			"psid", psid,
+			"err", err,
+		)
+		return &UserProfile{ID: psid}
+	}
+	return profile
 }
 
 // processReceipt maps Facebook delivery/read receipts to delivery-status

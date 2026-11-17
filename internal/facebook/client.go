@@ -119,7 +119,10 @@ func (c *apiClient) GetUserProfile(ctx context.Context, psid, token string) (*Us
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("fb profile: status %d: %s", resp.StatusCode, b)
+		if isTokenInvalidError(b) {
+			return nil, ErrTokenInvalid
+		}
+		return nil, fmt.Errorf("fb profile: %w", &APIError{StatusCode: resp.StatusCode, Body: string(b)})
 	}
 
 	var profile UserProfile

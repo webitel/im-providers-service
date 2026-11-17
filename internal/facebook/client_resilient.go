@@ -35,6 +35,7 @@ func newResilientGraphAPI(inner graphAPI, logger *slog.Logger) graphAPI {
 		ReadyToTrip: func(c gobreaker.Counts) bool {
 			return c.ConsecutiveFailures >= 5
 		},
+		IsSuccessful: breakerSuccess,
 		OnStateChange: func(name string, from, to gobreaker.State) {
 			l.Warn("circuit breaker state changed",
 				"name", name,
@@ -80,6 +81,22 @@ func retryable(err error) error {
 		return backoff.Permanent(err)
 	}
 	return err
+}
+
+// breakerSuccess reports whether err leaves Graph API healthy from the
+// breaker's point of view. Permanent client errors (missing permission,
+// unknown recipient, revoked token) describe one request, not an outage: if
+// they counted as failures, a burst of e.g. "(#100) insufficient permission
+// to access user profile" for one page would open the breaker and block every
+// call for every gate.
+func breakerSuccess(err error) bool {
+	if err == nil ||
+		errors.Is(err, ErrTokenInvalid) ||
+		errors.Is(err, context.Canceled) {
+		return true
+	}
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.Permanent()
 }
 
 func (r *resilientGraphAPI) ParseWebhook(data []byte) (*WebhookRequest, error) {
