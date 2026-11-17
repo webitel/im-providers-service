@@ -26,3 +26,12 @@ func messageSeen(ctx context.Context, rdb *redis.Client, mid string) bool {
 	}
 	return !inserted
 }
+
+// releaseMessage forgets a mid marked by messageSeen so that Facebook's
+// redelivery of an event that failed processing is not skipped as a duplicate.
+func releaseMessage(ctx context.Context, rdb *redis.Client, mid string) {
+	if mid == "" {
+		return
+	}
+	_ = rdb.Del(ctx, "fb:mid:"+mid).Err()
+}
