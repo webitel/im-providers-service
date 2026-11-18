@@ -3,6 +3,7 @@ package facebook
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -41,16 +42,25 @@ func (p *facebookProvider) syncContact(
 	return contact, nil
 }
 
+// newContactRequest builds the contact of a Facebook user. Name carries the
+// full profile name; Username must be unique per issuer and non-empty, so it
+// is the PSID: the profile (and the name) is unavailable for users without a
+// role on the app unless it has Advanced Access to "Business Asset User
+// Profile Access".
+func newContactRequest(issuer string, user *sharedmodel.ExternalUser) *gatewayv1.CreateContactRequest {
+	return &gatewayv1.CreateContactRequest{
+		IssId:    issuer,
+		Type:     issuer,
+		Name:     strings.TrimSpace(user.FullName()),
+		Username: user.ID,
+		Subject:  user.ID,
+	}
+}
+
 // ensureContact creates the internal contact or returns a stub when the
 // contact already exists (idempotent by design on the gateway side).
 func (p *facebookProvider) ensureContact(ctx context.Context, user *sharedmodel.ExternalUser) (*gatewayv1.Contact, error) {
-	contact, err := p.gatewayer.Create(ctx, &gatewayv1.CreateContactRequest{
-		IssId:    p.Type(),
-		Type:     p.Type(),
-		Name:     user.FirstName,
-		Username: user.LastName,
-		Subject:  user.ID,
-	})
+	contact, err := p.gatewayer.Create(ctx, newContactRequest(p.Type(), user))
 	if err != nil {
 		if isAlreadyExists(err) {
 			return &gatewayv1.Contact{Sub: user.ID, Iss: p.Type()}, nil
